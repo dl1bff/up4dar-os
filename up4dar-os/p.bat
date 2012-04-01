@@ -1,0 +1,1 @@
+batchisp -device at32uc3a0512 -hardware usb -operation erase f memory flash blankcheck loadbuffer Debug\up4dar-os.elf program verify start reset 0
