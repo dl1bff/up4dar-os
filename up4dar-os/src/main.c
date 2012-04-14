@@ -70,6 +70,8 @@ static void vLEDFlashTask( void *pvParameters );
 static unsigned char x_counter = 0;
 
 
+
+
 /*
 static U32 counter_FRO = 0;
 static U32 counter_RRE = 0;
@@ -77,7 +79,24 @@ static U32 counter_ROVR = 0;
 */
 
 
-static int touchKeyCounter[5] = { 0,0,0,0,0 };
+
+
+
+uint32_t  pwm_value = 520;
+
+static void set_pwm(void)
+{
+	char buf[10];
+	
+	vdisp_i2s(buf, 8, 10, 0, pwm_value);
+	vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
+	
+	AVR32_PWM.channel[0].cdty = pwm_value;
+}
+
+
+
+static int touchKeyCounter[6] = { 0,0,0,0,0,0 };
 
 static void vParTestToggleLED( portBASE_TYPE uxLED ) 
 {
@@ -86,87 +105,94 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 	switch(uxLED)
 	{
 	case 0:
-			gpio_toggle_pin(AVR32_PIN_PB27);
 			
+			// gpio_toggle_pin(AVR32_PIN_PB27);
 			
+			// gpio_toggle_pin(AVR32_PIN_PB19);
 			
 			eth_send_vdisp_frame();
-
-			if (gpio_get_pin_value(AVR32_PIN_PA22) != 0)
+	
+			const int pins[6] = {
+				AVR32_PIN_PA18,
+				AVR32_PIN_PA19,
+				AVR32_PIN_PA20,
+				AVR32_PIN_PA21,
+				AVR32_PIN_PA22,
+				AVR32_PIN_PA23
+			};
+			int i;
+				
+			for (i=0; i < ((sizeof pins) / (sizeof pins[0])); i++)
 			{
-				
-				int pins[5] = {
-					AVR32_PIN_PB22,
-					AVR32_PIN_PB23,
-					AVR32_PIN_PB24,
-					AVR32_PIN_PB25,
-					AVR32_PIN_PB26
-				};
-				int i;
-				
-				for (i=0; i < 5; i++)
+				if (gpio_get_pin_value(pins[i]) == 0)
 				{
-					if (gpio_get_pin_value(pins[i]) != 0)
-					{
-						touchKeyCounter[i] ++;
-					}					
-					
-					if ((touchKeyCounter[i] == 3) && (tx_active == 0))
-					{
-						switch(i)
-						{
-						case 0:
-							vdisp_clear_rect (0, 0, 128, 64);
-							vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Service Mode" );
-							dstarChangeMode(1);
-							break;
-
-						case 1:
-							vdisp_clear_rect (0, 0, 128, 64);
-							vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "EMR" );
-							dstarResetCounters();
-							tx_active = 2;
-							
-							
-							break;
-										
-						case 2:
-							vdisp_clear_rect (0, 0, 128, 64);
-							vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
-							dstarChangeMode(4);
-							break;
-										
-						case 3:
-							vdisp_clear_rect (0, 0, 128, 64);
-							vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
-							dstarChangeMode(2);
-							break;
-							
-						case 4:
-							vdisp_clear_rect (0, 0, 128, 64);
-							dstarResetCounters();
-							tx_active = 1;
-							break;
-										
-						}
-					}
-
+					touchKeyCounter[i] ++;
 				}
-			}
-			else
-			{
-				int i;
-				
-				for (i=0; i < 5; i++)
+				else
 				{
 					touchKeyCounter[i] = 0;
-				}									
+				}					
+					
+				if ((touchKeyCounter[i] == 2) && (tx_active == 0))
+				{
+					switch(i)
+					{
+					case 0:
+						vdisp_clear_rect (0, 0, 128, 64);
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Service Mode" );
+						dstarChangeMode(1);
+						break;
+
+					case 1:
+						vdisp_clear_rect (0, 0, 128, 64);
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "EMR" );
+						dstarResetCounters();
+						tx_active = 2;
+							
+							
+						break;
+										
+					case 2:
+						vdisp_clear_rect (0, 0, 128, 64);
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
+						dstarChangeMode(4);
+						break;
+										
+					case 3:
+						vdisp_clear_rect (0, 0, 128, 64);
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
+						dstarChangeMode(2);
+						break;
+							
+					case 4:
+						/* vdisp_clear_rect (0, 0, 128, 64);
+							dstarResetCounters();
+						tx_active = 1;
+						*/
+							
+						pwm_value --;
+						set_pwm();
+						touchKeyCounter[i] = 0;
+						break;
+							
+					case 5:
+							
+						pwm_value ++;
+						set_pwm();
+						touchKeyCounter[i] = 0;
+						break;
+										
+					}
+				}
+
 			}
+		
 			
 		break;
 		
 	case 1:
-			gpio_toggle_pin(AVR32_PIN_PB28);
+			// gpio_toggle_pin(AVR32_PIN_PB28);
+			//gpio_toggle_pin(AVR32_PIN_PB18);
 			
 			x_counter ++;
 			
@@ -198,11 +224,11 @@ const unsigned portBASE_TYPE uxNumOfLEDs = 2;
 		
 		if (uxLEDTask == 0)
 		{
-			pxLEDParameters->xFlashRate = 200;
+			pxLEDParameters->xFlashRate = configTICK_RATE_HZ / 5;
 		}
 		else
 		{
-			pxLEDParameters->xFlashRate = 1000;
+			pxLEDParameters->xFlashRate = configTICK_RATE_HZ;
 			// pxLEDParameters->xFlashRate /= portTICK_RATE_MS;
 		}
 
@@ -319,10 +345,148 @@ static void vRXEthTask( void *pvParameters )
 	while (1)
 	{
 		eth_recv_frame();
-		taskYIELD();
+		// taskYIELD();
+		vTaskDelay(3);
 	}		
 }
 
+
+
+#define LCD_PIN_RES		AVR32_PIN_PA02
+#define LCD_PIN_E		AVR32_PIN_PB12
+#define LCD_PIN_CS1		AVR32_PIN_PB13
+#define LCD_PIN_CS2		AVR32_PIN_PB14
+#define LCD_PIN_DI		AVR32_PIN_PB21
+#define LCD_PIN_RW		AVR32_PIN_PB22
+
+
+
+static void lcd_send(int linksrechts, int rs, int data)
+{
+	// uint32_t d = data << 24; 
+	
+	uint32_t d = 0;
+	int i;
+	
+	if (rs != 0)
+	{
+		gpio_set_pin_high(LCD_PIN_DI);
+	}
+	else
+	{
+		gpio_set_pin_low(LCD_PIN_DI);
+	}
+	
+	if (linksrechts == 1)
+	{
+		gpio_set_pin_high(LCD_PIN_CS1);
+	}
+	else
+	{
+		gpio_set_pin_high(LCD_PIN_CS2);
+	}
+	
+	for (i=0; i < 8; i++)
+	{
+		if ((data & 1) != 0)
+		{
+			d |= (1 << 23);
+		}
+		
+		d = d << 1;
+		data = data >> 1;
+	}		
+	 
+	
+	gpio_set_group_high(1 /* PORT B */, d);
+	gpio_set_group_low(1 /* PORT B */, d ^ 0xFF000000);
+	
+	
+	gpio_set_pin_high(LCD_PIN_E);
+	
+	taskYIELD();
+	
+	gpio_set_pin_low(LCD_PIN_E);
+	
+	
+	if (linksrechts == 1)
+	{
+		gpio_set_pin_low(LCD_PIN_CS1);
+	}
+	else
+	{
+		gpio_set_pin_low(LCD_PIN_CS2);
+	}
+	
+	taskYIELD();
+}
+
+static void vLCDTask( void *pvParameters )
+{
+	gpio_set_pin_low(LCD_PIN_RES);
+	gpio_set_pin_low(LCD_PIN_E);
+	gpio_set_pin_low(LCD_PIN_CS1);
+	gpio_set_pin_low(LCD_PIN_CS2);
+	gpio_set_pin_low(LCD_PIN_RW);
+	
+	gpio_set_pin_high(AVR32_PIN_PB19); // kontrast
+	gpio_set_pin_high(AVR32_PIN_PB18); // backlight
+	
+	vTaskDelay( 30 );
+	
+	gpio_set_pin_high(LCD_PIN_RES);
+	
+	vTaskDelay( 10 );
+	
+	lcd_send(1, 0, 0x3f);
+	lcd_send(2, 0, 0x3f);
+	
+	
+	unsigned char blob[8];
+	
+	for(;;)
+	{
+		int x,y,i;
+		
+		for (x=0; x < 16; x++)
+		{
+			for (y=0; y < 8; y++)
+			{
+				
+				int r = ((x >= 8) ? 2 : 1);
+				lcd_send(r, 0, 0x40 | ((x & 0x07) << 3));
+				lcd_send(r, 0, 0xB8 | (y & 0x07));
+
+				vdisp_get_pixel( x << 3, y << 3, blob );
+				
+				int mask = 0x80;
+				
+				for (i=0; i < 8; i++)
+				{
+					int m = 1;
+					int d = 0;
+					int j;
+					
+					for (j=0; j < 8; j++)
+					{
+						if ((blob[j] & mask) != 0)
+						{
+							d |= m;
+						}
+						m = m << 1;
+					}
+					
+					lcd_send(r, 1, d);
+
+					mask = mask >> 1;					
+				}
+			}
+		}
+		
+		vTaskDelay( 5 );
+	}
+	
+}
 
 
 
@@ -345,6 +509,8 @@ int main (void)
 //	xTaskCreate( vUSART0Task, (signed char *) "USART0", ledSTACK_SIZE, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	xTaskCreate( vRXEthTask, (signed char *) "rxeth", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	
+	xTaskCreate( vLCDTask, (signed char *) "LCD", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	vdisp_prints_xy(0, 0, VDISP_FONT_8x12, 0,  "Universal");
 	vdisp_prints_xy(0, 12, VDISP_FONT_8x12, 0, " Platform");
