@@ -60,23 +60,23 @@ static const gpio_map_t gpiomap = {
 };
 
 
-static unsigned char vdisp_frame[1024 + 42] =
+static unsigned char vdisp_frame[1024 + 42 + 320] =
 	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 		0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x01,
 		0x08, 0x00,  // IPv4
 		0x45, 0x00, // v4, DSCP
-		0x04, 20 + 8, // + 1024 total length
+		0x00, 0x00, // ip length (will be set later)
 		0x01, 0x01, // ID
 		0x40, 0x00,  // DF don't fragment, offset = 0
 		0x40, // TTL
 		0x11, // UDP = 17
-		0xb1, 0x70,  // header chksum
-		192, 168, 1, 16,  // source
+		0x00, 0x00,  // header chksum (will be calculated later)
+		192, 168, 1, 33,  // source
 		192, 168, 1, 255,  // destination
 		0xb0, 0xb0,  // source port
 		0xb0, 0xb0,  // destination port
-		0x04, 8,    //  + 1024  UDP length 
-		0x00, 0x00,  // UDP chksum
+		0x00, 0x00,    //   UDP length (will be set later)
+		0x00, 0x00,  // UDP chksum (0 = no checksum)
 		
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
 };
@@ -159,7 +159,45 @@ void eth_init(unsigned char ** p)
 	
 	AVR32_MACB.NCR.re = 1;  // receive enable
 
-	eth_ptr = 0;	
+	eth_ptr = 0;
+	
+	
+	// 2kHz tone:
+	for (i=(1024 + 42); i < (sizeof vdisp_frame); i+=8)
+	{
+		vdisp_frame[i+0] = 0;
+		vdisp_frame[i+1] = 0;
+				
+		vdisp_frame[i+2] = 10;
+		vdisp_frame[i+3] = 0;
+				
+		vdisp_frame[i+4] = 0;
+		vdisp_frame[i+5] = 0;
+				
+		vdisp_frame[i+6] = 245;
+		vdisp_frame[i+7] = 0;
+	}
+	
+	
+	int udp_length = 1024 + 320 + 8;
+	
+	((unsigned short *) (vdisp_frame + 14)) [1] = udp_length + 20; // IP len
+	
+	((unsigned short *) (vdisp_frame + 14)) [12] = udp_length; // UDP len
+	
+	int sum = 0;
+	
+	for (i=0; i < 10; i++) // 20 Byte Header
+	{
+		if (i != 5)  // das checksum-feld weglassen
+		{
+			sum += ((unsigned short *) (vdisp_frame + 14)) [i];
+		}
+	}
+	
+	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	
+	((unsigned short *) (vdisp_frame + 14)) [5] = sum; // checksumme setzen
 }
 
 

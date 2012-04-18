@@ -43,7 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_dstar/vdisp.h"
 #include "up_dstar/rtclock.h"
-
+#include "up_dstar/ambe.h"
 
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
@@ -224,7 +224,7 @@ const unsigned portBASE_TYPE uxNumOfLEDs = 2;
 		
 		if (uxLEDTask == 0)
 		{
-			pxLEDParameters->xFlashRate = configTICK_RATE_HZ / 5;
+			pxLEDParameters->xFlashRate =  40;  // configTICK_RATE_HZ / 5;
 		}
 		else
 		{
@@ -526,6 +526,9 @@ int main (void)
 	phyCommInit( dstarQueue );
 	
 	txtest_init();
+	
+	ambeInit();
+	
 	
 	vTaskStartScheduler();
   

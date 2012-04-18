@@ -96,7 +96,7 @@ void board_init(void)
 	gpio_enable_module( lcd_pwm_gpio_map, sizeof( lcd_pwm_gpio_map ) / sizeof( lcd_pwm_gpio_map[0] ) );
 	
 	
-	AVR32_PWM.channel[6].CMR.cpre = 4;
+	AVR32_PWM.channel[6].CMR.cpre = 8;
 	AVR32_PWM.channel[6].cprd = 1000;
 	AVR32_PWM.channel[6].cdty = 200;
 	
