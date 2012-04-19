@@ -63,6 +63,24 @@ static const gpio_map_t switch_gpio_map =
 	{ AVR32_PIN_PA22, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW5
 	{ AVR32_PIN_PA23, GPIO_DIR_INPUT | GPIO_PULL_UP }   // SW6
 };
+
+
+static const gpio_map_t	ambe_pin_gpio_map =
+{
+	{ AVR32_PIN_PB20, GPIO_DIR_OUTPUT | GPIO_INIT_LOW }	// RESETN
+};
+
+static const gpio_map_t	ambe_spi_gpio_map =
+{
+	{ AVR32_SPI0_NPCS_3_1_PIN, AVR32_SPI0_NPCS_3_1_FUNCTION },  // PA07
+	{ AVR32_SPI0_NPCS_1_0_PIN, AVR32_SPI0_NPCS_1_0_FUNCTION },  // PA08
+	{ AVR32_SPI0_NPCS_2_0_PIN, AVR32_SPI0_NPCS_2_0_FUNCTION },  // PA09
+	{ AVR32_SPI0_NPCS_0_0_PIN, AVR32_SPI0_NPCS_0_0_FUNCTION },  // PA10
+	{ AVR32_SPI0_MISO_0_0_PIN, AVR32_SPI0_MISO_0_0_FUNCTION },  // PA11	
+	{ AVR32_SPI0_MOSI_0_0_PIN, AVR32_SPI0_MOSI_0_0_FUNCTION },  // PA12
+	{ AVR32_SPI0_SCK_0_0_PIN,  AVR32_SPI0_SCK_0_0_FUNCTION  }   // PA13
+};
+
 	
 void board_init(void)
 {
@@ -96,12 +114,14 @@ void board_init(void)
 	gpio_enable_module( lcd_pwm_gpio_map, sizeof( lcd_pwm_gpio_map ) / sizeof( lcd_pwm_gpio_map[0] ) );
 	
 	
+	// Backlight
 	AVR32_PWM.channel[6].CMR.cpre = 8;
 	AVR32_PWM.channel[6].cprd = 1000;
 	AVR32_PWM.channel[6].cdty = 200;
 	
 	AVR32_PWM.ENA.chid6 = 1;
 	
+	// contrast
 	AVR32_PWM.channel[0].CMR.cpre = 3;
 	AVR32_PWM.channel[0].cprd = 1000;
 	AVR32_PWM.channel[0].cdty = 520;
@@ -111,7 +131,7 @@ void board_init(void)
 	
 	
 
-	// Tasten
+	// switches
 
 	gpio_enable_gpio( switch_gpio_map, sizeof( switch_gpio_map ) / sizeof( switch_gpio_map[0] ) );
 		
@@ -119,4 +139,15 @@ void board_init(void)
 	{
 		gpio_configure_pin( switch_gpio_map[i].pin, switch_gpio_map[i].function);
 	}
+	
+	// AMBE interface
+	
+	gpio_enable_gpio( ambe_pin_gpio_map, sizeof( ambe_pin_gpio_map ) / sizeof( ambe_pin_gpio_map[0] ) );
+		
+	for (i=0; i < (sizeof( ambe_pin_gpio_map ) / sizeof( ambe_pin_gpio_map[0] )); i++)
+	{
+		gpio_configure_pin( ambe_pin_gpio_map[i].pin, ambe_pin_gpio_map[i].function);
+	}
+	
+	gpio_enable_module( ambe_spi_gpio_map, sizeof( ambe_spi_gpio_map ) / sizeof( ambe_spi_gpio_map[0] ) );
 }

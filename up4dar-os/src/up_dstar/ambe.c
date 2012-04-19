@@ -28,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "gpio.h"
+
 #include "ambe.h"
 
 
@@ -35,10 +37,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 static portTASK_FUNCTION( ambeTask, pvParameters )
 {
+	AVR32_SPI0.mr = 0x030F0007;  // PCSDEC PS MSTR   3 clocks delay
+	
+	AVR32_SPI0.csr0 = 0x03034084; // CSNAAT, 16 Bit,  SCBR=64
+	AVR32_SPI0.csr1 = 0x03034084; // CSNAAT, 16 Bit,  SCBR=64
+	AVR32_SPI0.csr2 = 0x03034084; // CSNAAT, 16 Bit,  SCBR=64
+	AVR32_SPI0.csr3 = 0x03034084; // CSNAAT, 16 Bit,  SCBR=64
+	
+	AVR32_SPI0.CR.spien = 1;
+	
+	gpio_set_pin_low(AVR32_PIN_PB20); // RESETN
+	vTaskDelay(1);
+	gpio_set_pin_high(AVR32_PIN_PB20);
+	
 	for( ;; )
 	{
-		vTaskDelay(10);
+		vTaskDelay(20);
 		
+		AVR32_SPI0.tdr = 0x000A0000;
 	}
 } 
 
@@ -51,6 +67,6 @@ void ambeInit( void )
 {
 	
 	xTaskCreate( ambeTask, ( signed char * ) "AMBE", configMINIMAL_STACK_SIZE, NULL,
-		 tskIDLE_PRIORITY + 1 , ( xTaskHandle * ) NULL );
+		 tskIDLE_PRIORITY + 2 , ( xTaskHandle * ) NULL );
 
 }
