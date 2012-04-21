@@ -29,8 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef AMBE_H_
 #define AMBE_H_
 
-void ambeInit( void );
-
+// void ambeInit( void );
+void ambeInit( unsigned char * pixelBuf );
 
 
 

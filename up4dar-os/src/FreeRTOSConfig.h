@@ -85,8 +85,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // #define configCPU_CLOCK_HZ        ( FOSC0 ) /* Hz clk gen */
 // #define configPBA_CLOCK_HZ        ( FOSC0 )
-#define configCPU_CLOCK_HZ        ( 60000000 ) /* Hz clk gen */
-#define configPBA_CLOCK_HZ        ( 15000000 )
+
+//#define configCPU_CLOCK_HZ        ( 60000000 ) /* Hz clk gen */
+//#define configPBA_CLOCK_HZ        ( 15000000 )
+#define configCPU_CLOCK_HZ        ( 65536000 ) /* Hz clk gen */
+#define configPBA_CLOCK_HZ        ( 16384000 )
+
 //#define configCPU_CLOCK_HZ        ( 64000000 ) /* Hz clk gen */
 //#define configPBA_CLOCK_HZ        ( 16000000 )
 

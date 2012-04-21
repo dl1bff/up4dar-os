@@ -67,14 +67,13 @@ static const gpio_map_t switch_gpio_map =
 
 static const gpio_map_t	ambe_pin_gpio_map =
 {
-	{ AVR32_PIN_PB20, GPIO_DIR_OUTPUT | GPIO_INIT_LOW }	// RESETN
+	{ AVR32_PIN_PB20, GPIO_DIR_OUTPUT | GPIO_INIT_LOW },	// RESETN
+	{ AVR32_PIN_PA07, GPIO_DIR_INPUT  }						// EPR
 };
 
 static const gpio_map_t	ambe_spi_gpio_map =
 {
-	{ AVR32_SPI0_NPCS_3_1_PIN, AVR32_SPI0_NPCS_3_1_FUNCTION },  // PA07
 	{ AVR32_SPI0_NPCS_1_0_PIN, AVR32_SPI0_NPCS_1_0_FUNCTION },  // PA08
-	{ AVR32_SPI0_NPCS_2_0_PIN, AVR32_SPI0_NPCS_2_0_FUNCTION },  // PA09
 	{ AVR32_SPI0_NPCS_0_0_PIN, AVR32_SPI0_NPCS_0_0_FUNCTION },  // PA10
 	{ AVR32_SPI0_MISO_0_0_PIN, AVR32_SPI0_MISO_0_0_FUNCTION },  // PA11	
 	{ AVR32_SPI0_MOSI_0_0_PIN, AVR32_SPI0_MOSI_0_0_FUNCTION },  // PA12
@@ -84,26 +83,58 @@ static const gpio_map_t	ambe_spi_gpio_map =
 	
 void board_init(void)
 {
-	int i;
 	
+	/*
 	pcl_freq_param_t freq = { configCPU_CLOCK_HZ, configPBA_CLOCK_HZ, FOSC0, OSC0_STARTUP };
 		
 	pcl_configure_clocks ( &freq );
-	
-	
-	/*
-	// EVK1105   LED Pins
-	gpio_set_gpio_pin(AVR32_PIN_PB27);
-	gpio_set_pin_low(AVR32_PIN_PB27);
-	
-	gpio_set_gpio_pin(AVR32_PIN_PB28);
-	gpio_set_pin_low(AVR32_PIN_PB28);
-	
 	*/
+	
+	// first change to OSC0 (12MHz)
+	pm_enable_osc0_crystal(& AVR32_PM, FOSC0);            // Enable the Osc0 in crystal mode
+	pm_enable_clk0(& AVR32_PM, OSC0_STARTUP);                  // Crystal startup time 
+	pm_switch_to_clock(& AVR32_PM, AVR32_PM_MCSEL_OSC0);  // Then switch main clock to Osc0
+	
+	
+	
+	pm_enable_osc1_ext_clock(& AVR32_PM);  // ocs1 is external clock
+	pm_enable_clk1(& AVR32_PM, OSC1_STARTUP);
+	
+	pm_pll_setup(&AVR32_PM
+	 , 0   // pll
+	 , 3 // mul
+	  , 0 // div  ->  f_vfo = 16.384 MHz * 8 = 131.072 MHz
+	 , 1   // osc
+	  , 16  // lockcount
+	  );
+	  
+	pm_pll_set_option(&AVR32_PM
+	  , 0 // pll
+	  , 1 // pll_freq  (f_vfo range 80MHz - 180 MHz)
+	  , 1 // pll_div2  (f_pll1 = f_vfo / 2)
+	  , 0 // pll_wbwdisable
+	  );
+	
+	pm_pll_enable(&AVR32_PM, 0);
+		
+	pm_wait_for_pll0_locked(&AVR32_PM);
+	
+	pm_cksel(&AVR32_PM
+	  , 1, 1 // PBA  (CPU / 4) = 16.384 MHz
+	  , 0, 0 // PBB  65.536 MHz
+	  , 0, 0 // HSB	 = CPU 65.536 MHz
+	  );
+	
+	flashc_set_wait_state(1);  // one wait state if CPU clock > 33 MHz
+	
+	pm_switch_to_clock(&AVR32_PM, AVR32_PM_MCCTRL_MCSEL_PLL0); // switch to PLL0
+	
 	
 	// LCD display
 	
 	gpio_enable_gpio( lcd_gpio_map, sizeof( lcd_gpio_map ) / sizeof( lcd_gpio_map[0] ) );
+	
+	int i;
 	
 	for (i=0; i < (sizeof( lcd_gpio_map ) / sizeof( lcd_gpio_map[0] )); i++)
 	{

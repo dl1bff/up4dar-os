@@ -105,12 +105,14 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 	switch(uxLED)
 	{
 	case 0:
+			{
+				
 			
 			// gpio_toggle_pin(AVR32_PIN_PB27);
 			
 			// gpio_toggle_pin(AVR32_PIN_PB19);
 			
-			eth_send_vdisp_frame();
+			// eth_send_vdisp_frame();
 	
 			const int pins[6] = {
 				AVR32_PIN_PA18,
@@ -187,7 +189,7 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 
 			}
 		
-			
+			}		
 		break;
 		
 	case 1:
@@ -527,7 +529,7 @@ int main (void)
 	
 	txtest_init();
 	
-	ambeInit();
+	ambeInit(pixelBuf);
 	
 	
 	vTaskStartScheduler();
