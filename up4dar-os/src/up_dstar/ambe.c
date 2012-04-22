@@ -35,6 +35,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vdisp.h"
 
 #include "up_io/eth.h"
+#include "up_io/wm8510.h"
 
 #include "gcc_builtin.h"
 
@@ -70,8 +71,8 @@ static unsigned short int chan_tx_data[24] =
 	0x0000,
 	0x0000,
 
-	// 0xFAFF,  //  FF = no DTMF
-	 0xD88C,  // DTMF A
+	0xFAFF,  //  FF = no DTMF
+	// 0x008C,  // DTMF A
 
 	// 0x8004,  // encoder
 	0x8000,  // decoder
@@ -122,7 +123,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 {
 	gpio_set_pin_low(AVR32_PIN_PB20); // RESETN
 	
-	AVR32_SPI0.mr = 0x180F0007;  // PCSDEC PS MSTR   24 clocks delay
+	AVR32_SPI0.mr = 0x100F0007;  // PCSDEC PS MSTR  16 clocks delay
 	
 	AVR32_SPI0.csr0 = 0x00001E84; //  16 Bit,  SCBR=30, CSNAAT, DLYBCT=0
 	AVR32_SPI0.csr1 = 0x00001E84; //  16 Bit,  SCBR=30, CSNAAT, DLYBCT=0
@@ -169,20 +170,22 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	AVR32_PDCA.channel[1].mar = (unsigned long) in_buf1;
 	AVR32_PDCA.channel[1].tcr = BUF_SIZE ; 
 	
-	vTaskDelay(1000);
+	vTaskDelay(1);
 	gpio_set_pin_high(AVR32_PIN_PB20);
 
 
-	vTaskDelay(300);
+	vTaskDelay(100);
 	
-	AVR32_PDCA.channel[1].CR.ten = 1; // rx
-	AVR32_PDCA.channel[0].CR.ten = 1; // tx
+	AVR32_PDCA.channel[1].cr = 1; // rx enable
+	AVR32_PDCA.channel[0].cr = 1; // tx enable
 	
 	
 	char buf_ready_rx = 1;
 	char buf_ready_tx = 1;
 	
-	
+	int tx_ptr = 0;
+	extern unsigned char Sprache[];
+	#define	Anzahl_SprachBytes	7830
 	
 	for( ;; )
 	{
@@ -241,6 +244,18 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 				case 2:
 					chan_tx_state = 0;
 					chan_tx_data[11] = 0x8003; // do not set rate again
+					
+					chan_tx_data[12] = (Sprache[tx_ptr + 0] << 8) | Sprache[tx_ptr + 1];
+					chan_tx_data[13] = (Sprache[tx_ptr + 2] << 8) | Sprache[tx_ptr + 3];
+					chan_tx_data[14] = (Sprache[tx_ptr + 4] << 8) | Sprache[tx_ptr + 5];
+					chan_tx_data[15] = (Sprache[tx_ptr + 6] << 8) | Sprache[tx_ptr + 7];
+					chan_tx_data[16] = (Sprache[tx_ptr + 8] << 8) ;
+					
+					tx_ptr += 9;
+					if (tx_ptr >= Anzahl_SprachBytes)
+					{
+						tx_ptr = 0;
+					}
 					break;
 			}
 		}
@@ -273,6 +288,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 				if ((b[i] & 0x000F0000) == AMBE_CS_CODEC)
 				{
 					put_sound_data(b[i] & 0x0000FFFF);
+					wm8510_put_audio_sample( (int16_t) (b[i] & 0x0000FFFF));
 				}
 			}
 			

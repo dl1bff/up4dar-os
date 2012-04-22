@@ -80,6 +80,27 @@ static const gpio_map_t	ambe_spi_gpio_map =
 	{ AVR32_SPI0_SCK_0_0_PIN,  AVR32_SPI0_SCK_0_0_FUNCTION  }   // PA13
 };
 
+static const gpio_map_t i2c_config_gpio_map =
+{
+	{ AVR32_TWI_SDA_0_0_PIN, GPIO_DIR_OUTPUT | GPIO_INIT_HIGH | GPIO_OPEN_DRAIN	},  // PA29
+	{ AVR32_TWI_SCL_0_0_PIN, GPIO_DIR_OUTPUT | GPIO_INIT_HIGH | GPIO_OPEN_DRAIN	}   // PA30	
+};
+
+static const gpio_map_t i2c_gpio_map =
+{
+	{ AVR32_TWI_SDA_0_0_PIN, AVR32_TWI_SDA_0_0_FUNCTION	},  // PA29
+	{ AVR32_TWI_SCL_0_0_PIN, AVR32_TWI_SCL_0_0_FUNCTION	}   // PA30	
+};
+
+
+static const gpio_map_t ssc_gpio_map =
+{
+	{ AVR32_SSC_TX_FRAME_SYNC_0_PIN, AVR32_SSC_TX_FRAME_SYNC_0_FUNCTION }, // PA14
+	{ AVR32_SSC_TX_CLOCK_0_PIN, AVR32_SSC_TX_CLOCK_0_FUNCTION },		// PA15
+	{ AVR32_SSC_TX_DATA_0_PIN,  AVR32_SSC_TX_DATA_0_FUNCTION  },		// PA16	
+	{ AVR32_SSC_RX_DATA_0_PIN,  AVR32_SSC_RX_DATA_0_FUNCTION }			// PA17			
+};
+
 	
 void board_init(void)
 {
@@ -181,4 +202,33 @@ void board_init(void)
 	}
 	
 	gpio_enable_module( ambe_spi_gpio_map, sizeof( ambe_spi_gpio_map ) / sizeof( ambe_spi_gpio_map[0] ) );
+	
+	
+	// I2C
+	
+	gpio_enable_gpio( i2c_config_gpio_map, sizeof( i2c_config_gpio_map ) / sizeof( i2c_config_gpio_map[0] ) );
+	
+	for (i=0; i < (sizeof( i2c_config_gpio_map ) / sizeof( i2c_config_gpio_map[0] )); i++)
+	{
+		gpio_configure_pin( i2c_config_gpio_map[i].pin, i2c_config_gpio_map[i].function);
+	}
+	
+	gpio_enable_module( i2c_gpio_map, sizeof( i2c_gpio_map ) / sizeof( i2c_gpio_map[0] ) );
+	
+	AVR32_TWI.cwgr = 0x00006060;  // CKDIV = 0, CLDIV = CHDIV = 96  -> less than 100kHz
+	
+	
+	// SSC
+	
+	gpio_enable_module( ssc_gpio_map, sizeof( ssc_gpio_map ) / sizeof( ssc_gpio_map[0] ) );
+	
+	AVR32_SSC.cmr = 32;  //  32 bit period, 8kHz sample rate  -> 256kHz SSC clock  
+	
+	AVR32_SSC.tcmr = 0x0F010504;           // 32 bits per frame, STTDLY=1, 
+	                    // start = rising edge on TX_FRAME_SYNC, Continuous Transmit Clock
+						
+	AVR32_SSC.tfmr = 0x0020008F;		// frame sync = Positive Pulse, frame sync length = 1,
+	                                        // 1 data word per frame, MSB first, 16 bits per data word
+	
+	
 }

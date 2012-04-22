@@ -45,6 +45,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/rtclock.h"
 #include "up_dstar/ambe.h"
 
+#include "up_io/wm8510.h"
+
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
 
@@ -531,6 +533,7 @@ int main (void)
 	
 	ambeInit(pixelBuf);
 	
+	wm8510Init();
 	
 	vTaskStartScheduler();
   
