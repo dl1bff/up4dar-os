@@ -29,9 +29,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef AMBE_H_
 #define AMBE_H_
 
-// void ambeInit( void );
-void ambeInit( unsigned char * pixelBuf );
+#include "up_dstar/audio_q.h"
 
-
+void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio );
+void ambe_start_encode(void);
+void ambe_stop_encode(void);
 
 #endif /* AMBE_H_ */

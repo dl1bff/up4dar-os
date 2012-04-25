@@ -47,6 +47,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_io/wm8510.h"
 
+#include "up_dstar/audio_q.h"
+
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
 
@@ -54,6 +56,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 U32 counter = 0;
 U32 errorCounter = 0;
+
+
+audio_q_t  audio_tx_q;
+audio_q_t  audio_rx_q;
 
 
 /* Structure used to pass parameters to the LED tasks. */
@@ -116,13 +122,14 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			// eth_send_vdisp_frame();
 	
-			const int pins[6] = {
+			const int pins[7] = {
 				AVR32_PIN_PA18,
 				AVR32_PIN_PA19,
 				AVR32_PIN_PA20,
 				AVR32_PIN_PA21,
 				AVR32_PIN_PA22,
-				AVR32_PIN_PA23
+				AVR32_PIN_PA23,
+				AVR32_PIN_PA28
 			};
 			int i;
 				
@@ -135,6 +142,11 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 				else
 				{
 					touchKeyCounter[i] = 0;
+					
+					if (i==6)  // PTT off
+					{
+						ambe_stop_encode();
+					}
 				}					
 					
 				if ((touchKeyCounter[i] == 2) && (tx_active == 0))
@@ -185,7 +197,16 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 						set_pwm();
 						touchKeyCounter[i] = 0;
 						break;
-										
+						
+					case 6: // PTT
+					
+						ambe_start_encode();
+						
+						{
+							extern int audio_max;
+							audio_max = 0;
+						}							
+						break;			
 					}
 				}
 
@@ -531,9 +552,12 @@ int main (void)
 	
 	txtest_init();
 	
-	ambeInit(pixelBuf);
+	audio_q_initialize(& audio_tx_q);
+	audio_q_initialize(& audio_rx_q);
 	
-	wm8510Init();
+	ambeInit(pixelBuf, & audio_tx_q, & audio_rx_q);
+	
+	wm8510Init( & audio_tx_q, & audio_rx_q );
 	
 	vTaskStartScheduler();
   

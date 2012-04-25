@@ -56,12 +56,14 @@ static const gpio_map_t lcd_pwm_gpio_map =
 
 static const gpio_map_t switch_gpio_map =
 {
+	{ AVR32_PIN_PA28, GPIO_DIR_INPUT | GPIO_PULL_UP },	// PTT
 	{ AVR32_PIN_PA18, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW1
 	{ AVR32_PIN_PA19, GPIO_DIR_INPUT | GPIO_PULL_UP },  // SW2
 	{ AVR32_PIN_PA20, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW3
 	{ AVR32_PIN_PA21, GPIO_DIR_INPUT | GPIO_PULL_UP },  // SW4
 	{ AVR32_PIN_PA22, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW5
 	{ AVR32_PIN_PA23, GPIO_DIR_INPUT | GPIO_PULL_UP }   // SW6
+		
 };
 
 
@@ -230,5 +232,12 @@ void board_init(void)
 	AVR32_SSC.tfmr = 0x0020008F;		// frame sync = Positive Pulse, frame sync length = 1,
 	                                        // 1 data word per frame, MSB first, 16 bits per data word
 	
-	
+	AVR32_SSC.rcmr = 0x0F010101;           // 32 bits per frame, STTDLY=1,
+					  // start = TX start ,  clock = TX Clock
+					  
+	AVR32_SSC.rfmr = 0x0000008F;		// frame sync = Positive Pulse, frame sync length = 1,
+	                                        // 1 data word per frame, MSB first, 16 bits per data word
+											
+											
+
 }

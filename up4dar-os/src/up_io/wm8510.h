@@ -29,9 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef WM8510_H_
 #define WM8510_H_
 
+#include "up_dstar/audio_q.h"
 
-void wm8510Init(void);
-
-void wm8510_put_audio_sample (int16_t d);
+void wm8510Init( audio_q_t * tx, audio_q_t * rx );
 
 #endif /* WM8510_H_ */
