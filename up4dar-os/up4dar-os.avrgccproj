@@ -252,6 +252,12 @@
     <Compile Include="src\up_dstar\ambe.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\ambe_q.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\ambe_q.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\audio_q.c">
       <SubType>compile</SubType>
     </Compile>

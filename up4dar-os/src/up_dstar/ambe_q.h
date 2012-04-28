@@ -19,23 +19,40 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /*
- * ambe.h
+ * ambe_q.h
  *
- * Created: 18.04.2012 16:40:26
+ * Created: 28.04.2012 17:14:47
  *  Author: mdirska
  */ 
 
 
-#ifndef AMBE_H_
-#define AMBE_H_
-
-#include "up_dstar/audio_q.h"
-
-void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio );
-void ambe_start_encode(void);
-void ambe_stop_encode(void);
+#ifndef AMBE_Q_H_
+#define AMBE_Q_H_
 
 
-void ambe_input_data( const uint8_t * d);
 
-#endif /* AMBE_H_ */
+#include <FreeRTOS.h>
+
+#include "semphr.h"
+
+#define AMBE_Q_DATASIZE  9
+#define AMBE_Q_BUFLEN  (AMBE_Q_DATASIZE * 100)
+
+struct ambe_q {
+	uint8_t buf[AMBE_Q_BUFLEN];
+	short in_ptr;
+	short out_ptr;
+	short count;
+	short state;
+	xSemaphoreHandle mutex;
+};
+
+typedef struct ambe_q ambe_q_t;
+
+void ambe_q_initialize (ambe_q_t * a);
+int ambe_q_put (ambe_q_t * a, const uint8_t * data);
+int ambe_q_get (ambe_q_t * a, uint8_t * data);
+
+
+
+#endif /* AMBE_Q_H_ */

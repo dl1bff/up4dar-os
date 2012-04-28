@@ -40,6 +40,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gcc_builtin.h"
 
 #include "up_dstar/audio_q.h"
+#include "up_dstar/ambe_q.h"
 
 
 
@@ -65,7 +66,7 @@ static uint32_t counter = 0;
 static audio_q_t * audio_output_q;
 static audio_q_t * audio_input_q;
 
-
+static ambe_q_t ambe_output_q;
 
 
 static unsigned short int chan_tx_data[24] =
@@ -114,29 +115,16 @@ static int16_t abuf_ptr;
 static int16_t encbuf[AUDIO_Q_TRANSFERLEN];
 
 
-unsigned char tmp_ambe_buf[9000];
-int tmp_ambe_write_buf_ptr = 0;
-int tmp_ambe_read_buf_ptr = 0;
+unsigned char tmp_ambe_buf[AMBE_Q_DATASIZE];
+
+int input_counter = 0;
+
 int ambe_encode = 0;
 static int ambe_encoder_state = 0;
 static int ambe_encoder_counter = 0;
 
 static int silence_counter = 0;
 
-static void set_silence(void)
-{
-	tmp_ambe_buf[0] = 0x9e;
-	tmp_ambe_buf[1] = 0x8d; 
-	tmp_ambe_buf[2] = 0x32;
-	tmp_ambe_buf[3] = 0x88;
-	tmp_ambe_buf[4] = 0x26;
-	tmp_ambe_buf[5] = 0x1a;
-	tmp_ambe_buf[6] = 0x3f;
-	tmp_ambe_buf[7] = 0x61;
-	tmp_ambe_buf[8] = 0xe8;
-	
-	tmp_ambe_write_buf_ptr = 9;
-}
 
 
 
@@ -238,11 +226,6 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	char buf_ready_rx = 1;
 	char buf_ready_tx = 1;
 
-/*	
-	int tx_ptr = 0;
-	extern unsigned char Sprache[];
-	#define	Anzahl_SprachBytes	(7830 + 200 * 9)
-*/
 
 	for( ;; )
 	{
@@ -316,47 +299,16 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 					{
 						chan_tx_data[11] = 0x8003; // decoder,  do not set rate again
 						
-						chan_tx_data[12] =	(tmp_ambe_buf[tmp_ambe_read_buf_ptr + 0] << 8) |
-											 tmp_ambe_buf[tmp_ambe_read_buf_ptr + 1];
-						chan_tx_data[13] =	(tmp_ambe_buf[tmp_ambe_read_buf_ptr + 2] << 8) |
-											 tmp_ambe_buf[tmp_ambe_read_buf_ptr + 3];					 
-						chan_tx_data[14] =	(tmp_ambe_buf[tmp_ambe_read_buf_ptr + 4] << 8) |
-											 tmp_ambe_buf[tmp_ambe_read_buf_ptr + 5];
-						chan_tx_data[15] =	(tmp_ambe_buf[tmp_ambe_read_buf_ptr + 6] << 8) |
-											 tmp_ambe_buf[tmp_ambe_read_buf_ptr + 7];
-						chan_tx_data[16] =	(tmp_ambe_buf[tmp_ambe_read_buf_ptr + 8] << 8);
 						
-						tmp_ambe_read_buf_ptr += 9;
-						
-						
-						
-						if ((tmp_ambe_read_buf_ptr >= ((sizeof tmp_ambe_buf) - 9))
-							 || (tmp_ambe_read_buf_ptr >= tmp_ambe_write_buf_ptr))
+						if (ambe_q_get (& ambe_output_q, (uint8_t *) (chan_tx_data + 12)) == 0)
 						{
-							tmp_ambe_read_buf_ptr = 0;
-							set_silence();
+							 // if buffer not empty set silence_counter
+							silence_counter = 200;  // output audio for another 200 samples
+													// after queue is empty
 						}
-						else
-						{
-							silence_counter = 200;
-						}
+						
 					}
 					
-					/*
-					
-					chan_tx_data[12] = (Sprache[tx_ptr + 0] << 8) | Sprache[tx_ptr + 1];
-					chan_tx_data[13] = (Sprache[tx_ptr + 2] << 8) | Sprache[tx_ptr + 3];
-					chan_tx_data[14] = (Sprache[tx_ptr + 4] << 8) | Sprache[tx_ptr + 5];
-					chan_tx_data[15] = (Sprache[tx_ptr + 6] << 8) | Sprache[tx_ptr + 7];
-					chan_tx_data[16] = (Sprache[tx_ptr + 8] << 8) ;
-					
-					tx_ptr += 9;
-					if (tx_ptr >= Anzahl_SprachBytes)
-					{
-						tx_ptr = 0;
-					}
-					
-					*/
 					break;
 			}
 		}
@@ -389,7 +341,6 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 				if ((b[i] & 0x000F0000) == AMBE_CS_CODEC)
 				{
 					put_sound_data(b[i] & 0x0000FFFF);
-					// wm8510_put_audio_sample( (int16_t) (b[i] & 0x0000FFFF));
 					
 					abuf[abuf_ptr] = (int16_t) (b[i] & 0x0000FFFF);
 					abuf_ptr ++;
@@ -426,25 +377,22 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 							case 13:
 							case 14:
 							case 15:
-								tmp_ambe_buf[tmp_ambe_write_buf_ptr] = (b[i] & 0x0000FF00) >> 8;
-								tmp_ambe_buf[tmp_ambe_write_buf_ptr+1] = (b[i] & 0x000000FF);
-								tmp_ambe_write_buf_ptr += 2;
+								tmp_ambe_buf[(ambe_encoder_counter - 12) << 1] = (b[i] & 0x0000FF00) >> 8;
+								tmp_ambe_buf[((ambe_encoder_counter - 12) << 1) + 1] = (b[i] & 0x000000FF);
 								break;
 							
 							case 16:
-								tmp_ambe_buf[tmp_ambe_write_buf_ptr] = (b[i] & 0x0000FF00) >> 8;
-								tmp_ambe_write_buf_ptr++;
+								tmp_ambe_buf[8] = (b[i] & 0x0000FF00) >> 8;
+								if (ambe_q_put(& ambe_output_q, tmp_ambe_buf) != 0) // queue full
+								{
+									ambe_stop_encode();
+								}
 								break;
 							case 23:
 								ambe_encoder_state = 0;
 								break;
 						}
 						break;
-					}
-					
-					if (tmp_ambe_write_buf_ptr >= ((sizeof tmp_ambe_buf) - 9))
-					{
-						ambe_stop_encode();
 					}
 					
 					} // if ambe_encode					
@@ -455,8 +403,6 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 			
 		}
 		
-		 
-		// AVR32_SPI0.tdr = 0x000A0000;
 	}
 } 
 
@@ -467,7 +413,6 @@ void ambe_start_encode(void)
 	{
 		ambe_encoder_state = 0;
 		ambe_encoder_counter = 0;
-		set_silence();
 		ambe_encode = 1;
 	}
 }
@@ -476,10 +421,15 @@ void ambe_stop_encode(void)
 {
 	if (ambe_encode != 0)
 	{
-		tmp_ambe_read_buf_ptr = 0;
 		ambe_encode = 0;
 	}
-}	
+}
+
+
+void ambe_input_data( const uint8_t * d)
+{
+	ambe_q_put ( & ambe_output_q, d );
+}
 
 
 
@@ -491,8 +441,9 @@ void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * 
 	audio_input_q = input_audio;
 	abuf_ptr = 0;
 	
+	ambe_q_initialize( & ambe_output_q );
+	
 	ambe_encode = 0;
-	set_silence();
 	
 	xTaskCreate( ambeTask, ( signed char * ) "AMBE", configMINIMAL_STACK_SIZE, NULL,
 		 tskIDLE_PRIORITY + 2 , ( xTaskHandle * ) NULL );

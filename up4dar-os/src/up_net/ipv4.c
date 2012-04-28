@@ -37,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipneigh.h"
 #include "ipv4.h"
 
+#include "up_dstar/ambe.h"
 
 
 unsigned char ipv4_addr[4] = { 192, 168, 1, 33 };
@@ -151,6 +152,28 @@ static void icmpv4_input (unsigned char * p, int len, unsigned char * ipv4_heade
 	
 	
 	
+static void udp_input (unsigned char * p, int len)
+{
+	// int src_port = (p[0] << 8) | p[1];
+	int dest_port = (p[2] << 8) | p[3];
+	int udp_length = (p[4] << 8) | p[5];
+	
+	if (udp_length > len)  // length invalid
+	   return;
+	
+	if (udp_length < 8)  // UDP header has at least 8 bytes
+	   return;
+	   
+	if (dest_port == 5555)
+	{
+		if (udp_length >= (8+9)) // accept packets to port 5555 with at least 9 data bytes
+		{
+			ambe_input_data( p + 8 );
+		}
+	}
+}	
+	
+	
 
 void ipv4_input (unsigned char * p, int len)
 {
@@ -196,6 +219,7 @@ void ipv4_input (unsigned char * p, int len)
 			icmpv4_input(p + header_len, total_len - header_len, p);
 			break;
 		case 17: // UDP
+			udp_input(p + header_len, total_len - header_len);
 			break;
 	}
 	
