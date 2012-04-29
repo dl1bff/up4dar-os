@@ -130,7 +130,7 @@ static int silence_counter = 0;
 
 static void put_sound_data( unsigned short d )
 {
-	char buf[10];
+	// char buf[10];
 	
 	sound_buf2[ sound_buf2_ptr ] = d;
 	
@@ -148,6 +148,7 @@ static void put_sound_data( unsigned short d )
 		
 		// vdisp_i2s(buf, 8, 10, 0, counter);
 		
+		/*
 		extern int audio_error;
 		
 		vdisp_i2s(buf, 8, 10, 0, audio_error);
@@ -157,6 +158,7 @@ static void put_sound_data( unsigned short d )
 		
 		vdisp_i2s(buf, 8, 10, 0, audio_max);
 		vdisp_prints_xy( 60, 48, VDISP_FONT_6x8, 0, buf );
+		*/
 		
 	}
 }

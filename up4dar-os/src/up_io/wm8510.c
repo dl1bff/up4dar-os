@@ -140,7 +140,7 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 			if (chip_init() == 0) // init successful
 			{
 				audio_state = 1;
-				vdisp_prints_xy(0, 40, VDISP_FONT_6x8, 0, "OK ");
+				// vdisp_prints_xy(0, 40, VDISP_FONT_6x8, 0, "OK ");
 				
 				AVR32_PDCA.channel[2].mr = AVR32_PDCA_HALF_WORD; // 16 bit transfer
 				AVR32_PDCA.channel[2].psr = AVR32_PDCA_PID_SSC_TX; // select peripherial
@@ -160,7 +160,7 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 			}
 			else
 			{
-				vdisp_prints_xy(0, 40, VDISP_FONT_6x8, 0, "ERR");
+				// vdisp_prints_xy(0, 40, VDISP_FONT_6x8, 0, "ERR");
 			}
 			break;
 			

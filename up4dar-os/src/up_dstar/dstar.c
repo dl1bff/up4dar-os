@@ -38,63 +38,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "rtclock.h"
 #include "phycomm.h"
 
+#include "ambe.h"
 
 
 
-
-
-// --------------------------------
-
-/*
-static int berechne_hub (unsigned char Mittelwert, unsigned char FrameSync[])
-{
-	register short Summe = 0;
-
-Summe += FrameSync[ 5] - Mittelwert;
-Summe += FrameSync[ 6] - Mittelwert;
-Summe += FrameSync[ 7] - Mittelwert;
-Summe += FrameSync[ 8] - Mittelwert;
-Summe += FrameSync[ 9] - Mittelwert;
-Summe += FrameSync[10] - Mittelwert;
-Summe += FrameSync[11] - Mittelwert;
-Summe += FrameSync[12] - Mittelwert;
-Summe += FrameSync[13] - Mittelwert;
-Summe += FrameSync[14] - Mittelwert;
-
-Summe += FrameSync[29] - Mittelwert;
-Summe += FrameSync[30] - Mittelwert;
-Summe += FrameSync[31] - Mittelwert;
-Summe += FrameSync[32] - Mittelwert;
-
-
-Summe += Mittelwert - FrameSync[41];
-Summe += Mittelwert - FrameSync[42];
-Summe += Mittelwert - FrameSync[43];
-Summe += Mittelwert - FrameSync[44];
-
-Summe += Mittelwert - FrameSync[71];
-Summe += Mittelwert - FrameSync[72];
-Summe += Mittelwert - FrameSync[73];
-Summe += Mittelwert - FrameSync[74];
-Summe += Mittelwert - FrameSync[75];
-Summe += Mittelwert - FrameSync[76];
-Summe += Mittelwert - FrameSync[77];
-Summe += Mittelwert - FrameSync[78];
-Summe += Mittelwert - FrameSync[79];
-Summe += Mittelwert - FrameSync[80];
-Summe += Mittelwert - FrameSync[81];
-Summe += Mittelwert - FrameSync[82];
-Summe += Mittelwert - FrameSync[83];
-Summe += Mittelwert - FrameSync[84];
-Summe += Mittelwert - FrameSync[85];
-Summe += Mittelwert - FrameSync[86];
-
-return  Summe/4;
-
-
-}
-
-*/
 
 static xQueueHandle dstarQueue;
 
@@ -131,8 +78,7 @@ static void mkPrintableString (char * data, int len)
 static char buf[40];
 
 
-static void printHeader( int ypos, unsigned char crc_result, unsigned char * header_data,
-	char * desc)
+static void printHeader( int ypos, unsigned char crc_result, const unsigned char * header_data )
 {
 	
 	memcpy(buf, header_data + 19, 8);
@@ -164,8 +110,8 @@ static void printHeader( int ypos, unsigned char crc_result, unsigned char * hea
 			vdisp_clear_rect (0, 0, 128, 36);
 			diagram_displayed = 0;
 		}
-		vdisp_prints_xy(0, 24, VDISP_FONT_6x8, 0, "UR:");
-		vdisp_prints_xy(18, 24, VDISP_FONT_6x8, 0, buf);
+		vdisp_prints_xy(74, 16, VDISP_FONT_4x6, 0, "UR:");
+		vdisp_prints_xy(86, 16, VDISP_FONT_4x6, 0, buf);
 	}
 	
 	
@@ -187,8 +133,8 @@ static void printHeader( int ypos, unsigned char crc_result, unsigned char * hea
 	}
 	else if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(0, 16, VDISP_FONT_6x8, 0, "RX:");
-		vdisp_prints_xy(18, 16, VDISP_FONT_6x8, 0, buf);
+		vdisp_prints_xy(0, 16, VDISP_FONT_4x6, 0, "RX:");
+		vdisp_prints_xy(12, 16, VDISP_FONT_4x6, 0, buf);
 	}
 	
 	
@@ -207,8 +153,26 @@ static void printHeader( int ypos, unsigned char crc_result, unsigned char * hea
 	}
 	else if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(66, 16, VDISP_FONT_6x8, 0, "/");
-		vdisp_prints_xy(74, 16, VDISP_FONT_6x8, 0, buf);
+		vdisp_prints_xy(48, 16, VDISP_FONT_4x6, 0, "/");
+		vdisp_prints_xy(52, 16, VDISP_FONT_4x6, 0, buf);
+	}
+	
+	memcpy(buf, header_data + 11, 8);
+	mkPrintableString(buf,8);
+	
+	if ((crc_result == 0) && (ypos == 9))
+	{
+		vdisp_prints_xy(0, 9, VDISP_FONT_4x6, 0, "RPT1:");
+		vdisp_prints_xy(20, 9, VDISP_FONT_4x6, 0, buf);
+	}
+	
+	memcpy(buf, header_data + 3, 8);
+	mkPrintableString(buf,8);
+	
+	if ((crc_result == 0) && (ypos == 9))
+	{
+		vdisp_prints_xy(74, 9, VDISP_FONT_4x6, 0, "RPT2:");
+		vdisp_prints_xy(94, 9, VDISP_FONT_4x6, 0, buf);
 	}
 }
 
@@ -264,7 +228,7 @@ static void processSDHeader( unsigned char len )
 	{
 		unsigned char res = checkSDHeaderCRC();
 		
-		printHeader(9, res, sdHeaderBuf, "Header from slow data channel:");
+		printHeader(9, res, sdHeaderBuf);
 		sdHeaderPos = 0;
 	}
 	
@@ -276,7 +240,7 @@ static void processSDHeader( unsigned char len )
 
 
 
-static void processSlowData( unsigned char sdPos, unsigned char * sd )
+static void processSlowData( unsigned char sdPos, const unsigned char * sd )
 {	
 	if (sdPos & 1)
 	{	
@@ -319,6 +283,7 @@ static void processSlowData( unsigned char sdPos, unsigned char * sd )
 
 static U32 voicePackets = 0;
 static U32 syncPackets = 0;
+
 
 static unsigned char dState = 0;
 
@@ -443,11 +408,6 @@ static void print_diagram(int mean_value)
 	vdisp_i2s(buf, 3, 10, 0, mean_value);
 	vdisp_prints_xy( 116, 14, VDISP_FONT_4x6, 0, buf );
 	
-	/*			
-	vdisp_set_pixel( 34, 20, 0, 0x0f, 3 );
-	vdisp_set_pixel( 34, 10, 0, 0x0f, 3 );
-	vdisp_set_pixel( 34, 30, 0, 0x0f, 3 );
-	*/
 }
 
 
@@ -483,7 +443,7 @@ static void processPacket(void)
 			if (dp.dataLen == 40)
 			{
 				
-				printHeader (5, dp.data[0], dp.data + 1, "Header from command 0x30:");
+				printHeader (5, dp.data[0], dp.data + 1); 
 				
 			}				
 			break;
@@ -551,8 +511,6 @@ static void processPacket(void)
 		case 0x33:
 			if (dp.dataLen == 4)
 			{
-				// dispPrintDecimalXY(0,5, dp.data[0]);
-				
 				processSlowData(dp.data[0], dp.data + 1);
 			}
 			break;
@@ -595,55 +553,9 @@ static void processPacket(void)
 					hub_min = hub;
 				}
 				
-				/*
-				vdisp_i2s(buf, 4, 10, 0, hub_max);
-				vdisp_prints_xy( 0, 20, VDISP_FONT_4x6, 0, buf );
-				vdisp_i2s(buf, 4, 10, 0, hub_min);
-				vdisp_prints_xy( 0, 26, VDISP_FONT_4x6, 0, buf );
-				*/
 				diagram_displayed = 1;
 				
 			} 
-			
-			/* else	if (dp.dataLen == FRAMESYNC_LEN)
-			{
-				int i;
-				int sum = 0;
-				
-				for (i=0; i < FRAMESYNC_LEN; i++)
-				{
-					frameSync[i] = dp.data[i];
-					sum += dp.data[i];
-				}					
-				
-				// vdisp_clear_rect (0, 0, 128, 48);
-				
-				sum /= FRAMESYNC_LEN;
-				
-				print_diagram(sum);
-				
-				char buf[5];
-				int hub = berechne_hub( sum & 0xFF, frameSync);
-				vdisp_i2s(buf, 4, 10, 0, hub);
-				vdisp_prints_xy( 0, 17, VDISP_FONT_4x6, 0, buf );
-				
-				if (hub > hub_max)
-				{
-					hub_max = hub;
-				}
-				
-				if (hub < hub_min)
-				{
-					hub_min = hub;
-				}
-				
-				vdisp_i2s(buf, 4, 10, 0, hub_max);
-				vdisp_prints_xy( 0, 10, VDISP_FONT_4x6, 0, buf );
-				vdisp_i2s(buf, 4, 10, 0, hub_min);
-				vdisp_prints_xy( 0, 24, VDISP_FONT_4x6, 0, buf );
-				
-				diagram_displayed = 1;
-			}  */
 			
 			break;
 			
@@ -684,7 +596,57 @@ static portTASK_FUNCTION( dstarRXTask, pvParameters )
 } 
 
 
+static U32 dcs_last_session = 0;
 
+
+void dstarProcessDCSPacket( const uint8_t * data )
+{
+	uint8_t buf[4];
+	
+	
+	int dcs_session = data[43] | (data[44] << 8);
+	
+	if (dcs_session != dcs_last_session)
+	{
+		dcs_last_session = dcs_session;
+		
+		sdHeaderPos = 0;
+		
+		vdisp_clear_rect (0, 0, 128, 64);
+		printHeader (5, 0, data + 4 );
+		
+	}
+	
+	int dcs_packets = data[58] | (data[59] << 8) | (data[60] << 16);
+	
+	int secs = dcs_packets / 50;
+			
+	int last_frame = 0;
+	
+		
+	if ((data[45] & 0x40) != 0)
+	{
+		last_frame = 1;
+	}			
+	else
+	{
+		ambe_input_data( data + 46);
+		
+		buf[0] = 0x70 ^ data[55];
+		buf[1] = 0x4F ^ data[56];
+		buf[2] = 0x93 ^ data[57];
+	
+		processSlowData( data[45], buf);
+	}		
+			
+	if (secs > 0)
+	{
+		vdisp_i2s((char *)buf, 3, 10, 0, secs);
+		vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, (last_frame == 0) ? 1 : 0, (char *) buf );
+		vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, (last_frame == 0) ? 1 : 0, "s" );
+	}	
+	
+}
 
 
 

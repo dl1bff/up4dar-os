@@ -42,15 +42,32 @@ static const uint8_t silence_data[AMBE_Q_DATASIZE] =
 
 
 
+int ambe_q_flush (ambe_q_t * a)
+{
+
+	if( xSemaphoreTake( a->mutex, 0 ) == pdTRUE )  // get Mutex, don't wait
+    {
+		a->count = 0;
+		a->in_ptr = 0;
+		a->out_ptr = 0;
+		a->state = 0;
+        xSemaphoreGive( a->mutex );
+    }
+	else
+	{
+		// should not happen: could not get Mutex
+		return 1;
+	}
+	
+	return 0;
+}
+
 
 void ambe_q_initialize( ambe_q_t * a )
 {
-	a->count = 0;
-	a->in_ptr = 0;
-	a->out_ptr = 0;
-	a->state = 0;
-	
 	a->mutex = xSemaphoreCreateMutex();
+	
+	ambe_q_flush( a );
 }
 
 

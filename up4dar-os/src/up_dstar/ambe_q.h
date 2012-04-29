@@ -52,7 +52,7 @@ typedef struct ambe_q ambe_q_t;
 void ambe_q_initialize (ambe_q_t * a);
 int ambe_q_put (ambe_q_t * a, const uint8_t * data);
 int ambe_q_get (ambe_q_t * a, uint8_t * data);
-
+int ambe_q_flush (ambe_q_t * a);
 
 
 #endif /* AMBE_Q_H_ */

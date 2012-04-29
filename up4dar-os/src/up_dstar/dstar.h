@@ -43,4 +43,6 @@ void dstarChangeMode(int m);
 
 void dstarResetCounters(void);
 
+void dstarProcessDCSPacket( const uint8_t * data );
+
 #endif /* DSTAR_H_ */

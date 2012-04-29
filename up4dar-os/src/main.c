@@ -202,10 +202,12 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 					
 						ambe_start_encode();
 						
+						/*
 						{
 							extern int audio_max;
 							audio_max = 0;
-						}							
+						}
+						*/							
 						break;			
 					}
 				}
@@ -249,7 +251,7 @@ const unsigned portBASE_TYPE uxNumOfLEDs = 2;
 		
 		if (uxLEDTask == 0)
 		{
-			pxLEDParameters->xFlashRate =  40;  // configTICK_RATE_HZ / 5;
+			pxLEDParameters->xFlashRate =  200;  // configTICK_RATE_HZ / 5;
 		}
 		else
 		{

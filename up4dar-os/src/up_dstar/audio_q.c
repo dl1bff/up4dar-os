@@ -42,10 +42,11 @@ void audio_q_initialize (audio_q_t * a)
 }
 
 
+/*
 int audio_error = 0;
 
 int audio_max = 0;
-
+*/
 
 void audio_q_put (audio_q_t * a,  const short * samples)
 {
@@ -57,10 +58,12 @@ void audio_q_put (audio_q_t * a,  const short * samples)
 		{
 			for (i=0; i < AUDIO_Q_TRANSFERLEN; i++)
 			{
+				/*
 				if (samples[i] > audio_max)
 				{
 					audio_max = samples[i];
 				}
+				*/
 				
 				a->buf[a->in_ptr] = samples[i];
 				a->in_ptr ++;
@@ -81,7 +84,7 @@ void audio_q_put (audio_q_t * a,  const short * samples)
 				}
 				a->count ++;
 				
-				audio_error ++;
+				// audio_error ++;
 			}
 			else if (a->count > (AUDIO_Q_BUFLEN - AUDIO_Q_TRANSFERLEN + 2)) // delete last sample
 			{
@@ -92,12 +95,12 @@ void audio_q_put (audio_q_t * a,  const short * samples)
 				}
 				a->count --;
 				
-				audio_error ++;
+				// audio_error ++;
 			}
 		}
 		else
 		{
-				audio_error ++;
+				// audio_error ++;
 		}			
         xSemaphoreGive( a->mutex );
     }

@@ -25,6 +25,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */ 
 
 
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
+
 
 #include <asf.h>
 
@@ -37,7 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipneigh.h"
 #include "ipv4.h"
 
-#include "up_dstar/ambe.h"
+#include "up_dstar/dstar.h"
 
 
 unsigned char ipv4_addr[4] = { 192, 168, 1, 33 };
@@ -166,9 +170,13 @@ static void udp_input (unsigned char * p, int len)
 	   
 	if (dest_port == 5555)
 	{
-		if (udp_length >= (8+9)) // accept packets to port 5555 with at least 9 data bytes
+		if (udp_length >= (8+100)) // accept packets to port 5555 with at least 100 data bytes
 		{
-			ambe_input_data( p + 8 );
+			if (memcmp(p + 8, "0001", 4) == 0)  // first four bytes "0001"
+			{
+				dstarProcessDCSPacket( p + 8 );
+			}
+			
 		}
 	}
 }	
