@@ -110,8 +110,8 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 			vdisp_clear_rect (0, 0, 128, 36);
 			diagram_displayed = 0;
 		}
-		vdisp_prints_xy(74, 16, VDISP_FONT_4x6, 0, "UR:");
-		vdisp_prints_xy(86, 16, VDISP_FONT_4x6, 0, buf);
+		vdisp_prints_xy(74, 18, VDISP_FONT_4x6, 0, "UR:");
+		vdisp_prints_xy(86, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
 	
@@ -133,8 +133,8 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	}
 	else if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(0, 16, VDISP_FONT_4x6, 0, "RX:");
-		vdisp_prints_xy(12, 16, VDISP_FONT_4x6, 0, buf);
+		vdisp_prints_xy(0, 18, VDISP_FONT_4x6, 0, "RX:");
+		vdisp_prints_xy(12, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
 	
@@ -153,8 +153,8 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	}
 	else if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(48, 16, VDISP_FONT_4x6, 0, "/");
-		vdisp_prints_xy(52, 16, VDISP_FONT_4x6, 0, buf);
+		vdisp_prints_xy(48, 18, VDISP_FONT_4x6, 0, "/");
+		vdisp_prints_xy(52, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
 	memcpy(buf, header_data + 11, 8);
@@ -162,8 +162,8 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	
 	if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(0, 9, VDISP_FONT_4x6, 0, "RPT1:");
-		vdisp_prints_xy(20, 9, VDISP_FONT_4x6, 0, buf);
+		vdisp_prints_xy(0, 9, VDISP_FONT_6x8, 0, "R1:");
+		vdisp_prints_xy(18, 9, VDISP_FONT_6x8, 0, buf);
 	}
 	
 	memcpy(buf, header_data + 3, 8);
@@ -171,8 +171,8 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	
 	if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(74, 9, VDISP_FONT_4x6, 0, "RPT2:");
-		vdisp_prints_xy(94, 9, VDISP_FONT_4x6, 0, buf);
+		vdisp_prints_xy(74, 11, VDISP_FONT_4x6, 0, "RPT2:");
+		vdisp_prints_xy(94, 11, VDISP_FONT_4x6, 0, buf);
 	}
 }
 
@@ -614,7 +614,7 @@ void dstarProcessDCSPacket( const uint8_t * data )
 		
 		vdisp_clear_rect (0, 0, 128, 64);
 		printHeader (5, 0, data + 4 );
-		
+		rtclock_disp_xy(84, 0, 2, 1);
 	}
 	
 	int dcs_packets = data[58] | (data[59] << 8) | (data[60] << 16);

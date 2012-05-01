@@ -33,11 +33,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 void eth_init(unsigned char ** p);
 // void eth_send_frame (void);
 void eth_send_vdisp_frame (void);
+void eth_send_dcs_frame (void);
 
+extern uint8_t dcs_frame[];
 
 void eth_send_raw ( unsigned char * b, int len );
 
 void eth_recv_frame (void);
+
 
 extern U32 eth_counter;
 extern U32 eth_counter2;

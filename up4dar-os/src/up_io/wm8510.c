@@ -74,9 +74,9 @@ static int chip_init(void)
 	
 	if (send_wm8510(  14, 0x1E8) != 0) goto error;  // enable ADCOSR128, enable HPF  327Hz
 	
-	if (send_wm8510(  33, 0x07B) != 0) goto error;  // ALC hold 170ms
+	if (send_wm8510(  33, 0x071) != 0) goto error;  // ALC hold 170ms, target level -27dBFS
 	
-	if (send_wm8510(  34, 0x054) != 0) goto error;  // ALC attack 1.6ms, decay 13ms
+	 // if (send_wm8510(  34, 0x054) != 0) goto error;  // ALC attack 1.6ms, decay 13ms
  	
 	if (send_wm8510(  10, 0x048) != 0) goto error;  // DACMU, DACOSR128
 		

@@ -58,14 +58,19 @@ static const gpio_map_t switch_gpio_map =
 {
 	{ AVR32_PIN_PA28, GPIO_DIR_INPUT | GPIO_PULL_UP },	// PTT
 	{ AVR32_PIN_PA18, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW1
-	{ AVR32_PIN_PA19, GPIO_DIR_INPUT | GPIO_PULL_UP },  // SW2
-	{ AVR32_PIN_PA20, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW3
-	{ AVR32_PIN_PA21, GPIO_DIR_INPUT | GPIO_PULL_UP },  // SW4
+	{ AVR32_PIN_PA19, GPIO_DIR_INPUT | GPIO_PULL_UP },  // SW2 
+	{ AVR32_PIN_PA20, GPIO_DIR_INPUT                },	// SW3 has external pull up
+	{ AVR32_PIN_PA21, GPIO_DIR_INPUT                },  // SW4 special analog input
 	{ AVR32_PIN_PA22, GPIO_DIR_INPUT | GPIO_PULL_UP },	// SW5
 	{ AVR32_PIN_PA23, GPIO_DIR_INPUT | GPIO_PULL_UP }   // SW6
 		
 };
 
+
+static const gpio_map_t adc_gpio_map =
+{
+	{ AVR32_ADC_AD_0_PIN, AVR32_ADC_AD_0_FUNCTION }  // SW4, PA21	
+};
 
 static const gpio_map_t	ambe_pin_gpio_map =
 {
@@ -194,6 +199,11 @@ void board_init(void)
 		gpio_configure_pin( switch_gpio_map[i].pin, switch_gpio_map[i].function);
 	}
 	
+	// ADC
+	
+	gpio_enable_module( adc_gpio_map, sizeof( adc_gpio_map ) / sizeof( adc_gpio_map[0] ) );
+	
+	
 	// AMBE interface
 	
 	gpio_enable_gpio( ambe_pin_gpio_map, sizeof( ambe_pin_gpio_map ) / sizeof( ambe_pin_gpio_map[0] ) );
@@ -204,6 +214,11 @@ void board_init(void)
 	}
 	
 	gpio_enable_module( ambe_spi_gpio_map, sizeof( ambe_spi_gpio_map ) / sizeof( ambe_spi_gpio_map[0] ) );
+	
+	AVR32_ADC.mr = 0x0F031E20;     // SHTIM = 15,  STARTUP = 3, PRESCAL = 30, SLEEP Mode  
+	AVR32_ADC.cher = 1; // enable ADC0
+	AVR32_ADC.cr = 2; // start conversion
+	
 	
 	
 	// I2C

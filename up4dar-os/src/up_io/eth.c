@@ -81,6 +81,28 @@ static unsigned char vdisp_frame[1024 + 42 + 320] =
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
 };
 
+uint8_t dcs_frame[42 + 100] =
+	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x01,
+		0x08, 0x00,  // IPv4
+		0x45, 0x00, // v4, DSCP
+		0x00, 0x00, // ip length (will be set later)
+		0x01, 0x01, // ID
+		0x40, 0x00,  // DF don't fragment, offset = 0
+		0x40, // TTL
+		0x11, // UDP = 17
+		0x00, 0x00,  // header chksum (will be calculated later)
+		192, 168, 1, 33,  // source
+		192, 168, 1, 255,  // destination
+		0xb0, 0xb0,  // source port
+		0x40, 0x01,  // destination port 16385
+		0x00, 0x00,    //   UDP length (will be set later)
+		0x00, 0x00,  // UDP chksum (0 = no checksum)
+		
+		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
+};
+
+
 static unsigned long tx_buffer_q[2];
 
 #define RECV_BUF_COUNT  64
@@ -178,6 +200,7 @@ void eth_init(unsigned char ** p)
 		vdisp_frame[i+7] = 0;
 	}
 	
+	// vdisp_frame
 	
 	int udp_length = 1024 + 320 + 8;
 	
@@ -198,6 +221,31 @@ void eth_init(unsigned char ** p)
 	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
 	
 	((unsigned short *) (vdisp_frame + 14)) [5] = sum; // checksumme setzen
+	
+	
+	// dcs_frame
+	
+	udp_length = 100 + 8;
+	
+	((unsigned short *) (dcs_frame + 14)) [1] = udp_length + 20; // IP len
+	
+	((unsigned short *) (dcs_frame + 14)) [12] = udp_length; // UDP len
+	
+	sum = 0;
+	
+	for (i=0; i < 10; i++) // 20 Byte Header
+	{
+		if (i != 5)  // das checksum-feld weglassen
+		{
+			sum += ((unsigned short *) (dcs_frame + 14)) [i];
+		}
+	}
+	
+	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	
+	((unsigned short *) (dcs_frame + 14)) [5] = sum; // checksumme setzen
+	
+	
 }
 
 
@@ -466,3 +514,10 @@ void eth_send_vdisp_frame (void)
 
 }
 
+
+void eth_send_dcs_frame (void)
+{
+
+  eth_send_raw( dcs_frame, sizeof dcs_frame );  
+
+}

@@ -67,6 +67,7 @@ static audio_q_t * audio_output_q;
 static audio_q_t * audio_input_q;
 
 static ambe_q_t ambe_output_q;
+static ambe_q_t * ambe_input_q;
 
 
 static unsigned short int chan_tx_data[24] =
@@ -140,7 +141,8 @@ static void put_sound_data( unsigned short d )
 	{
 		memcpy( sound_buf, sound_buf2, sizeof sound_buf2 );
 		sound_buf2_ptr = 0;
-		eth_send_vdisp_frame();
+		
+		//eth_send_vdisp_frame();
 		
 		chan_tx_state = 1; // send new request to AMBE
 		
@@ -282,7 +284,18 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 			
 			for (i=0; i < BUF_SIZE; i+=4)  // CODEC part of the buffer
 			{
-				b[i] = AMBE_CS_CODEC | ((unsigned short ) encbuf[ (i >> 2) ]);
+				short sample = encbuf[ (i >> 2) ];
+				
+				if (sample > 3276)
+				{
+					sample = 3276;
+				}
+				else if (sample < -3276)
+				{
+					sample = -3276;
+				}
+				
+				b[i] = AMBE_CS_CODEC | ((unsigned short ) (sample * 10)); // x10 = 10dB Gain
 			}				
 			
 			switch (chan_tx_state)
@@ -385,7 +398,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 							
 							case 16:
 								tmp_ambe_buf[8] = (b[i] & 0x0000FF00) >> 8;
-								if (ambe_q_put(& ambe_output_q, tmp_ambe_buf) != 0) // queue full
+								if (ambe_q_put(ambe_input_q, tmp_ambe_buf) != 0) // queue full
 								{
 									ambe_stop_encode();
 								}
@@ -416,6 +429,7 @@ void ambe_start_encode(void)
 		ambe_encoder_state = 0;
 		ambe_encoder_counter = 0;
 		ambe_encode = 1;
+		vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 1, " TX " );
 	}
 }
 
@@ -424,6 +438,7 @@ void ambe_stop_encode(void)
 	if (ambe_encode != 0)
 	{
 		ambe_encode = 0;
+		vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 0, "    " );
 	}
 }
 
@@ -435,7 +450,8 @@ void ambe_input_data( const uint8_t * d)
 
 
 
-void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio )
+void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio,
+		ambe_q_t * microphone )
 {
 	sound_buf = (unsigned short *)  (pixelBuf + 1024);
 
@@ -444,6 +460,8 @@ void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * 
 	abuf_ptr = 0;
 	
 	ambe_q_initialize( & ambe_output_q );
+	
+	ambe_input_q = microphone;
 	
 	ambe_encode = 0;
 	

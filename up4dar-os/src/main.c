@@ -49,6 +49,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_dstar/audio_q.h"
 
+#include "gcc_builtin.h"
+
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
 
@@ -60,6 +62,8 @@ U32 errorCounter = 0;
 
 audio_q_t  audio_tx_q;
 audio_q_t  audio_rx_q;
+
+ambe_q_t microphone;
 
 
 /* Structure used to pass parameters to the LED tasks. */
@@ -87,6 +91,7 @@ static U32 counter_ROVR = 0;
 */
 
 
+static char tmp_buf[6];
 
 
 
@@ -103,8 +108,9 @@ static void set_pwm(void)
 }
 
 
+#define NUMBER_OF_KEYS  7
 
-static int touchKeyCounter[6] = { 0,0,0,0,0,0 };
+static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0, 0 };
 
 static void vParTestToggleLED( portBASE_TYPE uxLED ) 
 {
@@ -122,18 +128,18 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			// eth_send_vdisp_frame();
 	
-			const int pins[7] = {
+			const int pins[NUMBER_OF_KEYS] = {
 				AVR32_PIN_PA18,
 				AVR32_PIN_PA19,
 				AVR32_PIN_PA20,
-				AVR32_PIN_PA21,
+				AVR32_PIN_PA28, // SW3 -> analog channel
 				AVR32_PIN_PA22,
 				AVR32_PIN_PA23,
 				AVR32_PIN_PA28
 			};
 			int i;
 				
-			for (i=0; i < ((sizeof pins) / (sizeof pins[0])); i++)
+			for (i=0; i < NUMBER_OF_KEYS; i++)
 			{
 				if (gpio_get_pin_value(pins[i]) == 0)
 				{
@@ -143,10 +149,12 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 				{
 					touchKeyCounter[i] = 0;
 					
+					/*
 					if (i==6)  // PTT off
 					{
 						ambe_stop_encode();
 					}
+					*/
 				}					
 					
 				if ((touchKeyCounter[i] == 2) && (tx_active == 0))
@@ -173,12 +181,14 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
 						dstarChangeMode(4);
 						break;
-										
+					
+					/*					
 					case 3:
 						vdisp_clear_rect (0, 0, 128, 64);
 						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
 						dstarChangeMode(2);
 						break;
+						*/
 							
 					case 4:
 						/* vdisp_clear_rect (0, 0, 128, 64);
@@ -198,9 +208,10 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 						touchKeyCounter[i] = 0;
 						break;
 						
-					case 6: // PTT
+						
+					// case 6: // PTT
 					
-						ambe_start_encode();
+					//	ambe_start_encode();
 						
 						/*
 						{
@@ -208,7 +219,7 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 							audio_max = 0;
 						}
 						*/							
-						break;			
+					//	break;			
 					}
 				}
 
@@ -224,8 +235,29 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			x_counter ++;
 			
 		
-			rtclock_disp_xy(84, 0, x_counter & 0x02, 1);
+			// rtclock_disp_xy(84, 0, x_counter & 0x02, 1);
+			rtclock_disp_xy(84, 0, 2, 1);
 			
+			{
+			int v = AVR32_ADC.cdr0;
+			
+			v *= 330 * 430;  // 3.3V , r1+r2 = 43k
+			v /= 1023 * 56;  // inputmax=1023, r1=5.6k
+			
+			vdisp_i2s( tmp_buf, 4, 10, 0, v);
+			tmp_buf[3] = tmp_buf[2];
+			tmp_buf[2] = '.';
+			tmp_buf[4] = 'V';
+			tmp_buf[5] = 0;
+			
+			if (v > 400)  // more than 4 volts
+			{
+				vdisp_prints_xy( 50, 0, VDISP_FONT_4x6, 0, tmp_buf );
+			}
+			
+			}			
+			
+			AVR32_ADC.cr = 2; // start conversion
 			
 		break;
 	}
@@ -517,6 +549,144 @@ static void vLCDTask( void *pvParameters )
 
 
 
+static int dcs_tx_counter = 0;
+static int dcs_frame_counter = 0;
+
+static void send_dcs (int session_id, int last_frame)
+{
+	uint8_t * d = dcs_frame + 42; // skip ip+udp header
+	
+	memcpy(d, "0001", 4);
+	
+	d[4] = 0;  // flags
+	d[5] = 0;
+	d[6] = 0;
+	
+	memcpy(d + 7, "DCS001 SDCS001 SCQCQCQ  DL1BFF D    ", 36); // header
+	
+	d[43] = (session_id >> 8) & 0xFF;
+	d[44] = session_id & 0xFF;
+	
+	d[45] = dcs_frame_counter | ((last_frame != 0) ? 0x40 : 0);
+	
+	d[58] = dcs_tx_counter & 0xFF;
+	d[59] = (dcs_tx_counter >> 8) & 0xFF;
+	d[60] = (dcs_tx_counter >> 16) & 0xFF;
+	
+	d[61] = 0x01;
+	
+	if (last_frame != 0)
+	{
+		d[55] = 0x55;
+		d[56] = 0x55;
+		d[57] = 0x55;
+	}
+	else
+	{
+		if (dcs_frame_counter == 0) // sync
+		{
+			d[55] = 0x55;
+			d[56] = 0x2d;
+			d[57] = 0x16;
+		}
+		else
+		{
+			d[55] = 0x16;
+			d[56] = 0x29;
+			d[57] = 0xf5;
+		}
+	}
+	
+	eth_send_dcs_frame();
+	
+	dcs_frame_counter ++;
+	
+	if (dcs_frame_counter >= 21)
+	{
+		dcs_frame_counter = 0;
+	}
+	
+	dcs_tx_counter ++;
+	
+}
+
+
+static void vTXTask( void *pvParameters )
+{
+	int tx_state = 0;
+	
+	int session_id = 5555;
+
+	for(;;)
+	{
+		switch(tx_state)
+		{
+		case 0:  // PTT off
+			if (gpio_get_pin_value(AVR32_PIN_PA28) == 0)  // PTT pressed
+			{
+				tx_state = 1;
+				ambe_start_encode();
+				vTaskDelay(100); // pre-buffer audio
+				dcs_frame_counter = 0;
+				dcs_tx_counter = 0;
+				session_id ++;
+			}
+			else
+			{
+				vTaskDelay(100); // watch for PTT every 100ms
+			}
+			break;
+			
+		case 1:  // PTT on
+			if (gpio_get_pin_value(AVR32_PIN_PA28) != 0)  // PTT released
+			{
+				tx_state = 2;
+				ambe_stop_encode();
+			}
+			else
+			{
+				if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue unexpectedly empty
+				{
+					ambe_stop_encode();
+					send_dcs( session_id, 1); // send end frame
+					tx_state = 3; // wait for PTT release
+				}					
+				else
+				{
+					send_dcs(  session_id, 0); // send normal frame
+					vTaskDelay(20); // wait 20ms
+				}
+			}
+			break;
+				
+		case 2: // PTT off, drain microphone data
+			if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue empty
+			{
+				send_dcs( session_id, 1); // send end frame
+				tx_state = 0; // wait for PTT
+			}
+			else
+			{
+				send_dcs(  session_id, 0); // send normal frame
+				vTaskDelay(20); // wait 20ms
+			}
+			break;
+		
+		case 3: // PTT on, wait for release
+			if (gpio_get_pin_value(AVR32_PIN_PA28) != 0)  // PTT released
+			{
+				tx_state = 0;
+			}
+			else
+			{
+				vTaskDelay(100); // watch for PTT every 100ms
+			}
+			break;
+		}
+	}		
+	
+}	
+
 
 int main (void)
 {
@@ -557,9 +727,13 @@ int main (void)
 	audio_q_initialize(& audio_tx_q);
 	audio_q_initialize(& audio_rx_q);
 	
-	ambeInit(pixelBuf, & audio_tx_q, & audio_rx_q);
+	ambe_q_initialize(& microphone);
+	
+	ambeInit(pixelBuf, & audio_tx_q, & audio_rx_q, & microphone);
 	
 	wm8510Init( & audio_tx_q, & audio_rx_q );
+	
+	xTaskCreate( vTXTask, (signed char *) "TX", ledSTACK_SIZE, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	vTaskStartScheduler();
   
