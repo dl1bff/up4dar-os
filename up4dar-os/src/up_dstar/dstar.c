@@ -463,7 +463,12 @@ static void processPacket(void)
 						vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 1, buf );
 						vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, 1, "s" );
 					}
-				}					
+				}
+				
+				if ( (dp.data[0] == 0x20) && (dp.dataLen >= 37) )
+				{
+					ambe_input_data_sd( dp.data + 1 );
+				}				
 			}				
 			break;
 		case 0x32:

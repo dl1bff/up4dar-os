@@ -108,14 +108,6 @@ static void set_pwm(void)
 }
 
 
-// #define FWUPLOAD_BUTTON 1
-
-#if defined(FWUPLOAD_BUTTON)
-
-
-#include "phy_firmware.h"
-
-static unsigned char fw_data[3];
 
 #define DLE 0x10
 #define STX 0x02
@@ -147,6 +139,117 @@ static void send_cmd(const char* Befehl, const short size){
 	
 	phyCommSend(buf, ind);
 }
+
+
+static const char tx_on[1] = {0x10};
+static char header[40];
+
+static char send_voice[11];
+static char send_data [ 4];
+
+static const char YOUR[9] = "CQCQCQ  ";
+static const char RPT2[9] = "DB0DF  G";
+static const char RPT1[9] = "DB0DF  B";
+static const char MY1[9]  = "DL1BFF  ";
+static const char MY2[5]  = "2012";
+
+static int phy_frame_counter = 0;
+
+static void phy_start_tx(void)
+{
+
+	// Schalte UP4DAR auf Senden um
+	
+    send_cmd(tx_on, 1);
+	
+	// Bereite einen Header vor
+	
+	header[0] = 0x20;
+	header[1] = (					// "1st control byte"
+				  (1 << 6)	// Setze den Repeater-Flag
+				);
+				
+	
+	
+	header[2] = 0x0;				// "2nd control byte"
+	header[3] = 0x0;				// "3rd control byte"
+	
+	for (short i=0; i<8; ++i){
+		header[4+i] = RPT2[i];
+	}
+	
+	for (short i=0; i<8; ++i){
+		header[12+i] = RPT1[i];
+	}
+	
+	for (short i=0; i<8; ++i){
+		header[20+i] = YOUR[i];
+	}
+	
+	for (short i=0; i<8; ++i){
+		header[28+i] = MY1[i];
+	}
+	
+	for (short i=0; i<4; ++i){
+		header[36+i] = MY2[i];
+	}
+	
+	// Bis zu 70ms kann man sich Zeit lassen, bevor die Header-Daten uebergeben werden.
+	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhängig.
+	//usleep(70000);
+	
+	// vTaskDelay (50); // 50ms
+	
+	send_cmd(header, 40);
+	
+	phy_frame_counter = 0;
+}
+
+
+
+static void send_phy ( const unsigned char * d )
+{
+	send_voice[0] = 0x21;
+	send_voice[1] = 0x01;
+	for (short k=0; k<9; ++k)
+		send_voice[2+k] = d[k];
+	send_cmd(send_voice, 11);
+
+	if (phy_frame_counter > 0)
+	{
+		send_data[0] = 0x22;
+		send_data[1] = 0x66;
+		send_data[2] = 0x66;
+		send_data[3] = 0x66;
+		send_cmd(send_data, 4);
+	}
+	
+	phy_frame_counter++;
+	
+	if (phy_frame_counter >= 21)
+	{
+		phy_frame_counter = 0;
+	}		
+}	
+	
+
+
+
+
+
+
+
+
+// #define FWUPLOAD_BUTTON 1
+
+#if defined(FWUPLOAD_BUTTON)
+
+
+#include "phy_firmware.h"
+
+static unsigned char fw_data[3];
+
+
 
 static void fw_upload(void)
 {
@@ -277,8 +380,10 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 										
 					case 2:
 						vdisp_clear_rect (0, 0, 128, 64);
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
-						dstarChangeMode(4);
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
+						dstarChangeMode(2);
+						// vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
+						// dstarChangeMode(4);
 						break;
 					
 					/*					
@@ -725,6 +830,7 @@ static void vTXTask( void *pvParameters )
 			{
 				tx_state = 1;
 				ambe_start_encode();
+				phy_start_tx();
 				vTaskDelay(100); // pre-buffer audio
 				dcs_frame_counter = 0;
 				dcs_tx_counter = 0;
@@ -747,12 +853,14 @@ static void vTXTask( void *pvParameters )
 				if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue unexpectedly empty
 				{
 					ambe_stop_encode();
-					send_dcs( session_id, 1); // send end frame
+					// send_dcs( session_id, 1); // send end frame
+					send_phy ( dcs_frame + (42 + 46) );
 					tx_state = 3; // wait for PTT release
 				}					
 				else
 				{
-					send_dcs(  session_id, 0); // send normal frame
+					// send_dcs(  session_id, 0); // send normal frame
+					send_phy ( dcs_frame + (42 + 46) );
 					vTaskDelay(20); // wait 20ms
 				}
 			}
@@ -761,12 +869,14 @@ static void vTXTask( void *pvParameters )
 		case 2: // PTT off, drain microphone data
 			if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue empty
 			{
-				send_dcs( session_id, 1); // send end frame
+				// send_dcs( session_id, 1); // send end frame
+				send_phy ( dcs_frame + (42 + 46) );
 				tx_state = 0; // wait for PTT
 			}
 			else
 			{
-				send_dcs(  session_id, 0); // send normal frame
+				// send_dcs(  session_id, 0); // send normal frame
+				send_phy ( dcs_frame + (42 + 46) );
 				vTaskDelay(20); // wait 20ms
 			}
 			break;

@@ -38,5 +38,6 @@ void ambe_stop_encode(void);
 
 
 void ambe_input_data( const uint8_t * d);
+void ambe_input_data_sd( const uint8_t * d);
 
 #endif /* AMBE_H_ */

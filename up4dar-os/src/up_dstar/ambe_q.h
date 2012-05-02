@@ -36,7 +36,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "semphr.h"
 
 #define AMBE_Q_DATASIZE  9
-#define AMBE_Q_BUFLEN  (AMBE_Q_DATASIZE * 100)
+
+#define AMBE_Q_DATASIZE_SD  (AMBE_Q_DATASIZE * 4)
+
+#define AMBE_Q_BUFLEN  (AMBE_Q_DATASIZE_SD * 50)
 
 struct ambe_q {
 	uint8_t buf[AMBE_Q_BUFLEN];
@@ -53,6 +56,7 @@ void ambe_q_initialize (ambe_q_t * a);
 int ambe_q_put (ambe_q_t * a, const uint8_t * data);
 int ambe_q_get (ambe_q_t * a, uint8_t * data);
 int ambe_q_flush (ambe_q_t * a);
-
+int ambe_q_put_sd (ambe_q_t * a, const uint8_t * data);
+int ambe_q_get_sd (ambe_q_t * a, uint8_t * data );
 
 #endif /* AMBE_Q_H_ */

@@ -70,7 +70,7 @@ static ambe_q_t ambe_output_q;
 static ambe_q_t * ambe_input_q;
 
 
-static unsigned short int chan_tx_data[24] =
+static unsigned short int chan_tx_data[60] =
   {
 	0x13ec,
 	0x0000,
@@ -97,6 +97,48 @@ static unsigned short int chan_tx_data[24] =
 	0x261a,
 	0x3f61,
 	0xe800,
+	0x0000,
+	
+	0x0000,  
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	
+	0x0000,  
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	
+	0x0000,  
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	
+	0x0000,  
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	
+	0x0000,  
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
+		
+	0x0000,  
+	0x0000,
+	0x0000,
+	0x0000,
+	0x0000,
 	0x0000,
 	
 	0x0000,  
@@ -266,9 +308,15 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 						b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) ];
 						break;
 					case 2:
-						if ((i >> 2) < 8)
+						b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) + 16 ];
+						break;
+					case 3:
+						b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) + 32 ];
+						break;
+					case 4:
+						if ((i >> 2) < 12)
 						{
-							b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) + 16 ];
+							b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) + 48 ];
 						}
 						else
 						{
@@ -303,19 +351,30 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 				case 1:
 					chan_tx_state = 2;
 					break;
-				case 2:					
+				case 2:
+					chan_tx_state = 3;
+					break;
+				case 3:
+					chan_tx_state = 4;
+					break;
+				case 4:					
 					chan_tx_state = 0;
 					
 					if (ambe_encode == 1)
 					{
 						chan_tx_data[11] = 0x8007; // encoder
+						
+						for (i=12; i < 60; i++)
+						{
+							chan_tx_data[i] = 0x0000;
+						}
 					}
 					else
 					{
 						chan_tx_data[11] = 0x8003; // decoder,  do not set rate again
 						
 						
-						if (ambe_q_get (& ambe_output_q, (uint8_t *) (chan_tx_data + 12)) == 0)
+						if (ambe_q_get_sd (& ambe_output_q, (uint8_t *) (chan_tx_data + 12)) == 0)
 						{
 							 // if buffer not empty set silence_counter
 							silence_counter = 200;  // output audio for another 200 samples
@@ -403,7 +462,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 									ambe_stop_encode();
 								}
 								break;
-							case 23:
+							case 59:
 								ambe_encoder_state = 0;
 								break;
 						}
@@ -448,7 +507,10 @@ void ambe_input_data( const uint8_t * d)
 	ambe_q_put ( & ambe_output_q, d );
 }
 
-
+void ambe_input_data_sd( const uint8_t * d)
+{
+	ambe_q_put_sd ( & ambe_output_q, d );
+}
 
 void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio,
 		ambe_q_t * microphone )

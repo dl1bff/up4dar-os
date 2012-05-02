@@ -41,6 +41,34 @@ static const uint8_t silence_data[AMBE_Q_DATASIZE] =
  { 0x9e, 0x8d, 0x32, 0x88, 0x26, 0x1a, 0x3f, 0x61, 0xe8 };
 
 
+static void expand_to_sd_data( uint8_t * sd_data, const uint8_t * inp_data)
+{
+	int i;
+	for (i=0; i < AMBE_Q_DATASIZE; i++)
+	{
+		uint8_t d = inp_data[i];
+		sd_data[(i << 2) + 0] = ((d & 0x80) ? 0xF0 : 0) | ((d & 0x40) ? 0x0F : 0);
+		sd_data[(i << 2) + 1] = ((d & 0x20) ? 0xF0 : 0) | ((d & 0x10) ? 0x0F : 0);
+		sd_data[(i << 2) + 2] = ((d & 0x08) ? 0xF0 : 0) | ((d & 0x04) ? 0x0F : 0);
+		sd_data[(i << 2) + 3] = ((d & 0x02) ? 0xF0 : 0) | ((d & 0x01) ? 0x0F : 0);
+	}
+}
+
+static void reduce_sd_data( uint8_t * data, const uint8_t * sd_data)
+{
+	int i;
+	for (i=0; i < AMBE_Q_DATASIZE; i++)
+	{
+		data[i] =
+			 (sd_data[(i << 2) + 0] & 0x80)       |  ((sd_data[(i << 2) + 0] & 0x08) << 3) |
+			((sd_data[(i << 2) + 1] & 0x80) >> 2) |  ((sd_data[(i << 2) + 1] & 0x08) << 1) |
+			((sd_data[(i << 2) + 2] & 0x80) >> 4) |  ((sd_data[(i << 2) + 2] & 0x08) >> 1) |
+			((sd_data[(i << 2) + 3] & 0x80) >> 6) |  ((sd_data[(i << 2) + 3] & 0x08) >> 3);
+	}
+}
+
+
+
 
 int ambe_q_flush (ambe_q_t * a)
 {
@@ -71,26 +99,26 @@ void ambe_q_initialize( ambe_q_t * a )
 }
 
 
-int ambe_q_put (ambe_q_t * a,  const uint8_t * data)
+int ambe_q_put_sd (ambe_q_t * a,  const uint8_t * data)
 {
 	int ret = 0;
 	
 	if( xSemaphoreTake( a->mutex, 0 ) == pdTRUE )  // get Mutex, don't wait
     {
-		if ((AMBE_Q_BUFLEN - a->count) >= AMBE_Q_DATASIZE) // there is space in the buffer
+		if ((AMBE_Q_BUFLEN - a->count) >= AMBE_Q_DATASIZE_SD) // there is space in the buffer
 		{
-			memcpy (a->buf + a->in_ptr, data, AMBE_Q_DATASIZE);
+			memcpy (a->buf + a->in_ptr, data, AMBE_Q_DATASIZE_SD);
 			
-			a->in_ptr += AMBE_Q_DATASIZE;
+			a->in_ptr += AMBE_Q_DATASIZE_SD;
 			
 			if (a->in_ptr >= AMBE_Q_BUFLEN)
 			{
 				a->in_ptr = 0;
 			}
 			
-			a->count += AMBE_Q_DATASIZE;
+			a->count += AMBE_Q_DATASIZE_SD;
 			
-			if (a->count >= (AMBE_Q_DATASIZE * 3)) // if 3 ambe records are in memory...
+			if (a->count >= (AMBE_Q_DATASIZE_SD * 3)) // if 3 ambe records are in memory...
 			{
 				a->state = 1;  // ... start delivering via get method
 			}
@@ -110,9 +138,15 @@ int ambe_q_put (ambe_q_t * a,  const uint8_t * data)
 	return ret;
 }
 
+int ambe_q_put (ambe_q_t * a,  const uint8_t * data)
+{
+	uint8_t buf[AMBE_Q_DATASIZE_SD];
+	expand_to_sd_data(buf, data);
+	return ambe_q_put_sd( a, buf );
+}
 
 
-int ambe_q_get (ambe_q_t * a,  uint8_t * data )
+int ambe_q_get_sd (ambe_q_t * a,  uint8_t * data )
 {
 	int ret = 0;
 	
@@ -120,16 +154,16 @@ int ambe_q_get (ambe_q_t * a,  uint8_t * data )
     {
 		if ((a->count > 0) && (a->state == 1)) // there is data in the buffer
 		{
-			memcpy (data, a->buf + a->out_ptr, AMBE_Q_DATASIZE);
+			memcpy (data, a->buf + a->out_ptr, AMBE_Q_DATASIZE_SD);
 			
-			a->out_ptr += AMBE_Q_DATASIZE;
+			a->out_ptr += AMBE_Q_DATASIZE_SD;
 			
 			if (a->out_ptr >= AMBE_Q_BUFLEN)
 			{
 				a->out_ptr = 0;
 			}
 			
-			a->count -= AMBE_Q_DATASIZE;
+			a->count -= AMBE_Q_DATASIZE_SD;
 			
 			if (a->count <= 0)
 			{
@@ -138,7 +172,7 @@ int ambe_q_get (ambe_q_t * a,  uint8_t * data )
 		}		
 		else
 		{
-			memcpy ( data, silence_data, AMBE_Q_DATASIZE );
+			expand_to_sd_data( data, silence_data );
 			ret = 1;
 		}				
         xSemaphoreGive( a->mutex );
@@ -147,10 +181,17 @@ int ambe_q_get (ambe_q_t * a,  uint8_t * data )
 	{
 		// should not happen: could not get Mutex
 		
-		memcpy ( data, silence_data, AMBE_Q_DATASIZE );
+		expand_to_sd_data( data, silence_data );
 		ret = 1;
 	}
 	
 	return ret;
 }
 
+int ambe_q_get (ambe_q_t * a,  uint8_t * data)
+{
+	uint8_t buf[AMBE_Q_DATASIZE_SD];
+	int ret = ambe_q_get_sd( a, buf );
+	reduce_sd_data( data, buf );
+	return ret;
+}
