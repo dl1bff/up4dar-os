@@ -108,6 +108,96 @@ static void set_pwm(void)
 }
 
 
+// #define FWUPLOAD_BUTTON 1
+
+#if defined(FWUPLOAD_BUTTON)
+
+
+#include "phy_firmware.h"
+
+static unsigned char fw_data[3];
+
+#define DLE 0x10
+#define STX 0x02
+#define ETX 0x03
+
+static void send_cmd(const char* Befehl, const short size){
+	const char* nachricht = Befehl;
+	
+	char  buf[100];
+	char  zeichen;
+	short ind = 2;
+	
+	
+	buf[0] = DLE;
+	buf[1] = STX;
+	
+	for (int i=0; i<size; ++i){
+		zeichen = *nachricht++;
+		if (zeichen == DLE){
+			buf[ind++] = DLE;
+			buf[ind++] = DLE;
+		} else {
+			buf[ind++] = zeichen;
+		}
+	}
+	
+	buf[ind++] = DLE;
+    buf[ind++] = ETX;
+	
+	phyCommSend(buf, ind);
+}
+
+static void fw_upload(void)
+{
+	fw_data[0] = 0xe1;
+	send_cmd((char *) fw_data, 1);
+			
+	vTaskDelay (120); // 120ms
+			
+	long fw_counter;
+			
+	for (fw_counter = 0; fw_counter < (sizeof fw_bytes); fw_counter += 512)
+	{
+		int i;
+				
+		fw_data[0] = DLE;
+		fw_data[1] = STX;
+		fw_data[2] = 0xe2;
+		phyCommSend((char *) fw_data, 3);
+	
+		for (i=0; i < 512; i++)
+		{
+			
+			fw_data[0] = fw_bytes[fw_counter + i];
+					
+			if (fw_data[0] == DLE)
+			{
+				fw_data[1] = DLE;
+				phyCommSend((char *) fw_data, 2);						
+			}
+			else
+			{
+				phyCommSend((char *) fw_data, 1);						
+			}
+						
+		}	
+				
+		fw_data[0] = DLE;
+		fw_data[1] = ETX;
+		phyCommSend((char *) fw_data, 2);
+			
+		vTaskDelay (2000); // 2s
+	}
+			
+	fw_data[0] = 0xe3;
+	send_cmd((char *) fw_data, 1);
+}
+
+
+#endif
+
+
 #define NUMBER_OF_KEYS  7
 
 static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0, 0 };
@@ -163,8 +253,17 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 					{
 					case 0:
 						vdisp_clear_rect (0, 0, 128, 64);
+						
+#if defined(FWUPLOAD_BUTTON)
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "FW upload" );
+						
+						fw_upload();
+						
+						vdisp_prints_xy( 30, 38, VDISP_FONT_6x8, 0, "FW upload done!" );
+#else
 						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Service Mode" );
 						dstarChangeMode(1);
+#endif
 						break;
 
 					case 1:
