@@ -43,6 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_dstar/dstar.h"
 
+#include "snmp.h"
 
 unsigned char ipv4_addr[4] = { 192, 168, 1, 33 };
 	
@@ -59,7 +60,7 @@ static unsigned char echo_reply_buf[1520] = {
 };	
 	
 	
-static void icmpv4_send_echo_reply (unsigned char * p, int len, unsigned char * ipv4_header)
+static void icmpv4_send_echo_reply (unsigned char * p, int len, const unsigned char * ipv4_header)
 {
 	ip_addr_t  tmp_addr;
 	memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
@@ -120,7 +121,7 @@ static void icmpv4_send_echo_reply (unsigned char * p, int len, unsigned char * 
 	
 	
 
-static void icmpv4_input (unsigned char * p, int len, unsigned char * ipv4_header)
+static void icmpv4_input (unsigned char * p, int len, const unsigned char * ipv4_header)
 {
 	int sum = 0;
 	int i;
@@ -153,10 +154,73 @@ static void icmpv4_input (unsigned char * p, int len, unsigned char * ipv4_heade
 	}
 
 }	
+
+
+static unsigned char snmp_reply_buf [1520] =
+{
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // dest
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // src
+	0x08, 0x00, // IP
+	0x45, 0x00, 0x00, 0x00,   // IPv4, 20 Bytes Header
+	0x00, 0x00, 0x40, 0x00,  // don't fragment
+	0x80, 0x11, 0x00, 0x00,  // UDP, TTL=128
+	0x00, 0x00, 0x00, 0x00,  // source
+	0x00, 0x00, 0x00, 0x00  // destination
+};	
+
+
+static void snmp_send_reply (unsigned char * p, int len, const unsigned char * ipv4_header)
+{
+	ip_addr_t  tmp_addr;
+	memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
+	memcpy(&tmp_addr.ipv4.addr, ipv4_header + 12 , sizeof ipv4_addr);  // antwort an diese adresse
 	
+	if (ipneigh_get(&tmp_addr, (mac_addr_t *) snmp_reply_buf) != 0)
+		return;   // ethernet-adresse war nicht in der neighbor list
+		
+	memcpy(snmp_reply_buf + 6, mac_addr, sizeof (mac_addr_t));  // absender MAC
 	
+	memcpy(snmp_reply_buf + 26, ipv4_addr, sizeof ipv4_addr); // src IP
+	memcpy(snmp_reply_buf + 30, ipv4_header + 12, sizeof ipv4_addr); // dest IP
 	
-static void udp_input (unsigned char * p, int len)
+	int data_length = snmp_process_request( p + 8, len, snmp_reply_buf + 42 );
+	
+	if (data_length <= 0)  // error occured
+		return;  
+		
+	int total_length = data_length + 8 + 20;
+	
+	((unsigned short *) (snmp_reply_buf + 14)) [1] = total_length;
+	
+	int sum = 0;
+	int i;
+	
+	for (i=0; i < 10; i++) // 20 Byte Header
+	{
+		if (i != 5)  // das checksum-feld weglassen
+		{
+			sum += ((unsigned short *) (snmp_reply_buf + 14)) [i];
+		}
+	}
+	
+	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	
+	((unsigned short *) (snmp_reply_buf + 14)) [5] = sum; // checksumme setzen
+	
+	// UDP
+	
+	int src_port = (p[0] << 8) | p[1];
+	int dest_port = (p[2] << 8) | p[3];
+	
+	((unsigned short *) (snmp_reply_buf + 14)) [10] = dest_port & 0xFFFF;
+	((unsigned short *) (snmp_reply_buf + 14)) [11] = src_port & 0xFFFF;
+	((unsigned short *) (snmp_reply_buf + 14)) [12] = data_length + 8;
+	((unsigned short *) (snmp_reply_buf + 14)) [13] = 0;  // chksum
+	
+	eth_send_raw (snmp_reply_buf, total_length + 14);
+}	
+	
+static void udp_input (unsigned char * p, int len, const unsigned char * ipv4_header)
 {
 	// int src_port = (p[0] << 8) | p[1];
 	int dest_port = (p[2] << 8) | p[3];
@@ -168,16 +232,22 @@ static void udp_input (unsigned char * p, int len)
 	if (udp_length < 8)  // UDP header has at least 8 bytes
 	   return;
 	   
-	if (dest_port == 5555)
+	switch(dest_port)
 	{
+	case 5555:
+	
 		if (udp_length >= (8+100)) // accept packets to port 5555 with at least 100 data bytes
 		{
 			if (memcmp(p + 8, "0001", 4) == 0)  // first four bytes "0001"
 			{
 				dstarProcessDCSPacket( p + 8 );
 			}
-			
 		}
+		break;
+		
+	case 161: // SNMP
+		snmp_send_reply ( p, udp_length - 8, ipv4_header );
+		break;
 	}
 }	
 	
@@ -227,7 +297,7 @@ void ipv4_input (unsigned char * p, int len)
 			icmpv4_input(p + header_len, total_len - header_len, p);
 			break;
 		case 17: // UDP
-			udp_input(p + header_len, total_len - header_len);
+			udp_input(p + header_len, total_len - header_len, p);
 			break;
 	}
 	

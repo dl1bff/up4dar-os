@@ -1,0 +1,108 @@
+
+ UP4DAR-MIB DEFINITIONS ::= BEGIN
+
+               IMPORTS
+                       experimental
+                           FROM RFC1155-SMI
+                       OBJECT-TYPE
+                           FROM RFC-1212;
+
+               DisplayString ::=
+                           OCTET STRING
+
+
+               UP4DAR      OBJECT IDENTIFIER ::= { experimental 5573 }   
+
+               UC3A     OBJECT IDENTIFIER ::= { UP4DAR 1 }
+			   PHY	OBJECT IDENTIFIER ::= { UP4DAR 2 }
+               
+
+               
+
+               PHY_softwareVersion OBJECT-TYPE
+                       SYNTAX  DisplayString (SIZE (0..55))
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { PHY 1 }
+					   
+			   PHY_cpuID   OBJECT-TYPE
+                       SYNTAX  OCTET STRING (SIZE (15))
+					   DISPLAY HINT  "1x."
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { PHY 2 }
+					   
+					   
+					   
+			   UC3A_softwareVersion OBJECT-TYPE
+                       SYNTAX  DisplayString (SIZE (0..80))
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { UC3A 1 }
+
+			   UC3A_cpuID   OBJECT-TYPE
+                       SYNTAX  OCTET STRING (SIZE (15))
+					   DISPLAY HINT  "1x."
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { UC3A 2 }
+					
+			   CallSign   OBJECT-TYPE
+                       SYNTAX  OCTET STRING (SIZE (8))
+                       ACCESS  read-write
+                       STATUS  mandatory
+                       ::= { UC3A 3 }					
+			   
+			   UC3A_testTable OBJECT-TYPE
+                       SYNTAX  SEQUENCE OF UC3A_testTableEntry
+                       ACCESS  not-accessible
+                       STATUS  mandatory
+                       ::= { UC3A 4 }
+
+              UC3A_testTableEntry OBJECT-TYPE
+                       SYNTAX  UC3A_testTableEntry
+                       ACCESS  not-accessible
+                       STATUS  mandatory
+                       INDEX   { UC3A_testTableIndex }
+                       ::= { UC3A_testTable 1 }
+
+               UC3A_testTableEntry ::= SEQUENCE {
+                   UC3A_testTableIndex
+                       INTEGER,
+                   UC3A_testDesc
+                       DisplayString,
+                   UC3A_testNum1
+                       INTEGER,
+                   UC3A_testNum2
+                       INTEGER
+               }
+
+               UC3A_testTableIndex OBJECT-TYPE
+                       SYNTAX  INTEGER
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { UC3A_testTableEntry 1 }
+
+               UC3A_testDesc OBJECT-TYPE
+                       SYNTAX  DisplayString (SIZE (0..70))
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { UC3A_testTableEntry 2 }
+
+				UC3A_testNum1 OBJECT-TYPE
+                       SYNTAX  INTEGER
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { UC3A_testTableEntry 3 }
+
+				UC3A_testNum2 OBJECT-TYPE
+                       SYNTAX  INTEGER
+                       ACCESS  read-only
+                       STATUS  mandatory
+                       ::= { UC3A_testTableEntry 4 }
+
+			   
+               
+               END
+			   
+			   

@@ -488,7 +488,7 @@ void ambe_start_encode(void)
 		ambe_encoder_state = 0;
 		ambe_encoder_counter = 0;
 		ambe_encode = 1;
-		vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 1, " TX " );
+		// vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 1, " TX " );
 	}
 }
 
@@ -497,7 +497,7 @@ void ambe_stop_encode(void)
 	if (ambe_encode != 0)
 	{
 		ambe_encode = 0;
-		vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 0, "    " );
+		// vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 0, "    " );
 	}
 }
 
