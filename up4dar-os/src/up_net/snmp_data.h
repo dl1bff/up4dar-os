@@ -19,22 +19,33 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /*
- * snmp.h
+ * snmp_data.h
  *
- * Created: 03.05.2012 11:04:56
+ * Created: 06.05.2012 13:46:44
  *  Author: mdirska
  */ 
 
 
-#ifndef SNMP_H_
-#define SNMP_H_
-
-struct snmpReq {
-	int param;
-	int data;
-};
-
-int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response );
+#ifndef SNMP_DATA_H_
+#define SNMP_DATA_H_
 
 
-#endif /* SNMP_H_ */
+int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen );
+
+#define SNMP_GET_FUNC(func)   int (func) (int32_t arg, uint8_t * res, int * res_len, int maxlen);
+
+#define SNMP_SET_FUNC(func)   int (func) (int32_t arg, const uint8_t * req, int req_len);
+
+
+SNMP_GET_FUNC( snmp_get_voltage )
+
+SNMP_GET_FUNC ( snmp_get_phy_cpuid )
+
+SNMP_GET_FUNC ( snmp_get_phy_sysinfo )
+
+SNMP_GET_FUNC ( snmp_get_phy_sysparam )
+SNMP_SET_FUNC ( snmp_set_phy_sysparam )
+
+
+
+#endif /* SNMP_DATA_H_ */

@@ -253,6 +253,39 @@ void phyCommSend (char * buf, int len)
 
 
 
+#define DLE 0x10
+#define STX 0x02
+#define ETX 0x03
+
+void phyCommSendCmd (const char * cmd, int len)
+{
+	const char * p = cmd;
+	int i;
+	
+	xSerialPutChar( xPort, DLE, 50 );
+	xSerialPutChar( xPort, STX, 50 );
+	
+	for (i=0; i < len; i++)
+	{
+		char d = *p;
+		
+		if (d == DLE)
+		{
+			xSerialPutChar( xPort, DLE, 50 );
+			xSerialPutChar( xPort, DLE, 50 );
+		}
+		else
+		{
+			xSerialPutChar( xPort, d, 50 );
+		}
+		p++;
+	}
+	
+	xSerialPutChar( xPort, DLE, 50 );
+	xSerialPutChar( xPort, ETX, 50 );
+}
+
+
 void phyCommInit( xQueueHandle dq )
 {
 	dstarQueue = dq;

@@ -1,108 +1,222 @@
 
- UP4DAR-MIB DEFINITIONS ::= BEGIN
-
-               IMPORTS
-                       experimental
-                           FROM RFC1155-SMI
-                       OBJECT-TYPE
-                           FROM RFC-1212;
-
-               DisplayString ::=
-                           OCTET STRING
+UP4DAR-MIB DEFINITIONS ::= BEGIN
 
 
-               UP4DAR      OBJECT IDENTIFIER ::= { experimental 5573 }   
+IMPORTS
+    MODULE-IDENTITY, OBJECT-TYPE, Integer32, experimental
+        FROM SNMPv2-SMI
+    DisplayString, PhysAddress
+        FROM SNMPv2-TC
+    MODULE-COMPLIANCE, OBJECT-GROUP
+        FROM SNMPv2-CONF ;
 
-               UC3A     OBJECT IDENTIFIER ::= { UP4DAR 1 }
-			   PHY	OBJECT IDENTIFIER ::= { UP4DAR 2 }
+
+up4darMIB MODULE-IDENTITY
+    LAST-UPDATED "201205060800Z"
+    ORGANIZATION "UP4DAR team"
+    CONTACT-INFO "dl1bff@mdx.de"
+    DESCRIPTION  "UP4DAR MIB"
+    REVISION "201205060800Z"
+    DESCRIPTION "initial version"
+     ::= { experimental 5573 }
+
+
+up4darMIBObjects	OBJECT IDENTIFIER ::= { up4darMIB 1 } 
+up4darMIBConformance  OBJECT IDENTIFIER ::= { up4darMIB 2 }
+
+up4darMIBCompliances OBJECT IDENTIFIER
+    ::= { up4darMIBConformance 1 }
+up4darMIBGroups      OBJECT IDENTIFIER
+    ::= { up4darMIBConformance 2 }
+
+up4darMIBCompliance MODULE-COMPLIANCE
+    STATUS  current
+    DESCRIPTION
+            "Describes the requirements for conformance UP4DAR MIB module."
+    MODULE  -- this module
+        MANDATORY-GROUPS { up4darMIBGroup }
+    ::= { up4darMIBCompliances 1 }
+
+
+up4darMIBGroup OBJECT-GROUP
+	OBJECTS {
+		callSign, phySoftwareVersion, phyCpuID,
+		uc3aSoftwareVersion, uc3aCpuID,
+		uc3aTestDesc, uc3aTestNum1, uc3aTestNum2,
+		inputVoltage, phyTxDelay, phyTxGain, phyRxInv,
+			-- phyTxDcShift, phyMATFST, phyLengthOfVW }
+		phyTxDcShift }
+	STATUS current
+	DESCRIPTION "A collection of of objects providing basic instrumentation and 
+            control of an UP4DAR board."
+	 ::= { up4darMIBGroups 1 }
+
+uc3a	OBJECT IDENTIFIER ::= { up4darMIBObjects 1 }
+phy	OBJECT IDENTIFIER ::= { up4darMIBObjects 2 }
+             
+
+callSign	OBJECT-TYPE
+	SYNTAX  OCTET STRING (SIZE (8))
+	MAX-ACCESS  read-write
+	STATUS  current
+	DESCRIPTION "callsign"
+           ::= { up4darMIBObjects 3 }
+	
+
+inputVoltage OBJECT-TYPE
+	SYNTAX  Integer32 ( 400..30000 )
+	MAX-ACCESS  read-only
+	STATUS  current
+	DESCRIPTION "Supply voltage in millivolts."
+           ::= { up4darMIBObjects 4 }
+
+
+
                
+phySoftwareVersion OBJECT-TYPE
+	SYNTAX  DisplayString
+	MAX-ACCESS  read-only
+          STATUS  current
+	DESCRIPTION "software version"
+           ::= { phy 1 }
+					   
 
-               
+	
+phyCpuID OBJECT-TYPE
+	SYNTAX  PhysAddress (SIZE(15))
+	MAX-ACCESS  read-only
+	STATUS  current
+	DESCRIPTION "cpu ID"
+           ::= { phy 2 }
 
-               PHY_softwareVersion OBJECT-TYPE
-                       SYNTAX  DisplayString (SIZE (0..55))
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { PHY 1 }
-					   
-			   PHY_cpuID   OBJECT-TYPE
-                       SYNTAX  OCTET STRING (SIZE (15))
-					   DISPLAY HINT  "1x."
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { PHY 2 }
-					   
-					   
-					   
-			   UC3A_softwareVersion OBJECT-TYPE
-                       SYNTAX  DisplayString (SIZE (0..80))
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { UC3A 1 }
+phyTxDelay OBJECT-TYPE
+	SYNTAX  Integer32 ( 0..255 )
+          MAX-ACCESS  read-write
+          STATUS  current
+	DESCRIPTION "Transmitter delay time between PTT activation and
+		transmission of information data in 8bit steps (additionally to
+		64 mandatory bits!). For a D-STAR voice frame this means
+		that after activation of PTT the sequence {1,0,1,0,1,0,...,1,0} of
+		length TX_DELAY*8+64 in front of FrameSync flag is
+		transmitted."
+           ::= { phy 3 }
 
-			   UC3A_cpuID   OBJECT-TYPE
-                       SYNTAX  OCTET STRING (SIZE (15))
-					   DISPLAY HINT  "1x."
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { UC3A 2 }
-					
-			   CallSign   OBJECT-TYPE
-                       SYNTAX  OCTET STRING (SIZE (8))
-                       ACCESS  read-write
-                       STATUS  mandatory
-                       ::= { UC3A 3 }					
+phyTxGain OBJECT-TYPE
+	SYNTAX  Integer32 ( -128..127 )
+          MAX-ACCESS  read-write
+          STATUS  current
+	DESCRIPTION "Linear factor for transmitted AF signal. The maximal range of
+		DAC is achieved if TX_GAIN = 127. By using of negative
+		values of TX_GAIN the output AF signal can be inverted, if it is
+		needed."
+	::= { phy 4 }
+
+phyRxInv OBJECT-TYPE
+	SYNTAX  INTEGER { disabled (0), enabled (1) }
+          MAX-ACCESS  read-write
+          STATUS  current
+	DESCRIPTION "If the incoming AF signal is inverted (due to an inverting
+		amplifier some where in receiver or if in a IF-mixer LO-QRG >
+		RX-QRG for instance) RX_inv should be set to 1."
+	::= { phy 5 }
+
+phyTxDcShift OBJECT-TYPE
+	SYNTAX  Integer32 ( -128..127 )
+          MAX-ACCESS  read-write
+          STATUS  current
+	DESCRIPTION "This parameter describes the linear offset of transmitted
+		signal. It is relevant for DC-coupled transmitter only."
+	::= { phy 6 }
+
+
+-- phyMATFST OBJECT-TYPE
+--	SYNTAX  Integer32 ( 0..255 )
+--          MAX-ACCESS  read-write
+--          STATUS  current
+--	DESCRIPTION "Maximal allowed time for a single transmission in digipeater
+--		mode in 2sec steps.
+--		The time is not limited if MATFST=0 ."
+--	::= { phy 7 }
+
+-- phyLengthOfVW OBJECT-TYPE
+--	SYNTAX  Integer32 ( 1..255 )
+--          MAX-ACCESS  read-write
+--          STATUS  current
+--	DESCRIPTION "Number of 20ms blocks of recorded voice warning message
+--		for user information about MATFST expiry."
+--	::= { phy 8 }
+
+					   
+uc3aSoftwareVersion OBJECT-TYPE
+	SYNTAX  DisplayString
+	MAX-ACCESS  read-only
+          STATUS  current
+	DESCRIPTION "software version"
+           ::= { uc3a 1 }
+					   
+
+	
+uc3aCpuID OBJECT-TYPE
+	SYNTAX  PhysAddress (SIZE(15))
+	MAX-ACCESS  read-only
+	STATUS  current
+	DESCRIPTION "cpu ID"
+           ::= { uc3a 2 }
+									   
+	
+
+
+uc3aTestTable OBJECT-TYPE
+	SYNTAX  SEQUENCE OF Uc3aTestTableEntry
+          MAX-ACCESS  not-accessible
+          STATUS  current
+	DESCRIPTION "test table"
+           ::= { uc3a 4 }
+
+uc3aTestTableEntry OBJECT-TYPE
+	SYNTAX  Uc3aTestTableEntry
+	MAX-ACCESS  not-accessible
+          STATUS  current
+	DESCRIPTION "test table"
+	INDEX   { uc3aTestTableIndex }
+           ::= { uc3aTestTable 1 }
+
+Uc3aTestTableEntry ::= SEQUENCE {
+	uc3aTestTableIndex Integer32,
+          uc3aTestDesc DisplayString,
+          uc3aTestNum1 Integer32,
+          uc3aTestNum2 Integer32  }
+
+uc3aTestTableIndex OBJECT-TYPE
+	SYNTAX  Integer32 ( 1..100 )
+          MAX-ACCESS  not-accessible
+          STATUS  current
+	DESCRIPTION "test table index"
+           ::= { uc3aTestTableEntry 1 }
+
+uc3aTestDesc OBJECT-TYPE
+	SYNTAX  DisplayString
+          MAX-ACCESS  read-only
+          STATUS  current
+	DESCRIPTION "test description"
+           ::= { uc3aTestTableEntry 2 }
+
+uc3aTestNum1 OBJECT-TYPE
+	SYNTAX  Integer32
+          MAX-ACCESS  read-only
+          STATUS  current
+	DESCRIPTION "test number"
+           ::= { uc3aTestTableEntry 3 }
+
+uc3aTestNum2 OBJECT-TYPE
+	SYNTAX  Integer32
+          MAX-ACCESS  read-only
+          STATUS  current
+	DESCRIPTION "test number"
+           ::= { uc3aTestTableEntry 4 }
+
+
 			   
-			   UC3A_testTable OBJECT-TYPE
-                       SYNTAX  SEQUENCE OF UC3A_testTableEntry
-                       ACCESS  not-accessible
-                       STATUS  mandatory
-                       ::= { UC3A 4 }
-
-              UC3A_testTableEntry OBJECT-TYPE
-                       SYNTAX  UC3A_testTableEntry
-                       ACCESS  not-accessible
-                       STATUS  mandatory
-                       INDEX   { UC3A_testTableIndex }
-                       ::= { UC3A_testTable 1 }
-
-               UC3A_testTableEntry ::= SEQUENCE {
-                   UC3A_testTableIndex
-                       INTEGER,
-                   UC3A_testDesc
-                       DisplayString,
-                   UC3A_testNum1
-                       INTEGER,
-                   UC3A_testNum2
-                       INTEGER
-               }
-
-               UC3A_testTableIndex OBJECT-TYPE
-                       SYNTAX  INTEGER
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { UC3A_testTableEntry 1 }
-
-               UC3A_testDesc OBJECT-TYPE
-                       SYNTAX  DisplayString (SIZE (0..70))
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { UC3A_testTableEntry 2 }
-
-				UC3A_testNum1 OBJECT-TYPE
-                       SYNTAX  INTEGER
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { UC3A_testTableEntry 3 }
-
-				UC3A_testNum2 OBJECT-TYPE
-                       SYNTAX  INTEGER
-                       ACCESS  read-only
-                       STATUS  mandatory
-                       ::= { UC3A_testTableEntry 4 }
-
-			   
-               
-               END
+END
 			   
 			   

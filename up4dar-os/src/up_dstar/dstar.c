@@ -40,11 +40,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ambe.h"
 
-
+#include "up_net/snmp_data.h"
+#include "up_net/snmp.h"
 
 
 static xQueueHandle dstarQueue;
-
+static xQueueHandle snmpReqQueue;
 
 static U32 qTimeout = 0;
 
@@ -426,6 +427,114 @@ void dstarChangeMode(int m)
 	dstarResetCounters();
 }
 
+
+#define CPU_ID_LEN 15
+
+static char sysinfo[70];
+static int sysinfo_len = 0;
+
+
+int snmp_get_phy_cpuid ( int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	if (maxlen < CPU_ID_LEN)
+			return 1;
+			
+	if (sysinfo_len <= CPU_ID_LEN )
+	{
+		memset (res, 0, CPU_ID_LEN);
+	}
+	else
+	{
+		memcpy(res, sysinfo + (sysinfo_len - CPU_ID_LEN), CPU_ID_LEN);
+	}
+	
+	*res_len = CPU_ID_LEN;
+	return 0;
+}
+
+static const char no_conn[] = "no connection to PHY";
+
+int snmp_get_phy_sysinfo ( int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	if (sysinfo_len <= CPU_ID_LEN )
+	{
+		if ((sizeof no_conn) >= maxlen)
+			return 1;
+		memcpy (res, no_conn, (sizeof no_conn) - 1);
+		*res_len = (sizeof no_conn) - 1;
+	}
+	else
+	{
+		if ((sysinfo_len - CPU_ID_LEN) > maxlen)
+			return 1;
+		memcpy(res, sysinfo, sysinfo_len - CPU_ID_LEN);
+		*res_len = sysinfo_len - CPU_ID_LEN;
+	}
+	
+	return 0;
+}
+
+
+int snmp_get_phy_sysparam ( int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	struct snmpReq rq;
+	char buf[2];
+	
+	while (xQueueReceive( snmpReqQueue, &rq, 0))  // flush Q
+	 ;
+	
+	buf[0] = 0x41; // request parameter
+	buf[1] = arg;
+	phyCommSendCmd(buf, 2);
+	
+	if (xQueueReceive( snmpReqQueue, &rq, 200)) // wait max 200ms
+	{
+		if (rq.param == -1)  // 0xD4  cmd_execution
+		{
+			if (rq.data != 1)  // not successful
+				return 1; // error
+		}
+	}
+	
+	if (xQueueReceive( snmpReqQueue, &rq, 200)) // wait max 200ms
+	{
+		if (rq.param == arg)  // param matches requested param
+		{
+			return snmp_encode_int( rq.data, res, res_len, maxlen );
+		}
+	}
+	
+	return 1; // timeout
+}
+
+
+int snmp_set_phy_sysparam (int32_t arg, const uint8_t * req, int req_len)
+{
+	struct snmpReq rq;
+	char buf[3];
+	
+	while (xQueueReceive( snmpReqQueue, &rq, 0))  // flush Q
+	 ;
+	
+	buf[0] = 0x42; // set parameter
+	buf[1] = arg;
+	buf[2] = req[ req_len - 1 ]; // LSByte
+	
+	phyCommSendCmd(buf, 3);
+	
+	if (xQueueReceive( snmpReqQueue, &rq, 200)) // wait max 200ms
+	{
+		if (rq.param == -1)  // 0xD4  cmd_execution
+		{
+			if (rq.data == 1)  // successful
+				return 0;
+		}
+	}
+	
+	return 1; // timeout or error
+}
+
+
 static void processPacket(void)
 {
 	
@@ -437,6 +546,11 @@ static void processPacket(void)
 			
 			vdisp_clear_rect (0, 0, 128, 64);
 			// dstarChangeMode(4);
+			if (dp.dataLen <= (sizeof sysinfo))
+			{
+				memcpy(sysinfo, dp.data, dp.dataLen);
+				sysinfo_len = dp.dataLen;
+			}
 			break;
 			
 		case 0x30:
@@ -564,6 +678,26 @@ static void processPacket(void)
 			
 			break;
 			
+		case 0x40:
+			if (dp.dataLen == 2)
+			{
+				struct snmpReq sr;
+				sr.param = dp.data[0];
+				switch (sr.param)
+				{
+					case 2:
+					case 4:
+						sr.data = ((int8_t *) dp.data)[1]; // signed byte
+						break;
+					default:
+						sr.data = dp.data[1]; // unsigned byte
+						break;
+				}
+				
+				xQueueSend ( snmpReqQueue, & sr, 0 );
+			}
+			break;
+			
 		case 0xD1:
 			if (dp.dataLen >= 2)
 			{
@@ -575,7 +709,16 @@ static void processPacket(void)
 			}
 			break;
 			
-		
+		case 0xD4:
+			if (dp.dataLen == 1)
+			{
+				struct snmpReq sr;
+				sr.param = -1;
+				sr.data = dp.data[0];
+				
+				xQueueSend ( snmpReqQueue, & sr, 0 );
+			}
+			break;
 	}	
 }
 
@@ -658,6 +801,8 @@ void dstarProcessDCSPacket( const uint8_t * data )
 void dstarInit( xQueueHandle dq )
 {
 	dstarQueue = dq;
+	
+	snmpReqQueue = xQueueCreate( 3, sizeof (struct snmpReq) );
 	
 	xTaskCreate( dstarRXTask, ( signed char * ) "DstarRx", configMINIMAL_STACK_SIZE, NULL,
 		 tskIDLE_PRIORITY + 1 , ( xTaskHandle * ) NULL );

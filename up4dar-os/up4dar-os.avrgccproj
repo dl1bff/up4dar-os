@@ -339,6 +339,9 @@
     <Compile Include="src\up_net\snmp.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\snmp_data.h">
+      <SubType>compile</SubType>
+    </Compile>
     <None Include="src\asf\avr32\utils\startup\trampoline_uc3.S">
       <SubType>compile</SubType>
     </None>

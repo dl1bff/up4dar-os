@@ -32,6 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/vdisp.h"
 #include "snmp.h"
 
+#include "snmp_data.h"
+
 #include "gcc_builtin.h"
 
 
@@ -53,8 +55,38 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 static char tmp_callsign[8] = "DL1BFF  ";
 
 
+int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
+{
+	uint32_t mask = 0xFFFFFF80;
+	int len = 1;
+	uint32_t v = (uint32_t) value;
+	
+	while (len < 4)
+	{
+		if ((v & mask) == ((value < 0) ? mask : 0))
+		   break;
+		len ++;
+		mask = mask << 8;
+	}
+	
+	if (len > maxlen)
+		return 1;
+		
+	*res_len = len;
+	
+	int i;
+	
+	for (i=0; i < len; i++)
+	{
+		res[len - 1 - i] = v & 0x00FF;
+		v = v >> 8;
+	}
+	
+	return 0;
+}
 
-static int set_callsign (int arg, const uint8_t * req, int req_len)
+
+static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 {
 	if (req_len > (sizeof tmp_callsign))
 		return 1;
@@ -64,7 +96,7 @@ static int set_callsign (int arg, const uint8_t * req, int req_len)
 	return 0;
 }
 
-static int get_callsign (int arg, uint8_t * res, int * res_len, int maxlen)
+static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
 	memcpy(res, tmp_callsign, sizeof tmp_callsign);
 	*res_len = sizeof tmp_callsign;
@@ -72,7 +104,7 @@ static int get_callsign (int arg, uint8_t * res, int * res_len, int maxlen)
 }
 
 
-static int test_return_string (int arg, uint8_t * res, int * res_len, int maxlen)
+static int test_return_string (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
 	memcpy(res, "TESTxTEST.TEST.", 15);
 	res[4] = 0x30 | arg;
@@ -80,44 +112,71 @@ static int test_return_string (int arg, uint8_t * res, int * res_len, int maxlen
 	return 0;
 }
 
-static int test_return_integer (int arg, uint8_t * res, int * res_len, int maxlen)
+static int test_return_integer (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	res[0] = arg;
-	*res_len = 1;
+	return snmp_encode_int( arg, res, res_len, maxlen );
+}
+
+
+// static const unsigned char * id_data = (unsigned char *) 0x80800204;
+
+static int get_cpu_id (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	if (maxlen < 15)
+		return 1;
+		
+	memcpy(res, (unsigned char *) 0x80800204, 15);
+	*res_len = 15;
 	return 0;
 }
+
 
 static const struct snmp_table_struct {
 	const char * oid;
 	char valueType;
-	int (* getter) (int arg, uint8_t * res, int * res_len, int maxlen);
-	int (* setter) (int arg, const uint8_t * req, int req_len);
-	int arg;
+	int (* getter) (int32_t arg, uint8_t * res, int * res_len, int maxlen);
+	int (* setter) (int32_t arg, const uint8_t * req, int req_len);
+	int32_t arg;
 } snmp_table[] =
 {  // this table must be sorted (oid string)
 	{ "110",	BER_OCTETSTRING,	test_return_string,		0			, 1},
-	{ "120",	BER_OCTETSTRING,	test_return_string,		0			, 2},
-	{ "130",    BER_OCTETSTRING,	get_callsign,   set_callsign,		 0},	
+	{ "120",	BER_OCTETSTRING,	get_cpu_id,		0			, 0},
+		
 		
 	{ "14111",	BER_INTEGER,		test_return_integer,		0		, 1},
 	{ "14112",	BER_INTEGER,		test_return_integer,		0		, 2},
+	{ "14113",	BER_INTEGER,		test_return_integer,		0		, 3},
 		
 	{ "14121",	BER_OCTETSTRING,	test_return_string,			0		, 1},
 	{ "14122",	BER_OCTETSTRING,	test_return_string,			0		, 5},
+	{ "14123",	BER_OCTETSTRING,	test_return_string,			0		, 6},
+	
 		
 	{ "14131",	BER_INTEGER,		test_return_integer,		0		, 10},
 	{ "14132",	BER_INTEGER,		test_return_integer,		0		, 10},
+	{ "14133",	BER_INTEGER,		test_return_integer,		0		, -10},
 		
 	{ "14141",	BER_INTEGER,		test_return_integer,		0		, 100},
 	{ "14142",	BER_INTEGER,		test_return_integer,		0		, 200},
+	{ "14143",	BER_INTEGER,		test_return_integer,		0		, 439462500},
 		
-	{ "210",	BER_OCTETSTRING,	test_return_string,		0			, 3},
-	{ "220",	BER_OCTETSTRING,	test_return_string,		0			, 4}
+	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
+	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
+	{ "230", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 1},
+	{ "240", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 2},
+	{ "250", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 3},
+	{ "260", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 4},
+//	{ "270", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 5},
+//	{ "280", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 6},
+			
+	{ "30",    BER_OCTETSTRING,	get_callsign,   set_callsign,		 0},
+	{ "40", 	BER_INTEGER,	snmp_get_voltage,			0		, 0}
+	
 };	
 
 
- // OID root  1.3.6.1.3.5573
-static const uint8_t up4dar_oid[6] = { 0x2b, 0x06, 0x01, 0x03, 0xab, 0x45 };
+ // OID root  1.3.6.1.3.5573.1
+static const uint8_t up4dar_oid[] = { 0x2b, 0x06, 0x01, 0x03, 0xab, 0x45, 0x01 };
 	
 
 static int parse_len;

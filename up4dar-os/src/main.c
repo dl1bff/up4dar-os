@@ -51,6 +51,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gcc_builtin.h"
 
+#include "up_net/snmp.h"
+#include "up_net/snmp_data.h"
+
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
 
@@ -65,6 +68,12 @@ audio_q_t  audio_rx_q;
 
 ambe_q_t microphone;
 
+static int32_t voltage = 0;
+
+int snmp_get_voltage(int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	return snmp_encode_int( voltage, res, res_len, maxlen );
+}
 
 /* Structure used to pass parameters to the LED tasks. */
 typedef struct LED_PARAMETERS
@@ -447,6 +456,8 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			v *= 330 * 430;  // 3.3V , r1+r2 = 43k
 			v /= 1023 * 56;  // inputmax=1023, r1=5.6k
+			
+			voltage = v * 10; // millivolt
 			
 			vdisp_i2s( tmp_buf, 4, 10, 0, v);
 			tmp_buf[3] = tmp_buf[2];
@@ -897,9 +908,17 @@ static void vTXTask( void *pvParameters )
 }	
 
 
+static xQueueHandle dstarQueue;
+
+
 int main (void)
 {
 	board_init();
+	
+	
+	
+	
+	
 
 	unsigned char * pixelBuf;
 	
@@ -923,10 +942,8 @@ int main (void)
 	vdisp_prints_xy(0, 24, VDISP_FONT_8x12, 0, "  for Digital");
 	vdisp_prints_xy(0, 36, VDISP_FONT_8x12, 0, "   Amateur Radio");
 	
-	xQueueHandle dstarQueue;
-	
 	dstarQueue = xQueueCreate( 10, sizeof (struct dstarPacket) );
-	
+
 	dstarInit( dstarQueue );
 	
 	phyCommInit( dstarQueue );
