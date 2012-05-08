@@ -470,10 +470,21 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 				vdisp_prints_xy( 50, 0, VDISP_FONT_4x6, 0, tmp_buf );
 			}
 			
-			}			
+						
 			
 			AVR32_ADC.cr = 2; // start conversion
 			
+			
+			// ethernet status
+			
+			v = AVR32_MACB.MAN.data;
+			
+			vdisp_i2s( tmp_buf, 4, 16, 1, v );
+			vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, tmp_buf );
+			
+			AVR32_MACB.man = 0x60C20000; // read register 0x10
+			
+			}
 		break;
 	}
 

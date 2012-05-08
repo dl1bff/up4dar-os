@@ -137,7 +137,7 @@ void eth_init(unsigned char ** p)
 	
 	AVR32_MACB.tbqp = (unsigned long) & tx_buffer_q;
 	
-	AVR32_MACB.NCR.te = 1;
+	AVR32_MACB.ncr = 0x0018; // TE + MDE
 	
 	if (p != 0)
 	{
