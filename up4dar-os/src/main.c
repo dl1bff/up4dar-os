@@ -92,6 +92,17 @@ static unsigned char x_counter = 0;
 
 
 
+static xComPortHandle debugOutput;
+
+
+static void printDebug(const char * s)
+{
+	if (debugOutput >= 0)
+	{
+		vSerialPutString(debugOutput, s);
+	}
+}
+
 
 /*
 static U32 counter_FRO = 0;
@@ -467,7 +478,7 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			if (v > 400)  // more than 4 volts
 			{
-				vdisp_prints_xy( 50, 0, VDISP_FONT_4x6, 0, tmp_buf );
+				vdisp_prints_xy( 63, 0, VDISP_FONT_4x6, 0, tmp_buf );
 			}
 			
 						
@@ -479,10 +490,39 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			v = AVR32_MACB.MAN.data;
 			
-			vdisp_i2s( tmp_buf, 4, 16, 1, v );
-			vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, tmp_buf );
+			// vdisp_i2s( tmp_buf, 4, 16, 1, v );
+			// vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, tmp_buf );
+			
+			const char * net_status = "     ";
+			if (v & 1)  // Ethernet link is active
+			{
+				v = ((v >> 1) & 0x03) ^ 0x01;
+				
+				switch (v)
+				{
+					case 0:
+						net_status = " 10HD";
+						break;
+					case 1:
+						net_status = "100HD";
+						break;
+					case 2:
+						net_status = " 10FD";
+						break;
+					case 3:
+						net_status = "100FD";
+						break;
+				}
+				
+				AVR32_MACB.ncfgr = 0x00000800 | v;  // SPD, FD, CLK = MCK / 32 -> 1.875 MHz
+			}
+			
+			vdisp_prints_xy( 41, 0, VDISP_FONT_4x6, 0, net_status );
 			
 			AVR32_MACB.man = 0x60C20000; // read register 0x10
+			
+			
+			 printDebug("Test von DL1BFF\n");
 			
 			}
 		break;
@@ -788,7 +828,7 @@ static void send_dcs (int session_id, int last_frame)
 	d[5] = 0;
 	d[6] = 0;
 	
-	memcpy(d + 7, "DCS001 SDCS001 SCQCQCQ  DL1BFF D    ", 36); // header
+	memcpy(d + 7, "DCS002 ADCS002 ACQCQCQ  DL1BFF      ", 36); // header
 	
 	d[43] = (session_id >> 8) & 0xFF;
 	d[44] = session_id & 0xFF;
@@ -875,13 +915,13 @@ static void vTXTask( void *pvParameters )
 				if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue unexpectedly empty
 				{
 					ambe_stop_encode();
-					// send_dcs( session_id, 1); // send end frame
+					send_dcs( session_id, 1); // send end frame
 					send_phy ( dcs_frame + (42 + 46) );
 					tx_state = 3; // wait for PTT release
 				}					
 				else
 				{
-					// send_dcs(  session_id, 0); // send normal frame
+					send_dcs(  session_id, 0); // send normal frame
 					send_phy ( dcs_frame + (42 + 46) );
 					vTaskDelay(20); // wait 20ms
 				}
@@ -891,13 +931,13 @@ static void vTXTask( void *pvParameters )
 		case 2: // PTT off, drain microphone data
 			if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue empty
 			{
-				// send_dcs( session_id, 1); // send end frame
+				send_dcs( session_id, 1); // send end frame
 				send_phy ( dcs_frame + (42 + 46) );
 				tx_state = 0; // wait for PTT
 			}
 			else
 			{
-				// send_dcs(  session_id, 0); // send normal frame
+				send_dcs(  session_id, 0); // send normal frame
 				send_phy ( dcs_frame + (42 + 46) );
 				vTaskDelay(20); // wait 20ms
 			}
@@ -922,10 +962,21 @@ static void vTXTask( void *pvParameters )
 static xQueueHandle dstarQueue;
 
 
+
+
+
+
 int main (void)
 {
 	board_init();
 	
+	
+	debugOutput = xSerialPortInitMinimal( 0, 115200, 10 );
+	
+	if (debugOutput < 0)
+	{
+		// TODO: error handling
+	}
 	
 	
 	
@@ -948,10 +999,10 @@ int main (void)
 	
 	xTaskCreate( vLCDTask, (signed char *) "LCD", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
-	vdisp_prints_xy(0, 0, VDISP_FONT_8x12, 0,  "Universal");
-	vdisp_prints_xy(0, 12, VDISP_FONT_8x12, 0, " Platform");
-	vdisp_prints_xy(0, 24, VDISP_FONT_8x12, 0, "  for Digital");
-	vdisp_prints_xy(0, 36, VDISP_FONT_8x12, 0, "   Amateur Radio");
+	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");
+	vdisp_prints_xy(0, 18, VDISP_FONT_8x12, 0, " Platform");
+	vdisp_prints_xy(0, 30, VDISP_FONT_8x12, 0, "  for Digital");
+	vdisp_prints_xy(0, 42, VDISP_FONT_8x12, 0, "   Amateur Radio");
 	
 	dstarQueue = xQueueCreate( 10, sizeof (struct dstarPacket) );
 

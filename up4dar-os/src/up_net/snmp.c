@@ -166,8 +166,8 @@ static const struct snmp_table_struct {
 	{ "240", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 2},
 	{ "250", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 3},
 	{ "260", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 4},
-//	{ "270", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 5},
-//	{ "280", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 6},
+	{ "270", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 5},
+	{ "280", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 6},
 			
 	{ "30",    BER_OCTETSTRING,	get_callsign,   set_callsign,		 0},
 	{ "40", 	BER_INTEGER,	snmp_get_voltage,			0		, 0}

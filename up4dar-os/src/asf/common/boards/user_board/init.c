@@ -108,6 +108,34 @@ static const gpio_map_t ssc_gpio_map =
 	{ AVR32_SSC_RX_DATA_0_PIN,  AVR32_SSC_RX_DATA_0_FUNCTION }			// PA17			
 };
 
+
+static const gpio_map_t	eth_pin_gpio_map =
+{
+	{ AVR32_PIN_PA03, GPIO_DIR_OUTPUT | GPIO_INIT_HIGH }	// INT/POWERDOWN
+	
+};
+
+static const gpio_map_t eth_module_gpio_map = {
+	{ AVR32_MACB_MDC_0_PIN, AVR32_MACB_MDC_0_FUNCTION },
+	{ AVR32_MACB_MDIO_0_PIN, AVR32_MACB_MDIO_0_FUNCTION },
+	{ AVR32_MACB_RXD_0_PIN, AVR32_MACB_RXD_0_FUNCTION },
+	{ AVR32_MACB_RXD_1_PIN, AVR32_MACB_RXD_1_FUNCTION },
+	{ AVR32_MACB_TXD_0_PIN, AVR32_MACB_TXD_0_FUNCTION },	
+	{ AVR32_MACB_TXD_1_PIN, AVR32_MACB_TXD_1_FUNCTION },
+	{ AVR32_MACB_TX_EN_0_PIN, AVR32_MACB_TX_EN_0_FUNCTION },	
+	{ AVR32_MACB_RX_ER_0_PIN, AVR32_MACB_RX_ER_0_FUNCTION },	
+	{ AVR32_MACB_RX_DV_0_PIN, AVR32_MACB_RX_DV_0_FUNCTION },	
+	{ AVR32_MACB_TX_CLK_0_PIN, AVR32_MACB_TX_CLK_0_FUNCTION }
+};
+
+
+static const gpio_map_t usart_gpio_map = {
+	{ AVR32_USART0_RXD_0_0_PIN, AVR32_USART0_RXD_0_0_FUNCTION },
+	{ AVR32_USART0_TXD_0_0_PIN, AVR32_USART0_TXD_0_0_FUNCTION },
+	{ AVR32_USART1_RXD_0_0_PIN, AVR32_USART1_RXD_0_0_FUNCTION },
+	{ AVR32_USART1_TXD_0_0_PIN, AVR32_USART1_TXD_0_0_FUNCTION }					
+};
+
 	
 void board_init(void)
 {
@@ -254,5 +282,20 @@ void board_init(void)
 	                                        // 1 data word per frame, MSB first, 16 bits per data word
 											
 											
+	// Ethernet
+	
+	gpio_enable_gpio( eth_pin_gpio_map, sizeof( eth_pin_gpio_map ) / sizeof( eth_pin_gpio_map[0] ) );
+	
+	for (i=0; i < (sizeof( eth_pin_gpio_map ) / sizeof( eth_pin_gpio_map[0] )); i++)
+	{
+		gpio_configure_pin( eth_pin_gpio_map[i].pin, eth_pin_gpio_map[i].function);
+	}
 
+
+	gpio_enable_module( eth_module_gpio_map, sizeof( eth_module_gpio_map ) / sizeof( eth_module_gpio_map[0] ) );
+	
+	// USART
+	
+	gpio_enable_module( usart_gpio_map, sizeof( usart_gpio_map ) / sizeof( usart_gpio_map[0] ) );
+	
 }

@@ -74,32 +74,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "board.h"
 #include "gpio.h"
 
-/*-----------------------------------------------------------*/
 
-/* Constants to setup and access the USART. */
-#define serINVALID_COMPORT_HANDLER        ( ( xComPortHandle ) 0 )
-#define serINVALID_QUEUE                  ( ( xQueueHandle ) 0 )
-#define serHANDLE                         ( ( xComPortHandle ) 1 )
-#define serNO_BLOCK                       ( ( portTickType ) 0 )
-
-/*-----------------------------------------------------------*/
-
-/* Queues used to hold received characters, and characters waiting to be
-transmitted. */
-static xQueueHandle xRxedChars;
-static xQueueHandle xCharsForTx;
-
-/*-----------------------------------------------------------*/
-
-/* Forward declaration. */
-static void vprvSerialCreateQueues( unsigned portBASE_TYPE uxQueueLength,
-									xQueueHandle *pxRxedChars,
-									xQueueHandle *pxCharsForTx );
-
-/*-----------------------------------------------------------*/
 
 U32 xSerialRXError = 0;
 U32 xSerialRXOK = 0;
+
+
+static void vUSART0_ISR( void );
+static void vUSART1_ISR( void );
+static void vUSART2_ISR( void );
+
+
+#define NUM_USART 3
+
+static struct usartParams
+{
+	volatile avr32_usart_t * usart;
+	int irq;
+	void (* intrHandler) (void);
+	xQueueHandle xRxedChars;
+	xQueueHandle xCharsForTx;
+} usarts[NUM_USART] =
+{
+	{ &AVR32_USART0,  AVR32_USART0_IRQ,  vUSART0_ISR,  0,  0 },
+	{ &AVR32_USART1,  AVR32_USART1_IRQ,  vUSART1_ISR,  0,  0 },
+	{ &AVR32_USART2,  AVR32_USART2_IRQ,  vUSART2_ISR,  0,  0 }
+};
 
 
 // -------------
@@ -110,14 +110,14 @@ U32 xSerialRXOK = 0;
 	#pragma optimize = no_inline
 #endif
 
-static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( void )
+static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( int usartNum )
 {
 	/* Now we can declare the local variables. */
 	signed portCHAR     cChar;
 	portBASE_TYPE     xHigherPriorityTaskWoken = pdFALSE;
 	unsigned portLONG     ulStatus;
 	unsigned portLONG     ulMaskReg;
-	volatile avr32_usart_t  *usart = serialPORT_USART;
+	volatile avr32_usart_t  *usart = usarts[usartNum].usart;
 	portBASE_TYPE retstatus;
 
 	/* What caused the interrupt? */
@@ -131,7 +131,7 @@ static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( void )
 		Because FreeRTOS is not supposed to run with nested interrupts, put all OS
 		calls in a critical section . */
 		portENTER_CRITICAL();
-			retstatus = xQueueReceiveFromISR( xCharsForTx, &cChar, &xHigherPriorityTaskWoken );
+			retstatus = xQueueReceiveFromISR( usarts[usartNum].xCharsForTx, &cChar, &xHigherPriorityTaskWoken );
 		portEXIT_CRITICAL();
 
 		if (retstatus == pdTRUE)
@@ -155,7 +155,7 @@ static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( void )
 		/* Because FreeRTOS is not supposed to run with nested interrupts, put all OS
 		calls in a critical section . */
 		portENTER_CRITICAL();
-			retstatus = xQueueSendFromISR(xRxedChars, &cChar, &xHigherPriorityTaskWoken);
+			retstatus = xQueueSendFromISR(usarts[usartNum].xRxedChars, &cChar, &xHigherPriorityTaskWoken);
 		portEXIT_CRITICAL();
 	
 		if (retstatus == pdTRUE)
@@ -182,6 +182,7 @@ static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( void )
 	should perform a vTaskSwitchContext(). */
 	return ( xHigherPriorityTaskWoken );
 }
+
 /*-----------------------------------------------------------*/
 
 /*
@@ -193,14 +194,66 @@ static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( void )
 	#pragma shadow_registers = full   // Naked.
 #endif
 
-static void vUSART_ISR( void )
+static void vUSART0_ISR( void )
 {
 	/* This ISR can cause a context switch, so the first statement must be a
 	call to the portENTER_SWITCHING_ISR() macro.  This must be BEFORE any
 	variable declarations. */
 	portENTER_SWITCHING_ISR();
 
-	prvUSART_ISR_NonNakedBehaviour();
+	prvUSART_ISR_NonNakedBehaviour(0);
+
+	/* Exit the ISR.  If a task was woken by either a character being received
+	or transmitted then a context switch will occur. */
+	portEXIT_SWITCHING_ISR();
+}
+
+
+
+/*-----------------------------------------------------------*/
+
+
+/*
+ * USART interrupt service routine.
+ */
+#if __GNUC__
+	__attribute__((__naked__))
+#elif __ICCAVR32__
+	#pragma shadow_registers = full   // Naked.
+#endif
+
+static void vUSART1_ISR( void )
+{
+	/* This ISR can cause a context switch, so the first statement must be a
+	call to the portENTER_SWITCHING_ISR() macro.  This must be BEFORE any
+	variable declarations. */
+	portENTER_SWITCHING_ISR();
+
+	prvUSART_ISR_NonNakedBehaviour(1);
+
+	/* Exit the ISR.  If a task was woken by either a character being received
+	or transmitted then a context switch will occur. */
+	portEXIT_SWITCHING_ISR();
+}
+/*-----------------------------------------------------------*/
+
+/*
+ * USART interrupt service routine.
+ */
+#if __GNUC__
+	__attribute__((__naked__))
+#elif __ICCAVR32__
+	#pragma shadow_registers = full   // Naked.
+#endif
+
+static void vUSART2_ISR( void )
+{
+	/* This ISR can cause a context switch, so the first statement must be a
+	call to the portENTER_SWITCHING_ISR() macro.  This must be BEFORE any
+	variable declarations. */
+	portENTER_SWITCHING_ISR();
+
+	prvUSART_ISR_NonNakedBehaviour(2);
 
 	/* Exit the ISR.  If a task was woken by either a character being received
 	or transmitted then a context switch will occur. */
@@ -212,32 +265,25 @@ static void vUSART_ISR( void )
 /*
  * Init the serial port for the Minimal implementation.
  */
-xComPortHandle xSerialPortInitMinimal( unsigned portLONG ulWantedBaud, unsigned portBASE_TYPE uxQueueLength )
+xComPortHandle xSerialPortInitMinimal( int usartNum, unsigned portLONG ulWantedBaud, unsigned portBASE_TYPE uxQueueLength )
 {
-static const gpio_map_t USART_GPIO_MAP =
-{
-	{ serialPORT_USART_RX_PIN, serialPORT_USART_RX_FUNCTION },
-	{ serialPORT_USART_TX_PIN, serialPORT_USART_TX_FUNCTION },
-		{
-			AVR32_USART0_RXD_0_0_PIN, AVR32_USART0_RXD_0_0_FUNCTION
-		},
-		{
-			AVR32_USART0_TXD_0_0_PIN, AVR32_USART0_TXD_0_0_FUNCTION
-		}					
-};
-
-xComPortHandle    xReturn = serHANDLE;
-volatile avr32_usart_t  *usart = serialPORT_USART;
-volatile avr32_usart_t  *usart0 = (&AVR32_USART0);
-int cd; /* USART Clock Divider. */
+	
+	if ((usartNum < 0) || (usartNum >= NUM_USART))
+	  return -1;  // error
 
 	/* Create the rx and tx queues. */
-	vprvSerialCreateQueues( uxQueueLength, &xRxedChars, &xCharsForTx );
+	usarts[usartNum].xRxedChars = xQueueCreate( uxQueueLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
+	usarts[usartNum].xCharsForTx = xQueueCreate( uxQueueLength + 1, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
+
+	volatile avr32_usart_t  *usart = usarts[usartNum].usart;
+	
+	int cd; /* USART Clock Divider. */
+
 
 	/* Configure USART. */
-	if( ( xRxedChars != serINVALID_QUEUE ) &&
-	  ( xCharsForTx != serINVALID_QUEUE ) &&
-	  ( ulWantedBaud != ( unsigned portLONG ) 0 ) )
+	if( ( usarts[usartNum].xRxedChars != 0 ) &&
+	  ( usarts[usartNum].xCharsForTx != 0 ) &&
+	  ( ulWantedBaud > 0 ) )
 	{
 		portENTER_CRITICAL();
 		{
@@ -265,30 +311,10 @@ int cd; /* USART Clock Divider. */
 					   AVR32_USART_CR_DTRDIS_MASK  |
 					   AVR32_USART_CR_RTSDIS_MASK;
 					   
-					   
-			// usart0
-
-			usart0->idr = 0xFFFFFFFF;
-
-			usart0->mr = 0; /* Reset Mode register. */
-			usart0->rtor = 0; /* Reset Receiver Time-out register. */
-			usart0->ttgr = 0; /* Reset Transmitter Timeguard register. */
-
-			usart0->cr = AVR32_USART_CR_RSTRX_MASK   |
-					   AVR32_USART_CR_RSTTX_MASK   |
-					   AVR32_USART_CR_RXDIS_MASK   |
-					   AVR32_USART_CR_TXDIS_MASK   |
-					   AVR32_USART_CR_RSTSTA_MASK  |
-					   AVR32_USART_CR_RSTIT_MASK   |
-					   AVR32_USART_CR_RSTNACK_MASK |
-					   AVR32_USART_CR_DTRDIS_MASK  |
-					   AVR32_USART_CR_RTSDIS_MASK;
-					   
+				   
 			/**
 			** Configure USART.
 			**/
-			/* Enable USART RXD & TXD pins. */
-			gpio_enable_module( USART_GPIO_MAP, sizeof( USART_GPIO_MAP ) / sizeof( USART_GPIO_MAP[0] ) );
 
 			/* Set the USART baudrate to be as close as possible to the wanted baudrate. */
 			/*
@@ -309,7 +335,7 @@ int cd; /* USART Clock Divider. */
 
 				if( cd < 2 )
 				{
-					return serINVALID_COMPORT_HANDLER;
+					return -1;  // error
 				}
 
 				usart->brgr = (cd << AVR32_USART_BRGR_CD_OFFSET);
@@ -323,7 +349,7 @@ int cd; /* USART Clock Divider. */
 				if( cd > 65535 )
 				{
 					/* Baudrate is too low */
-					return serINVALID_COMPORT_HANDLER;
+					return -1;  // error
 				}
 			}
 
@@ -343,7 +369,8 @@ int cd; /* USART Clock Divider. */
 
 			/* Register the USART interrupt handler to the interrupt controller and
 			 enable the USART interrupt. */
-			INTC_register_interrupt((__int_handler)&vUSART_ISR, serialPORT_USART_IRQ, AVR32_INTC_INT1);
+			INTC_register_interrupt((__int_handler) usarts[usartNum].intrHandler, 
+					usarts[usartNum].irq, AVR32_INTC_INT1);
 
 			/* Enable USART interrupt sources (but not Tx for now)... */
 			usart->ier = AVR32_USART_IER_RXRDY_MASK;
@@ -351,46 +378,23 @@ int cd; /* USART Clock Divider. */
 			/* Enable receiver and transmitter... */
 			usart->cr |= AVR32_USART_CR_TXEN_MASK | AVR32_USART_CR_RXEN_MASK;
 			
-			
-			// -------------------- usart0
-			
-			usart0->mr |= (1<<AVR32_USART_MR_OVER_OFFSET);
-			cd = 15; // configPBA_CLOCK_HZ / (8* 125000);
-			usart0->brgr = (cd << AVR32_USART_BRGR_CD_OFFSET);
-			
-			usart0->mr |= ((8-5) << AVR32_USART_MR_CHRL_OFFSET  ) |
-					(   4  << AVR32_USART_MR_PAR_OFFSET   ) |
-					(   0  << AVR32_USART_MR_NBSTOP_OFFSET);
-
-			/* Write the Transmit Timeguard Register */
-			usart0->ttgr = 0;
-
-
-			/* Enable USART interrupt sources (but not Tx for now)... */
-			// usart0->ier = AVR32_USART_IER_RXRDY_MASK;
-
-			/* Enable receiver and transmitter... */
-			usart0->cr |= AVR32_USART_CR_TXEN_MASK | AVR32_USART_CR_RXEN_MASK;
 		}
 		portEXIT_CRITICAL();
 	}
 	else
 	{
-		xReturn = serINVALID_COMPORT_HANDLER;
+		return -1;  // error
 	}
 
-	return xReturn;
+	return usartNum;  // usartNum is xComPortHandle
 }
 /*-----------------------------------------------------------*/
 
 signed portBASE_TYPE xSerialGetChar( xComPortHandle pxPort, signed portCHAR *pcRxedChar, portTickType xBlockTime )
 {
-	/* The port handle is not required as this driver only supports UART0. */
-	( void ) pxPort;
-
 	/* Get the next character from the buffer.  Return false if no characters
 	are available, or arrive before xBlockTime expires. */
-	if( xQueueReceive( xRxedChars, pcRxedChar, xBlockTime ) )
+	if( xQueueReceive( usarts[pxPort].xRxedChars, pcRxedChar, xBlockTime ) )
 	{
 		return pdTRUE;
 	}
@@ -401,21 +405,15 @@ signed portBASE_TYPE xSerialGetChar( xComPortHandle pxPort, signed portCHAR *pcR
 }
 /*-----------------------------------------------------------*/
 
-void vSerialPutString( xComPortHandle pxPort, const signed portCHAR * const pcString, unsigned portSHORT usStringLength )
+void vSerialPutString( xComPortHandle pxPort, const char * pcString )
 {
-signed portCHAR *pxNext;
-
-	/* NOTE: This implementation does not handle the queue being full as no
-	block time is used! */
-
-	/* The port handle is not required as this driver only supports UART0. */
-	( void ) pxPort;
+const char *pxNext;
 
 	/* Send each character in the string, one at a time. */
-	pxNext = ( signed portCHAR * ) pcString;
+	pxNext = ( const char * ) pcString;
 	while( *pxNext )
 	{
-		xSerialPutChar( pxPort, *pxNext, serNO_BLOCK );
+		xSerialPutChar( pxPort, *pxNext, 10 );  // 10ms block time 
 		pxNext++;
 	}
 }
@@ -423,10 +421,10 @@ signed portCHAR *pxNext;
 
 signed portBASE_TYPE xSerialPutChar( xComPortHandle pxPort, signed portCHAR cOutChar, portTickType xBlockTime )
 {
-volatile avr32_usart_t  *usart = serialPORT_USART;
+volatile avr32_usart_t  *usart = usarts[pxPort].usart;
 
 	/* Place the character in the queue of characters to be transmitted. */
-	if( xQueueSend( xCharsForTx, &cOutChar, xBlockTime ) != pdPASS )
+	if( xQueueSend( usarts[pxPort].xCharsForTx, &cOutChar, xBlockTime ) != pdPASS )
 	{
 		return pdFAIL;
 	}
@@ -441,26 +439,3 @@ volatile avr32_usart_t  *usart = serialPORT_USART;
 }
 /*-----------------------------------------------------------*/
 
-void vSerialClose( xComPortHandle xPort )
-{
-  /* Not supported as not required by the demo application. */
-}
-/*-----------------------------------------------------------*/
-
-/*###########################################################*/
-
-/*
- * Create the rx and tx queues.
- */
-static void vprvSerialCreateQueues(  unsigned portBASE_TYPE uxQueueLength, xQueueHandle *pxRxedChars, xQueueHandle *pxCharsForTx )
-{
-	/* Create the queues used to hold Rx and Tx characters. */
-	xRxedChars = xQueueCreate( uxQueueLength, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
-	xCharsForTx = xQueueCreate( uxQueueLength + 1, ( unsigned portBASE_TYPE ) sizeof( signed portCHAR ) );
-
-	/* Pass back a reference to the queues so the serial API file can
-	post/receive characters. */
-	*pxRxedChars = xRxedChars;
-	*pxCharsForTx = xCharsForTx;
-}
-/*-----------------------------------------------------------*/

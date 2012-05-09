@@ -44,8 +44,8 @@ up4darMIBGroup OBJECT-GROUP
 		uc3aSoftwareVersion, uc3aCpuID,
 		uc3aTestDesc, uc3aTestNum1, uc3aTestNum2,
 		inputVoltage, phyTxDelay, phyTxGain, phyRxInv,
-			-- phyTxDcShift, phyMATFST, phyLengthOfVW }
-		phyTxDcShift }
+		phyTxDcShift, phyMATFST, phyLengthOfVW }
+	
 	STATUS current
 	DESCRIPTION "A collection of of objects providing basic instrumentation and 
             control of an UP4DAR board."
@@ -129,22 +129,22 @@ phyTxDcShift OBJECT-TYPE
 	::= { phy 6 }
 
 
--- phyMATFST OBJECT-TYPE
---	SYNTAX  Integer32 ( 0..255 )
---          MAX-ACCESS  read-write
---          STATUS  current
---	DESCRIPTION "Maximal allowed time for a single transmission in digipeater
---		mode in 2sec steps.
---		The time is not limited if MATFST=0 ."
---	::= { phy 7 }
+phyMATFST OBJECT-TYPE
+	SYNTAX  Integer32 ( 0..255 )
+          MAX-ACCESS  read-write
+          STATUS  current
+	DESCRIPTION "Maximal allowed time for a single transmission in digipeater
+		mode in 2sec steps.
+		The time is not limited if MATFST=0 ."
+	::= { phy 7 }
 
--- phyLengthOfVW OBJECT-TYPE
---	SYNTAX  Integer32 ( 1..255 )
---          MAX-ACCESS  read-write
---          STATUS  current
---	DESCRIPTION "Number of 20ms blocks of recorded voice warning message
---		for user information about MATFST expiry."
---	::= { phy 8 }
+phyLengthOfVW OBJECT-TYPE
+	SYNTAX  Integer32 ( 1..255 )
+          MAX-ACCESS  read-write
+          STATUS  current
+	DESCRIPTION "Number of 20ms blocks of recorded voice warning message
+		for user information about MATFST expiry."
+	::= { phy 8 }
 
 					   
 uc3aSoftwareVersion OBJECT-TYPE

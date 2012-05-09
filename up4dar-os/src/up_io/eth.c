@@ -46,18 +46,6 @@ U32 eth_counter3 = 0;
 int eth_ptr = 0;
 
 
-static const gpio_map_t gpiomap = {
-	{ AVR32_MACB_MDC_0_PIN, AVR32_MACB_MDC_0_FUNCTION },
-	{ AVR32_MACB_MDIO_0_PIN, AVR32_MACB_MDIO_0_FUNCTION },
-	{ AVR32_MACB_RXD_0_PIN, AVR32_MACB_RXD_0_FUNCTION },
-	{ AVR32_MACB_RXD_1_PIN, AVR32_MACB_RXD_1_FUNCTION },
-	{ AVR32_MACB_TXD_0_PIN, AVR32_MACB_TXD_0_FUNCTION },	
-	{ AVR32_MACB_TXD_1_PIN, AVR32_MACB_TXD_1_FUNCTION },
-	{ AVR32_MACB_TX_EN_0_PIN, AVR32_MACB_TX_EN_0_FUNCTION },	
-	{ AVR32_MACB_RX_ER_0_PIN, AVR32_MACB_RX_ER_0_FUNCTION },	
-	{ AVR32_MACB_RX_DV_0_PIN, AVR32_MACB_RX_DV_0_FUNCTION },	
-	{ AVR32_MACB_TX_CLK_0_PIN, AVR32_MACB_TX_CLK_0_FUNCTION }
-};
 
 
 static unsigned char vdisp_frame[1024 + 42 + 320] =
@@ -122,7 +110,6 @@ static unsigned char arp_frame[60];
 
 void eth_init(unsigned char ** p)
 {	
-	gpio_enable_module( gpiomap, 10 );
 		
 	AVR32_MACB.NCFGR.spd = 1;  // 100MBit/s
 	// AVR32_MACB.NCFGR.spd = 0;  // 10MBit/s

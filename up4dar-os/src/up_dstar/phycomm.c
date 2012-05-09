@@ -39,7 +39,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-static xComPortHandle xPort = NULL;
+static xComPortHandle xPort;
+
 #define comRX_BLOCK_TIME			( ( portTickType ) 100 )
 #define comSTACK_SIZE				configMINIMAL_STACK_SIZE
 
@@ -290,7 +291,13 @@ void phyCommInit( xQueueHandle dq )
 {
 	dstarQueue = dq;
 	
-	xPort = xSerialPortInitMinimal( 115200, 20 );
+	xPort = xSerialPortInitMinimal( 1, 115200, 20 );
+	
+	if (xPort < 0)
+	{
+		//  TODO error handling
+		return ;
+	}
 	
 	xTaskCreate( vComRxTask, ( signed char * ) "COMRx", comSTACK_SIZE, NULL, mainCOM_TEST_PRIORITY, ( xTaskHandle * ) NULL );
 }
