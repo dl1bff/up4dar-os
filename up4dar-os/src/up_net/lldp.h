@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,34 +17,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+
 /*
- * eth.h
+ * lldp.h
  *
- * Created: 28.05.2011 18:12:55
+ * Created: 10.05.2012 12:50:54
  *  Author: mdirska
  */ 
 
 
-#ifndef ETH_H_
-#define ETH_H_
+#ifndef LLDP_H_
+#define LLDP_H_
 
 
-// void eth_init(void);
-void eth_init(unsigned char ** p);
-// void eth_send_frame (void);
-void eth_send_vdisp_frame (void);
+void lldp_send (void);
 
 
-void eth_send_raw ( unsigned char * b, int len );
-
-void eth_rx (void);
-void eth_set_src_mac_and_type(uint8_t * packet, uint16_t ethType);
 
 
-extern U32 eth_counter;
-extern U32 eth_counter2;
-extern U32 eth_counter3;
-
-extern unsigned char mac_addr[6];
-
-#endif /* ETH_H_ */
+#endif /* LLDP_H_ */

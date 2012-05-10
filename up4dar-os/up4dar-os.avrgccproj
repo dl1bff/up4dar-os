@@ -309,6 +309,12 @@
     <Compile Include="src\up_io\eth.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_io\eth_txmem.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_io\eth_txmem.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_io\serial.c">
       <SubType>compile</SubType>
     </Compile>
@@ -321,6 +327,12 @@
     <Compile Include="src\up_io\wm8510.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\arp.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\arp.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_net\ipneigh.c">
       <SubType>compile</SubType>
     </Compile>
@@ -331,6 +343,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_net\ipv4.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\lldp.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\lldp.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_net\snmp.c">

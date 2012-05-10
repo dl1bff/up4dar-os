@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,34 +17,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+
 /*
- * eth.h
+ * arp.h
  *
- * Created: 28.05.2011 18:12:55
+ * Created: 10.05.2012 16:32:38
  *  Author: mdirska
  */ 
 
 
-#ifndef ETH_H_
-#define ETH_H_
+#ifndef ARP_H_
+#define ARP_H_
 
 
-// void eth_init(void);
-void eth_init(unsigned char ** p);
-// void eth_send_frame (void);
-void eth_send_vdisp_frame (void);
 
 
-void eth_send_raw ( unsigned char * b, int len );
-
-void eth_rx (void);
-void eth_set_src_mac_and_type(uint8_t * packet, uint16_t ethType);
 
 
-extern U32 eth_counter;
-extern U32 eth_counter2;
-extern U32 eth_counter3;
 
-extern unsigned char mac_addr[6];
+void arp_process_packet(uint8_t * raw_packet);
 
-#endif /* ETH_H_ */
+void arp_send_request (const ip_addr_t * a, int unicast, const mac_addr_t * m);
+
+#endif /* ARP_H_ */

@@ -28,6 +28,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "queue.h"
 #include "task.h"
 
+#include "up_io/eth.h"
+#include "up_io/eth_txmem.h"
 
 #include "up_dstar/vdisp.h"
 #include "snmp.h"
@@ -429,18 +431,28 @@ static int error_byte_pos;
 static int error_index_byte_pos;
 
 
-static int error_msg (int err_code, int err_idx, uint8_t * response, const uint8_t * req, int req_len)
+static eth_txmem_t * error_msg (int err_code, int err_idx, const uint8_t * req, int req_len, int * data_len)
 {
+	eth_txmem_t * packet = eth_txmem_get(req_len + 14 + 20 + 8 );
+	
+	if (packet == NULL)
+		return NULL;
+	
+	uint8_t * response = packet->data + 14 + 20 + 8;
+		
 	memcpy(response, req, req_len);
 	response[req_type_pos] = BER_SNMP_RESPONSE;
 	response[error_byte_pos] = err_code;
 	response[error_index_byte_pos] = err_idx;
-	return req_len;
+	
+	*data_len = req_len;
+	
+	return packet;
 }	
 
 // static char buf[10];
 
-int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response )
+eth_txmem_t * snmp_process_request( const uint8_t * req, int req_len, int * result_data_len )
 {
 	parse_len = req_len;
 	parse_ptr = req;
@@ -520,7 +532,7 @@ int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response )
 		
 		int oid_index = find_oid(tmp_oid, oid_len, (request_type == BER_SNMP_GETNEXT) ? 1 : 0);
 		
-		if (oid_index < 0)  return error_msg(0x02, param_pos + 1, response, req, req_len);  // not found
+		if (oid_index < 0)  return error_msg(0x02, param_pos + 1, req, req_len, result_data_len);  // not found
 		
 		ber_skip();
 		
@@ -528,32 +540,32 @@ int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response )
 		if (request_type == BER_SNMP_SET)
 		{	
 			if ( parse_ptr[0] != snmp_table[oid_index].valueType )
-			  return error_msg(0x03, param_pos + 1, response, req, req_len); // wrong data type
+			  return error_msg(0x03, param_pos + 1, req, req_len, result_data_len); // wrong data type
 			  
 			if ( snmp_table[oid_index].setter == 0 )
-			  return error_msg(0x04, param_pos + 1, response, req, req_len); // read-only parameter
+			  return error_msg(0x04, param_pos + 1, req, req_len, result_data_len); // read-only parameter
 			  
 			int data_len = get_length(& tmp_len);
 			
 			if ( snmp_table[oid_index].setter(snmp_table[oid_index].arg, parse_ptr + 1 + tmp_len, data_len) != 0)
-			  return error_msg(0x05, param_pos + 1, response, req, req_len); // general error
+			  return error_msg(0x05, param_pos + 1, req, req_len, result_data_len); // general error
 		}
 		
 		snmp_result[param_pos].oid_index = oid_index;
 		
 		if ( snmp_table[oid_index].getter == 0)
-			return error_msg(0x05, param_pos + 1, response, req, req_len); // general error
+			return error_msg(0x05, param_pos + 1, req, req_len, result_data_len); // general error
 		
 		if ( snmp_table[oid_index].getter(snmp_table[oid_index].arg, 
 				snmp_result[param_pos].result_buf , &snmp_result[param_pos].result_len, MAX_RESULT_LEN ) != 0)
-			  return error_msg(0x05, param_pos + 1, response, req, req_len); // general error
+			  return error_msg(0x05, param_pos + 1, req, req_len, result_data_len); // general error
 		
 		
 		ber_skip();
 		param_pos ++;
 		
 		if (param_pos > MAX_REQ_PARAM)  // more parameters than we have memory for
-			return error_msg(0x01, param_pos, response, req, req_len); // "response message too large"
+			return error_msg(0x01, param_pos, req, req_len, result_data_len); // "response message too large"
 	}
 	
 	
@@ -578,9 +590,14 @@ int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response )
 	tmp_len += 2 + community_string_len; // communitystring, length < 127
 	tmp_len += 3; // snmp_version
 	
-	value = tmp_len + 4; // the UDP packet length
+	*result_data_len = tmp_len + 4; // the UDP packet length
 	
-	uint8_t * resp = response;
+	eth_txmem_t * packet = eth_txmem_get( (*result_data_len) + 8 + 20 + 14 );
+	
+	if (packet == NULL)
+		return NULL;
+	
+	uint8_t * resp = packet->data + 8 + 20 + 14;
 	
 	resp[0] = BER_SEQUENCE;
 	resp[1] = 0x82;
@@ -680,5 +697,5 @@ int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response )
 	// vdisp_i2s(buf, 8, 10, 0, tmp_len);
 	// vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
 	
-	return value;
+	return packet;
 }

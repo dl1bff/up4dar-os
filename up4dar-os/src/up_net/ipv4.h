@@ -31,9 +31,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 extern unsigned char ipv4_addr[4];
 
+extern unsigned char ipv4_netmask[4];
 
-void ipv4_input (unsigned char * p, int len);
+extern unsigned char ipv4_gw[4];
 
+extern unsigned char dcs_relay_host[4];
+
+void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header);
 
 
 #endif /* IPV4_H_ */

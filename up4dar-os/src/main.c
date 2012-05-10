@@ -39,6 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/txtest.h"
 
 #include "up_io/eth.h"
+#include "up_io/eth_txmem.h"
 #include "up_net/ipneigh.h"
 
 #include "up_dstar/vdisp.h"
@@ -53,6 +54,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_net/snmp.h"
 #include "up_net/snmp_data.h"
+
+#include "up_net/ipv4.h"
+
+
+#include "up_net/lldp.h"
 
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
@@ -324,6 +330,9 @@ static void fw_upload(void)
 #define NUMBER_OF_KEYS  7
 
 static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0, 0 };
+	
+	
+int maxTXQ;
 
 static void vParTestToggleLED( portBASE_TYPE uxLED ) 
 {
@@ -391,11 +400,9 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 
 					case 1:
 						vdisp_clear_rect (0, 0, 128, 64);
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "EMR" );
+						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "TX test" );
 						dstarResetCounters();
-						tx_active = 2;
-							
-							
+						tx_active = 1;	
 						break;
 										
 					case 2:
@@ -490,8 +497,8 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			v = AVR32_MACB.MAN.data;
 			
-			// vdisp_i2s( tmp_buf, 4, 16, 1, v );
-			// vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, tmp_buf );
+			 vdisp_i2s( tmp_buf, 4, 16, 1, maxTXQ );
+			 vdisp_prints_xy( 80, 56, VDISP_FONT_6x8, 0, tmp_buf );
 			
 			const char * net_status = "     ";
 			if (v & 1)  // Ethernet link is active
@@ -522,7 +529,15 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			AVR32_MACB.man = 0x60C20000; // read register 0x10
 			
 			
-			 printDebug("Test von DL1BFF\n");
+			 printDebug("Test von DL1BFF\r\n");
+			 
+			 lldp_send();
+			 
+			 ipneigh_service();
+			 
+			 // char buf[10];
+			 // vdisp_i2s(buf, 9, 16, 1, (unsigned int) eth_txmem_get(150) );
+			 // vdisp_prints_xy( 50, 56, VDISP_FONT_6x8, 0, buf );
 			
 			}
 		break;
@@ -665,13 +680,13 @@ static void vUSART0Task( void *pvParameters )
 
 */
 
-static void vRXEthTask( void *pvParameters )
+static void vRXTXEthTask( void *pvParameters )
 {
 	while (1)
 	{
-		eth_recv_frame();
-		// taskYIELD();
-		vTaskDelay(3);
+		eth_rx(); // receive packets
+		eth_txmem_flush_q();  // send frames in Q
+		vTaskDelay(1);
 	}		
 }
 
@@ -814,13 +829,52 @@ static void vLCDTask( void *pvParameters )
 }
 
 
+const uint8_t dcs_frame_header[] =
+	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x01,
+		0x08, 0x00,  // IPv4
+		0x45, 0x00, // v4, DSCP
+		0x00, 0x00, // ip length (will be set later)
+		0x01, 0x01, // ID
+		0x40, 0x00,  // DF don't fragment, offset = 0
+		0x40, // TTL
+		0x11, // UDP = 17
+		0x00, 0x00,  // header chksum (will be calculated later)
+		192, 168, 1, 33,  // source
+		192, 168, 1, 255,  // destination
+		0xb0, 0xb0,  // source port
+		0x40, 0x01,  // destination port 16385
+		0x00, 0x00,    //   UDP length (will be set later)
+		0x00, 0x00  // UDP chksum (0 = no checksum)	
+};
+
+
+
+
+static uint8_t dcs_ambe_data[9];
 
 static int dcs_tx_counter = 0;
 static int dcs_frame_counter = 0;
 
 static void send_dcs (int session_id, int last_frame)
 {
-	uint8_t * d = dcs_frame + 42; // skip ip+udp header
+	eth_txmem_t * packet = eth_txmem_get( 14 + 20 + 8 + 100 );
+	
+	if (packet == NULL)
+	{
+		vdisp_prints_xy( 40, 56, VDISP_FONT_6x8, 0, "NOMEM" );
+		return;
+	}
+	
+	
+	memcpy (packet->data, dcs_frame_header, sizeof dcs_frame_header);
+		
+	eth_set_src_mac_and_type( packet->data, 0x0800 );
+	
+	memcpy(packet->data + 26, ipv4_addr, sizeof ipv4_addr); // src IP
+	memcpy(packet->data + 30, dcs_relay_host, sizeof ipv4_addr); // dest IP
+	
+	uint8_t * d = packet->data + 42; // skip ip+udp header
 	
 	memcpy(d, "0001", 4);
 	
@@ -834,6 +888,8 @@ static void send_dcs (int session_id, int last_frame)
 	d[44] = session_id & 0xFF;
 	
 	d[45] = dcs_frame_counter | ((last_frame != 0) ? 0x40 : 0);
+	
+	memcpy (d + 46, dcs_ambe_data, sizeof dcs_ambe_data);
 	
 	d[58] = dcs_tx_counter & 0xFF;
 	d[59] = (dcs_tx_counter >> 8) & 0xFF;
@@ -863,7 +919,37 @@ static void send_dcs (int session_id, int last_frame)
 		}
 	}
 	
-	eth_send_dcs_frame();
+	
+	uint8_t * dcs_frame = packet->data;
+	
+	int udp_length = 100 + 8;
+	
+	((unsigned short *) (dcs_frame + 14)) [1] = udp_length + 20; // IP len
+	
+	((unsigned short *) (dcs_frame + 14)) [12] = udp_length; // UDP len
+	
+	int sum = 0;
+	int i;
+	
+	for (i=0; i < 10; i++) // 20 Byte Header
+	{
+		if (i != 5)  // das checksum-feld weglassen
+		{
+			sum += ((unsigned short *) (dcs_frame + 14)) [i];
+		}
+	}
+	
+	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	
+	((unsigned short *) (dcs_frame + 14)) [5] = sum; // checksumme setzen
+	
+	
+	ip_addr_t  tmp_addr;
+	memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
+	memcpy(&tmp_addr.ipv4.addr, dcs_relay_host , sizeof ipv4_addr);  //  an diese adresse
+	
+	ipneigh_send_packet (&tmp_addr, packet);
+	
 	
 	dcs_frame_counter ++;
 	
@@ -875,6 +961,7 @@ static void send_dcs (int session_id, int last_frame)
 	dcs_tx_counter ++;
 	
 }
+
 
 
 static void vTXTask( void *pvParameters )
@@ -912,33 +999,33 @@ static void vTXTask( void *pvParameters )
 			}
 			else
 			{
-				if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue unexpectedly empty
+				if (ambe_q_get(& microphone, dcs_ambe_data) != 0) // queue unexpectedly empty
 				{
 					ambe_stop_encode();
 					send_dcs( session_id, 1); // send end frame
-					send_phy ( dcs_frame + (42 + 46) );
+					send_phy ( dcs_ambe_data );
 					tx_state = 3; // wait for PTT release
 				}					
 				else
 				{
 					send_dcs(  session_id, 0); // send normal frame
-					send_phy ( dcs_frame + (42 + 46) );
+					send_phy ( dcs_ambe_data );
 					vTaskDelay(20); // wait 20ms
 				}
 			}
 			break;
 				
 		case 2: // PTT off, drain microphone data
-			if (ambe_q_get(& microphone, dcs_frame + (42 + 46)) != 0) // queue empty
+			if (ambe_q_get(& microphone, dcs_ambe_data) != 0) // queue empty
 			{
 				send_dcs( session_id, 1); // send end frame
-				send_phy ( dcs_frame + (42 + 46) );
+				send_phy ( dcs_ambe_data );
 				tx_state = 0; // wait for PTT
 			}
 			else
 			{
 				send_dcs(  session_id, 0); // send normal frame
-				send_phy ( dcs_frame + (42 + 46) );
+				send_phy ( dcs_ambe_data );
 				vTaskDelay(20); // wait 20ms
 			}
 			break;
@@ -978,9 +1065,6 @@ int main (void)
 		// TODO: error handling
 	}
 	
-	
-	
-	
 
 	unsigned char * pixelBuf;
 	
@@ -993,9 +1077,7 @@ int main (void)
 		
 	vStartLEDFlashTasks( mainLED_TASK_PRIORITY );
 	
-//	xTaskCreate( vUSART0Task, (signed char *) "USART0", ledSTACK_SIZE, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
-	
-	xTaskCreate( vRXEthTask, (signed char *) "rxeth", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	xTaskCreate( vLCDTask, (signed char *) "LCD", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
@@ -1022,6 +1104,15 @@ int main (void)
 	wm8510Init( & audio_tx_q, & audio_rx_q );
 	
 	xTaskCreate( vTXTask, (signed char *) "TX", ledSTACK_SIZE, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	
+	if (eth_txmem_init() == 0)
+	{
+		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM OK" );
+	}
+	else
+	{
+		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
+	}
 	
 	vTaskStartScheduler();
   

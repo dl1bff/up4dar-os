@@ -40,6 +40,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "ambe.h"
 
+#include "up_io/eth_txmem.h"
+
 #include "up_net/snmp_data.h"
 #include "up_net/snmp.h"
 

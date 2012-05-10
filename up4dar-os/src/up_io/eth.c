@@ -26,17 +26,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */ 
 
 
+#include "FreeRTOS.h"
+#include "queue.h"
+#include "task.h"
+
+
 #include <asf.h>
 
 #include "board.h"
 #include "gpio.h"
 
+#include "eth_txmem.h"
 
-#include "eth.h"
 #include "up_net/ipneigh.h"
+#include "eth.h"
+
 #include "up_net/ipv4.h"
 
 #include "gcc_builtin.h"
+
+#include "up_net/arp.h"
 
 
 U32 eth_counter = 0;
@@ -69,29 +78,8 @@ static unsigned char vdisp_frame[1024 + 42 + 320] =
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
 };
 
-uint8_t dcs_frame[42 + 100] =
-	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x01,
-		0x08, 0x00,  // IPv4
-		0x45, 0x00, // v4, DSCP
-		0x00, 0x00, // ip length (will be set later)
-		0x01, 0x01, // ID
-		0x40, 0x00,  // DF don't fragment, offset = 0
-		0x40, // TTL
-		0x11, // UDP = 17
-		0x00, 0x00,  // header chksum (will be calculated later)
-		192, 168, 1, 33,  // source
-		192, 168, 1, 255,  // destination
-		0xb0, 0xb0,  // source port
-		0x40, 0x01,  // destination port 16385
-		0x00, 0x00,    //   UDP length (will be set later)
-		0x00, 0x00,  // UDP chksum (0 = no checksum)
-		
-		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
-};
 
 
-static unsigned long tx_buffer_q[2];
 
 #define RECV_BUF_COUNT  64
 #define RECV_BUF_SIZE	128
@@ -100,29 +88,29 @@ static unsigned char rx_mem[(RECV_BUF_COUNT * RECV_BUF_SIZE) + 1540];  // 64 * 1
 
 static unsigned long rx_buffer_q[RECV_BUF_COUNT * 2];
 
-unsigned char mac_addr[6] = { 0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x01 };
+unsigned char mac_addr[6] = { 0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x00 };
 	
-
-	
-static unsigned char arp_frame[60];
 
 
 
 void eth_init(unsigned char ** p)
 {	
-		
+	
+	// Ethernet MAC address
+	memcpy(mac_addr + 3, (unsigned char *) 0x80800204, 3); // first 3 bytes of CPU id
+									// are the last 3 bytes of the MAC address
+	
 	AVR32_MACB.NCFGR.spd = 1;  // 100MBit/s
-	// AVR32_MACB.NCFGR.spd = 0;  // 10MBit/s
 
 	AVR32_MACB.NCFGR.fd = 1; // full duplex
 	AVR32_MACB.NCFGR.clk = 2; // MCK / 32 -> 1.875 MHz
 	
 	AVR32_MACB.USRIO.rmii = 0; // RMII
 	
-	tx_buffer_q[0] = (unsigned long) & vdisp_frame;
-	tx_buffer_q[1] = (sizeof vdisp_frame) | 0x40008000; // wrap bit, last buffer
+	// tx_buffer_q[0] = (unsigned long) & vdisp_frame;
+	// tx_buffer_q[1] = (sizeof vdisp_frame) | 0x40008000; // wrap bit, last buffer
 	
-	AVR32_MACB.tbqp = (unsigned long) & tx_buffer_q;
+	// AVR32_MACB.tbqp = (unsigned long) & tx_buffer_q;
 	
 	AVR32_MACB.ncr = 0x0018; // TE + MDE
 	
@@ -161,11 +149,6 @@ void eth_init(unsigned char ** p)
 	AVR32_MACB.sa1t	= mac_addr[4] |
 						(mac_addr[5] << 8);
 						
-	for (i=0; i < (sizeof arp_frame); i++ )
-	{
-		arp_frame[i] = 0;
-	}
-	
 	AVR32_MACB.NCR.re = 1;  // receive enable
 
 	eth_ptr = 0;
@@ -210,27 +193,6 @@ void eth_init(unsigned char ** p)
 	((unsigned short *) (vdisp_frame + 14)) [5] = sum; // checksumme setzen
 	
 	
-	// dcs_frame
-	
-	udp_length = 100 + 8;
-	
-	((unsigned short *) (dcs_frame + 14)) [1] = udp_length + 20; // IP len
-	
-	((unsigned short *) (dcs_frame + 14)) [12] = udp_length; // UDP len
-	
-	sum = 0;
-	
-	for (i=0; i < 10; i++) // 20 Byte Header
-	{
-		if (i != 5)  // das checksum-feld weglassen
-		{
-			sum += ((unsigned short *) (dcs_frame + 14)) [i];
-		}
-	}
-	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
-	
-	((unsigned short *) (dcs_frame + 14)) [5] = sum; // checksumme setzen
 	
 	
 }
@@ -260,63 +222,25 @@ static void free_buffer (int start_buf, int end_buf)
 void eth_send_raw ( unsigned char * b, int len )
 {
 	// TODO:  wait if a transmission is currently active
+	
+	//AVR32_MACB.tbqp = (unsigned long) & tx_buffer_q;
+	
+	/*
 	tx_buffer_q[0] = (unsigned long) b;
 	tx_buffer_q[1] = ((unsigned long) len) | 0x40008000; // wrap bit, last buffer
 	AVR32_MACB.NCR.tstart = 1; // und los!
+	*/
 }	
-		
 
 
-static const unsigned char arp_header[6] = {0x00, 0x01, 0x08, 0x00, 6, 4};
-	
-
-static void process_arp(unsigned char * p)
+void eth_set_src_mac_and_type(uint8_t * packet, uint16_t ethType)
 {
-	switch (((unsigned short *)p)[0])
-	{
-	case 1: // request
+	memcpy(packet + 6, mac_addr, sizeof mac_addr);  // source MAC
 	
-		if (memcmp(p+18, ipv4_addr, sizeof ipv4_addr) == 0) // meine IP
-		{
-			memcpy(arp_frame + 0, p+2, sizeof mac_addr); // dest MAC
-			memcpy(arp_frame + 6, mac_addr, sizeof mac_addr);  // source MAC
-			arp_frame[12] = 0x08;
-			arp_frame[13] = 0x06;
-			memcpy(arp_frame + 14, arp_header, sizeof arp_header);
-			arp_frame[20] = 0x00;
-			arp_frame[21] = 0x02; // reply
-			memcpy(arp_frame + 22, mac_addr, sizeof mac_addr); // sender MAC
-			memcpy(arp_frame + 28, ipv4_addr, sizeof ipv4_addr); // sender IP
-			memcpy(arp_frame + 32, p+2, sizeof mac_addr); // target MAC
-			memcpy(arp_frame + 38, p+8, sizeof ipv4_addr); // target IP
-			
-			ip_addr_t  tmp_addr;
-			memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-			memcpy(&tmp_addr.ipv4.addr, p+8, sizeof ipv4_addr);
-			ipneigh_rx( &tmp_addr, (mac_addr_t *) (p+2), 0);
-			
-			eth_send_raw ( arp_frame, sizeof arp_frame);
-			/*
-			tx_buffer_q[0] = (unsigned long) & arp_frame;
-			tx_buffer_q[1] = (sizeof arp_frame) | 0x40008000; // wrap bit, last buffer
-			AVR32_MACB.NCR.tstart = 1; // und los!
-			*/
-			
-		}
-		break;
-		
-	case 2: // reply
-		if (memcmp(p+8, ipv4_addr, sizeof ipv4_addr) == 0)
-		{
-			ip_addr_t  tmp_addr;
-			memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-			memcpy(&tmp_addr.ipv4.addr, p+8, sizeof ipv4_addr);
-			ipneigh_rx( &tmp_addr, (mac_addr_t *) (p+2), 1);
-		}
-		break;
-	}		
-		
+	packet[12] = ethType >> 8;
+	packet[13] = ethType & 0xFF;
 }
+
 
 
 static void process_frame (unsigned char * p, int len)
@@ -325,27 +249,24 @@ static void process_frame (unsigned char * p, int len)
 	
 	switch (((unsigned short *)p)[6])
 	{
-		case 0x86dd:
+		case 0x86dd: // IPv6
 			break;
-		case 0x0800:
-			ipv4_input(p+14, len - 14);
+		case 0x0800: // IPv4
+			ipv4_input(p+14, len - 14, p);
 			break;
-		case 0x0806:
-			
-			if ((len >= 42) && (memcmp(p+14, arp_header, sizeof arp_header) == 0))
+		case 0x0806: // ARP
+			if (len >= 42)
 			{
-				process_arp(p + 20);
+				arp_process_packet(p);
 			}
 			break;
 	}
-	
 }
 
 
-void eth_recv_frame (void)
+void eth_rx (void)
 {
-	
-	if (AVR32_MACB.RSR.rec == 1)
+	if (AVR32_MACB.RSR.rec == 1) 
 	{
 		AVR32_MACB.RSR.rec = 1;  // bit loeschen
 		
@@ -501,10 +422,3 @@ void eth_send_vdisp_frame (void)
 
 }
 
-
-void eth_send_dcs_frame (void)
-{
-
-  eth_send_raw( dcs_frame, sizeof dcs_frame );  
-
-}

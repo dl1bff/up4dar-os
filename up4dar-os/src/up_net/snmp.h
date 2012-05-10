@@ -34,7 +34,7 @@ struct snmpReq {
 	int data;
 };
 
-int snmp_process_request( const uint8_t * req, int req_len, uint8_t * response );
 
+eth_txmem_t * snmp_process_request( const uint8_t * req, int req_len, int * data_len );
 
 #endif /* SNMP_H_ */

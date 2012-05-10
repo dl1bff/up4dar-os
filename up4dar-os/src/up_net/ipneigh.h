@@ -54,19 +54,21 @@ struct ipneigh_mac_addr
 
 typedef struct ipneigh_mac_addr mac_addr_t;
 
-enum ipneigh_state
+typedef enum ipneigh_state
 {
 	INCOMPLETE,
 	REACHABLE,
 	STALE,
 	DELAY,
 	PROBE
-};
+} ipneigh_state_t;
 
 void ipneigh_init (void);
 
 void ipneigh_rx ( const ip_addr_t * a, const mac_addr_t * m, int solicited );
 
-int ipneigh_get ( const ip_addr_t * a, mac_addr_t * m );
+void ipneigh_send_packet ( const ip_addr_t * a, eth_txmem_t * packet );
+
+void ipneigh_service(void);
 
 #endif /* IPNEIGH_H_ */
