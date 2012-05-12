@@ -144,10 +144,13 @@ void arp_process_packet(uint8_t * raw_packet)
 			memcpy(arp_frame + 32, p+2, sizeof mac_addr); // target MAC
 			memcpy(arp_frame + 38, p+8, sizeof ipv4_addr); // target IP
 			
-			ip_addr_t  tmp_addr;
-			memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-			memcpy(&tmp_addr.ipv4.addr, p+8, sizeof ipv4_addr);
-			ipneigh_rx( &tmp_addr, (mac_addr_t *) (p+2), 0);  // put into neighbor list
+			if (ipv4_addr_is_local(p + 8))
+			{
+				ip_addr_t  tmp_addr;
+				memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
+				memcpy(&tmp_addr.ipv4.addr, p+8, sizeof ipv4_addr);
+				ipneigh_rx( &tmp_addr, (mac_addr_t *) (p+2), 0);  // put into neighbor list
+			}				
 			
 			eth_txmem_send( t );
 		}
@@ -156,10 +159,13 @@ void arp_process_packet(uint8_t * raw_packet)
 	case 2: // reply
 		if (memcmp(p+18, ipv4_addr, sizeof ipv4_addr) == 0)  // is it for me?
 		{
-			ip_addr_t  tmp_addr;
-			memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-			memcpy(&tmp_addr.ipv4.addr, p+8, sizeof ipv4_addr);
-			ipneigh_rx( &tmp_addr, (mac_addr_t *) (p+2), 1);  // solicited response
+			if (ipv4_addr_is_local(p + 8))
+			{
+				ip_addr_t  tmp_addr;
+				memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
+				memcpy(&tmp_addr.ipv4.addr, p+8, sizeof ipv4_addr);
+				ipneigh_rx( &tmp_addr, (mac_addr_t *) (p+2), 1);  // solicited response
+			}				
 		}
 		break;
 	}		

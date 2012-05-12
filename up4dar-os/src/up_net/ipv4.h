@@ -35,9 +35,12 @@ extern unsigned char ipv4_netmask[4];
 
 extern unsigned char ipv4_gw[4];
 
-extern unsigned char dcs_relay_host[4];
+
 
 void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header);
+void ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest );
+int ipv4_addr_is_local ( const uint8_t * ipv4_a );
+
 
 
 #endif /* IPV4_H_ */

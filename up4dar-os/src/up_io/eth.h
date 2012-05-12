@@ -38,8 +38,8 @@ void eth_send_vdisp_frame (void);
 void eth_send_raw ( unsigned char * b, int len );
 
 void eth_rx (void);
-void eth_set_src_mac_and_type(uint8_t * packet, uint16_t ethType);
 
+void eth_set_src_mac_and_type(uint8_t * data, uint16_t ethType);
 
 extern U32 eth_counter;
 extern U32 eth_counter2;

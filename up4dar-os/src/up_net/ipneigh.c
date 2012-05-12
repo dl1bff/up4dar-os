@@ -70,7 +70,7 @@ void ipneigh_init(void)
 	memset(&zero_address, 0, sizeof zero_address);	
 }
 
-#define REACHABLE_TIMER 300
+#define REACHABLE_TIMER 20
 
 #define PROBE_TIMER 3
 #define PROBE_RETRY 4
@@ -108,6 +108,7 @@ void ipneigh_service(void)
 						neighbors[i].state = PROBE;
 						neighbors[i].timer = PROBE_TIMER;
 						neighbors[i].retry_counter = PROBE_RETRY;
+						neighbors[i].pending_packet = NULL;
 					}
 				
 					break;
@@ -148,7 +149,8 @@ void ipneigh_service(void)
 						{
 							neighbors[i].state = INCOMPLETE;
 							neighbors[i].timer = INCOMPLETE_TIMER;
-							neighbors[i].retry_counter = INCOMPLETE_RETRY;					
+							neighbors[i].retry_counter = INCOMPLETE_RETRY;
+							neighbors[i].pending_packet = NULL;				
 						}
 						else
 						{
@@ -177,7 +179,8 @@ void ipneigh_rx ( const ip_addr_t * a, const mac_addr_t * m, int solicited )
 	{
 		if (memcmp(&neighbors[i].ip_addr, a, sizeof (ip_addr_t)) == 0)
 		{
-			if (solicited != 0)
+			if ((solicited != 0) && 
+			  ((neighbors[i].state == INCOMPLETE) || (neighbors[i].state == PROBE)))
 			{
 				memcpy(&neighbors[i].mac_addr, m, sizeof (mac_addr_t));
 				neighbors[i].state = REACHABLE;
@@ -186,8 +189,7 @@ void ipneigh_rx ( const ip_addr_t * a, const mac_addr_t * m, int solicited )
 				
 				if (neighbors[i].pending_packet != NULL)
 				{
-					
-					memcpy(&neighbors[i].pending_packet->data, m, sizeof (mac_addr_t));
+					memcpy(neighbors[i].pending_packet->data, m, sizeof (mac_addr_t));
 						// fill in dest MAC addr
 					eth_txmem_send(neighbors[i].pending_packet);
 					neighbors[i].pending_packet = NULL;
@@ -209,6 +211,7 @@ void ipneigh_rx ( const ip_addr_t * a, const mac_addr_t * m, int solicited )
 			neighbors[i].state = STALE;
 			neighbors[i].timer = 0;
 			neighbors[i].retry_counter = 0;
+			neighbors[i].pending_packet = NULL;
 			return;
 		}
 	}
@@ -226,6 +229,7 @@ void ipneigh_rx ( const ip_addr_t * a, const mac_addr_t * m, int solicited )
 			neighbors[i].state = STALE;
 			neighbors[i].timer = 0;
 			neighbors[i].retry_counter = 0;
+			neighbors[i].pending_packet = NULL;
 			return;
 		}
 	}
@@ -249,7 +253,7 @@ static int ipneigh_get ( const ip_addr_t * a, mac_addr_t * m, eth_txmem_t * pack
 			if (neighbors[i].state == INCOMPLETE)
 			{
 				// ND going on
-				vdisp_prints_xy( 30, 56, VDISP_FONT_6x8, 0, "INCOM" );
+				// vdisp_prints_xy( 30, 56, VDISP_FONT_6x8, 0, "INCOM" );
 				
 				eth_txmem_free(packet);  // packet could not be sent, free mem
 				return NEIGH_INCOMPLETE;
@@ -261,7 +265,8 @@ static int ipneigh_get ( const ip_addr_t * a, mac_addr_t * m, eth_txmem_t * pack
 			{
 				neighbors[i].state = PROBE;
 				neighbors[i].timer = PROBE_TIMER;
-				neighbors[i].retry_counter = PROBE_RETRY;	
+				neighbors[i].retry_counter = PROBE_RETRY;
+				neighbors[i].pending_packet = NULL;	
 			}
 			
 			return NEIGH_FOUND;
@@ -321,14 +326,12 @@ void ipneigh_send_packet ( const ip_addr_t * a, eth_txmem_t * packet )
 	}
 	else if (res == NEIGH_ERROR)
 	{
-		
-		
 		eth_txmem_free(packet);  // packet could not be sent, free mem
 	}
-	else if (res == NEIGH_INCOMPLETE)
+	/* else if (res == NEIGH_INCOMPLETE)
 	{
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "INCOM" );
-	}
+	} */
 	
 	// otherwise: wait for ND answer
 }

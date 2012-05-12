@@ -233,12 +233,12 @@ void eth_send_raw ( unsigned char * b, int len )
 }	
 
 
-void eth_set_src_mac_and_type(uint8_t * packet, uint16_t ethType)
+void eth_set_src_mac_and_type(uint8_t * data, uint16_t ethType)
 {
-	memcpy(packet + 6, mac_addr, sizeof mac_addr);  // source MAC
+	memcpy(data + 6, mac_addr, sizeof mac_addr);  // source MAC
 	
-	packet[12] = ethType >> 8;
-	packet[13] = ethType & 0xFF;
+	data[12] = ethType >> 8;
+	data[13] = ethType & 0xFF;
 }
 
 

@@ -54,7 +54,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-static char tmp_callsign[8] = "DL1BFF  ";
+char my_callsign[8] = "DL1BFF  ";
 
 
 int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
@@ -90,18 +90,18 @@ int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
 
 static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 {
-	if (req_len > (sizeof tmp_callsign))
+	if (req_len > (sizeof my_callsign))
 		return 1;
 		
-	memset(tmp_callsign, ' ', (sizeof tmp_callsign));
-	memcpy(tmp_callsign, req, req_len);
+	memset(my_callsign, ' ', (sizeof my_callsign));
+	memcpy(my_callsign, req, req_len);
 	return 0;
 }
 
 static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	memcpy(res, tmp_callsign, sizeof tmp_callsign);
-	*res_len = sizeof tmp_callsign;
+	memcpy(res, my_callsign, sizeof my_callsign);
+	*res_len = sizeof my_callsign;
 	return 0;
 }
 

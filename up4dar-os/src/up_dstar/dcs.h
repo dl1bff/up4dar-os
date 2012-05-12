@@ -1,3 +1,4 @@
+
 /*
 
 Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
@@ -17,25 +18,31 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-
 /*
- * snmp.h
+ * dcs.h
  *
- * Created: 03.05.2012 11:04:56
+ * Created: 12.05.2012 18:54:24
  *  Author: mdirska
  */ 
 
 
-#ifndef SNMP_H_
-#define SNMP_H_
+#ifndef DCS_H_
+#define DCS_H_
 
-struct snmpReq {
-	int param;
-	int data;
-};
 
-extern char my_callsign[8];
 
-eth_txmem_t * snmp_process_request( const uint8_t * req, int req_len, int * data_len );
+extern int dcs_udp_local_port;
 
-#endif /* SNMP_H_ */
+extern uint8_t dcs_ambe_data[9];
+
+void dcs_init(void);
+void dcs_service (void);
+void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);
+void dcs_on_off (void);
+void send_dcs (int session_id, int last_frame);
+void dcs_get_current_reflector_name (char * s);
+int dcs_is_connected (void);
+void dcs_reset_tx_counters(void);
+void dcs_select_reflector (int go_up);
+
+#endif /* DCS_H_ */

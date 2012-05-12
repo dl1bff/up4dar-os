@@ -45,14 +45,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/dstar.h"
 
 #include "snmp.h"
+#include "up_dstar/dcs.h"
 
 unsigned char ipv4_addr[4] = { 192, 168, 1, 33 };
 
 unsigned char ipv4_netmask[4] = { 255, 255, 255, 0 };
 
 unsigned char ipv4_gw[4] = { 192, 168, 1, 1 };
-
-unsigned char dcs_relay_host[4] = { 192, 168, 1, 55 };
 
 
 static const uint8_t echo_reply_header[38] = {
@@ -262,19 +261,17 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 	   
 	switch(dest_port)
 	{
-	case 5555:
-	
-		if (udp_length >= (8+100)) // accept packets to port 5555 with at least 100 data bytes
-		{
-			if (memcmp(p + 8, "0001", 4) == 0)  // first four bytes "0001"
-			{
-				dstarProcessDCSPacket( p + 8 );
-			}
-		}
-		break;
 		
 	case 161: // SNMP
 		snmp_send_reply ( p, udp_length - 8, ipv4_header );
+		break;
+		
+	default:
+	
+		if (dest_port == dcs_udp_local_port)
+		{
+			dcs_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+		}
 		break;
 	}
 }	
@@ -319,10 +316,14 @@ void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header)
 	if (((p[6] & 0x3F) != 0) || (p[7] != 0)) // fragment bit & fragment offset != 0
 		return;
 		
-	ip_addr_t  tmp_addr;
-	memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-	memcpy(&tmp_addr.ipv4.addr, p+12, sizeof ipv4_addr);
-	ipneigh_rx( &tmp_addr, (mac_addr_t *) (eth_header + 6), 0);  // put source into neighbor list
+		
+	if (ipv4_addr_is_local(p + 12))
+	{
+		ip_addr_t  tmp_addr;
+		memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
+		memcpy(&tmp_addr.ipv4.addr, p+12, sizeof ipv4_addr);
+		ipneigh_rx( &tmp_addr, (mac_addr_t *) (eth_header + 6), 0);  // put source into neighbor list
+	}
 			
 	switch (p[9])  // protocol
 	{
@@ -334,4 +335,39 @@ void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header)
 			break;
 	}
 	
+}
+
+
+int ipv4_addr_is_local ( const uint8_t * ipv4_a )
+{
+	int i;
+	
+	for (i=0; i < 4; i++)
+	{
+		uint8_t net_addr = ipv4_addr[i]  &  ipv4_netmask[i];
+		
+		if ((ipv4_a[i] & ipv4_netmask[i]) != net_addr)
+		{
+			return 0;
+		}
+	}
+	
+	return 1;
+}
+
+
+void ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest )
+{
+	memset(addr->ipv4.zero, 0, sizeof addr->ipv4.zero);
+	
+	if (ipv4_addr_is_local( ipv4_dest ) != 0)
+	{
+		// destination is on local subnet -> next hop is destination
+		memcpy(addr->ipv4.addr, ipv4_dest, sizeof ipv4_gw);
+	}
+	else
+	{
+		// destination is not on local subnet -> next hop is gateway
+		memcpy(addr->ipv4.addr, ipv4_gw, sizeof ipv4_gw);
+	}
 }
