@@ -182,7 +182,7 @@ static const char YOUR[9] = "CQCQCQ  ";
 static const char RPT2[9] = "DB0DF  G";
 static const char RPT1[9] = "DB0DF  B";
 // static const char MY1[9]  = "DL1BFF  ";
-static const char MY2[5]  = "2012";
+static const char MY2[5]  = "    ";
 
 static int phy_frame_counter = 0;
 
@@ -236,7 +236,8 @@ static void phy_start_tx(void)
 	phy_frame_counter = 0;
 }
 
-
+const char dstar_tx_msg[20] = "Michael, Berlin, D23";
+// --------------------------- 12345678901234567890
 
 static void send_phy ( const unsigned char * d )
 {
@@ -249,9 +250,30 @@ static void send_phy ( const unsigned char * d )
 	if (phy_frame_counter > 0)
 	{
 		send_data[0] = 0x22;
-		send_data[1] = 0x66;
-		send_data[2] = 0x66;
-		send_data[3] = 0x66;
+		
+		if ((phy_frame_counter >= 1) && (phy_frame_counter <= 8))
+		{
+			int i = (phy_frame_counter - 1) >> 1;
+			if (phy_frame_counter & 1)
+			{
+				send_data[1] = 0x40 + i;
+				send_data[2] = dstar_tx_msg[ i * 5 + 0 ];
+				send_data[3] = dstar_tx_msg[ i * 5 + 1 ];
+			}
+			else
+			{
+				send_data[1] = dstar_tx_msg[ i * 5 + 2 ];
+				send_data[2] = dstar_tx_msg[ i * 5 + 3 ];
+				send_data[3] = dstar_tx_msg[ i * 5 + 4 ];
+			}
+		}
+		else
+		{
+			send_data[1] = 0x66;
+			send_data[2] = 0x66;
+			send_data[3] = 0x66;
+		}
+		
 		send_cmd(send_data, 4);
 	}
 	

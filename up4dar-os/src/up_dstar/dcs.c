@@ -541,9 +541,32 @@ void send_dcs (int session_id, int last_frame)
 		}
 		else
 		{
-			d[55] = 0x16;
-			d[56] = 0x29;
-			d[57] = 0xf5;
+			extern const char dstar_tx_msg[20];
+			
+			if ((dcs_frame_counter >= 1) && (dcs_frame_counter <= 8))
+			{
+				int i = (dcs_frame_counter - 1) >> 1;
+				if (dcs_frame_counter & 1)
+				{
+					d[55] = (0x40 + i) ^ 0x70;
+					d[56] = dstar_tx_msg[ i * 5 + 0 ] ^ 0x4F;
+					d[57] = dstar_tx_msg[ i * 5 + 1 ] ^ 0x93;
+				}
+				else
+				{
+					d[55] = dstar_tx_msg[ i * 5 + 2 ] ^ 0x70;
+					d[56] = dstar_tx_msg[ i * 5 + 3 ] ^ 0x4F;
+					d[57] = dstar_tx_msg[ i * 5 + 4 ] ^ 0x93;
+				}
+			}
+			else
+			{
+				d[55] = 0x16;  // NOP
+				d[56] = 0x29;
+				d[57] = 0xf5;
+			}
+			
+		
 		}
 	}
 	

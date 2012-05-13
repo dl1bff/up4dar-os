@@ -552,7 +552,26 @@ static void processPacket(void)
 			{
 				memcpy(sysinfo, dp.data, dp.dataLen);
 				sysinfo_len = dp.dataLen;
+				
+#define QRG_TX  430375000
+#define QRG_RX  430375000
+
+				char buf[12];
+				
+				buf[0] = 0x44;
+				buf[1] = (QRG_RX >> 24) & 0xFF;
+				buf[2] = (QRG_RX >> 16) & 0xFF;
+				buf[3] = (QRG_RX >> 8) & 0xFF;
+				buf[4] = (QRG_RX >> 0) & 0xFF;
+				buf[5] = (QRG_TX >> 24) & 0xFF;
+				buf[6] = (QRG_TX >> 16) & 0xFF;
+				buf[7] = (QRG_TX >> 8) & 0xFF;
+				buf[8] = (QRG_TX >> 0) & 0xFF;
+ 				
+				phyCommSendCmd(buf, 9);
 			}
+			
+			
 			break;
 			
 		case 0x30:
