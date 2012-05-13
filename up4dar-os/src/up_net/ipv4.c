@@ -46,13 +46,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "snmp.h"
 #include "up_dstar/dcs.h"
+#include "up_net/dhcp.h"
 
-unsigned char ipv4_addr[4] = { 192, 168, 1, 33 };
 
-unsigned char ipv4_netmask[4] = { 255, 255, 255, 0 };
+unsigned char ipv4_addr[4];
 
-unsigned char ipv4_gw[4] = { 192, 168, 1, 1 };
+unsigned char ipv4_netmask[4];
 
+unsigned char ipv4_gw[4];
+
+static const uint8_t zero_addr[4] = { 0, 0, 0, 0 };
 
 static const uint8_t echo_reply_header[38] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // dest
@@ -272,6 +275,12 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 		{
 			dcs_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
 		}
+		
+		if ((dhcp_is_ready() == 0) &&  // if DHCP is not completed yet
+			(dest_port == 68))
+		{
+			dhcp_input_packet( p + 8, udp_length - 8 );
+		}
 		break;
 	}
 }	
@@ -280,9 +289,13 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 
 void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header)
 {
+	if (dhcp_is_ready() != 0)  // dhcp completed
+	{
+		if (memcmp(p+16, ipv4_addr, sizeof ipv4_addr) != 0)  // then: only allow packets
+						// for my ip address
+			return;
+	}
 	
-	if (memcmp(p+16, ipv4_addr, sizeof ipv4_addr) != 0)  // paket ist nicht fuer mich
-		return;
 	
 	if ((p[0] & 0xF0) != 0x40)   // IP version not 4
 		return;
@@ -356,7 +369,7 @@ int ipv4_addr_is_local ( const uint8_t * ipv4_a )
 }
 
 
-void ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest )
+int ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest )
 {
 	memset(addr->ipv4.zero, 0, sizeof addr->ipv4.zero);
 	
@@ -368,6 +381,31 @@ void ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest )
 	else
 	{
 		// destination is not on local subnet -> next hop is gateway
+		if (memcmp(ipv4_gw, zero_addr, sizeof zero_addr) == 0) // no gateway addr
+		{
+			return -1; // error: no gateway, no neighbour
+		}
+		
 		memcpy(addr->ipv4.addr, ipv4_gw, sizeof ipv4_gw);
 	}
+	
+	return 0;
+}
+
+
+void ipv4_init(void)
+{
+	ipv4_addr[0] = 169;
+	ipv4_addr[1] = 254;
+	ipv4_addr[2] = mac_addr[4];
+	ipv4_addr[3] = mac_addr[5];
+	
+	ipv4_netmask[0] = 255;
+	ipv4_netmask[1] = 255;
+	ipv4_netmask[2] = 0;
+	ipv4_netmask[3] = 0;
+	
+	memcpy(ipv4_gw, zero_addr, sizeof zero_addr); // no gateway
+	
+	ipneigh_init(); // delete neighbor cache
 }

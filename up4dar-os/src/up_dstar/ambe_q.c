@@ -70,7 +70,7 @@ static void reduce_sd_data( uint8_t * data, const uint8_t * sd_data)
 
 
 
-int ambe_q_flush (ambe_q_t * a)
+int ambe_q_flush (ambe_q_t * a, int read_fast)
 {
 
 	if( xSemaphoreTake( a->mutex, 0 ) == pdTRUE )  // get Mutex, don't wait
@@ -78,7 +78,7 @@ int ambe_q_flush (ambe_q_t * a)
 		a->count = 0;
 		a->in_ptr = 0;
 		a->out_ptr = 0;
-		a->state = 0;
+		a->state = (read_fast != 0) ? 1 : 0;
         xSemaphoreGive( a->mutex );
     }
 	else
@@ -95,7 +95,7 @@ void ambe_q_initialize( ambe_q_t * a )
 {
 	a->mutex = xSemaphoreCreateMutex();
 	
-	ambe_q_flush( a );
+	ambe_q_flush( a, 0 );
 }
 
 

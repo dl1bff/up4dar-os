@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,31 +17,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+
 /*
- * ipv4.h
+ * dhcp.h
  *
- * Created: 05.02.2012 14:23:29
+ * Created: 13.05.2012 05:20:10
  *  Author: mdirska
  */ 
 
 
-#ifndef IPV4_H_
-#define IPV4_H_
-
-
-extern unsigned char ipv4_addr[4];
-
-extern unsigned char ipv4_netmask[4];
-
-extern unsigned char ipv4_gw[4];
+#ifndef DHCP_H_
+#define DHCP_H_
 
 
 
-void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header);
-
-int ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest );
-int ipv4_addr_is_local ( const uint8_t * ipv4_a );
-void ipv4_init(void);
 
 
-#endif /* IPV4_H_ */
+
+int dhcp_is_ready(void);
+void dhcp_init(void);
+void dhcp_set_link_state (int link_up);
+void dhcp_service(void);
+void dhcp_input_packet (const uint8_t * data, int data_len);
+
+
+#endif /* DHCP_H_ */

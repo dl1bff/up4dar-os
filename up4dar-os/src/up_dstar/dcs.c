@@ -45,6 +45,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dcs.h"
 
 
+static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
+				   "<td width=\"4%\"><img border=\"0\" src=dongle.jpg></td>"
+				   "<td width=\"96%\"><font size=\"2\">"
+				   "<b>UP4DAR</b>"
+				   "</font></td>"
+				   "</tr></table>";
+
 
 #define UDP_MIN_PORT 11000
 #define UDP_MAX_PORT 11050
@@ -388,9 +395,16 @@ static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 	ip_addr_t  tmp_addr;
 	
 	
-	ipv4_get_neigh_addr(&tmp_addr, servers[current_server].ipv4_a );  // get addr of neighbor
-	
-	ipneigh_send_packet (&tmp_addr, packet);
+	if (ipv4_get_neigh_addr(&tmp_addr, servers[current_server].ipv4_a ) != 0)  // get addr of neighbor
+	{
+		// neighbor could not be set
+		eth_txmem_free(packet); // throw away packet
+	}
+	else
+	{
+		ipneigh_send_packet (&tmp_addr, packet);
+	}
+		
 }
 
 
@@ -459,15 +473,28 @@ void send_dcs (int session_id, int last_frame)
 	if (dcs_state != DCS_CONNECTED)  // only send voice if connected
 		return;
 		
+	int frame_size = DCS_VOICE_FRAME_SIZE;
+	
+	if ((dcs_tx_counter & 0x7F) == 0x03)  // approx every 2 seconds
+	{
+		frame_size += 500; // send HTML info
+	}		
 		
-	eth_txmem_t * packet = dcs_get_packet_mem( DCS_VOICE_FRAME_SIZE );
+	eth_txmem_t * packet = dcs_get_packet_mem( frame_size );
 	
 	if (packet == NULL)
 	{
 		return;
 	}
 	
+	
+	
 	uint8_t * d = packet->data + 42; // skip ip+udp header
+	
+	if (frame_size > DCS_VOICE_FRAME_SIZE) // send HTML info
+	{
+		memcpy(d + 100, dcs_html_info, sizeof dcs_html_info);
+	}
 	
 	memcpy(d, "0001", 4);
 	
@@ -521,7 +548,7 @@ void send_dcs (int session_id, int last_frame)
 	}
 	
 	
-	dcs_calc_chksum_and_send( packet, DCS_VOICE_FRAME_SIZE );
+	dcs_calc_chksum_and_send( packet, frame_size );
 	
 	dcs_frame_counter ++;
 	

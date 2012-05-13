@@ -340,7 +340,7 @@ static void dstarStateChange(unsigned char n)
 					vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 0, "    " );
 				}
 				
-				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 0, "       " );
+				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 0, "    " );
 			}
 			else
 			{
@@ -374,13 +374,13 @@ static void dstarStateChange(unsigned char n)
 			break;
 			
 		case 10:
-		    vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " WAIT " );
-			vdisp_prints_xy( 36,0, VDISP_FONT_6x8, 0, " " );
+		    vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, "WAIT" );
+			//vdisp_prints_xy( 36,0, VDISP_FONT_6x8, 0, " " );
 			break;
 		
 		case 4:
-		    vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, "  TX  " );
-			vdisp_prints_xy( 36,0, VDISP_FONT_6x8, 0, " " );
+		    vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " TX " );
+			//vdisp_prints_xy( 36,0, VDISP_FONT_5x8, 0, " " );
 			break;
 	}
 	
@@ -622,10 +622,10 @@ static void processPacket(void)
 						minus = 1;
 						v = -v;
 					}
-					vdisp_i2s(buf, 3, 10, 0, v);
-					vdisp_prints_xy( 6, 0, VDISP_FONT_6x8, 0, buf );
+					vdisp_i2s(buf, 3, 10, 1, v);
+					vdisp_prints_xy( 5, 0, VDISP_FONT_6x8, 0, buf );
 					vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 0, minus ? "-" : "+" );
-					vdisp_prints_xy( 24, 0, VDISP_FONT_6x8, 0, "ppm" );
+					// vdisp_prints_xy( 20, 0, VDISP_FONT_5x8, 0, "ppm" );
 				}
 			}				
 			break;

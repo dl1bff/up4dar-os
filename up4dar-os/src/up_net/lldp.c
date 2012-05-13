@@ -40,6 +40,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_io/eth_txmem.h"
 #include "up_io/eth.h"
+#include "up_net/ipneigh.h"
+#include "up_net/ipv4.h"
+
 
 #include "lldp.h"
 
@@ -58,7 +61,11 @@ const uint8_t lldp_frame[] =
 	
 	0x06, 0x02, 0x00, 0x0A,  // TTL 10 seconds
 	
-	0x0C, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // system description
+	0x0C,    6 , 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // system description
+	
+	0x10,   12 , 0x05, 0x01, 0x00, 0x00, 0x00, 0x00,  // management address
+	  0x01, 0x00, 0x00, 0x00, 0x00,		// interface number
+	  0x00,  // OID  
 	
 	0x00, 0x00  // END
 };
@@ -77,6 +84,8 @@ void lldp_send (void)
 	memcpy(packet->data + 26, mac_addr, 6); // 6 byte mac address
 	
 	memcpy(packet->data + 38, "UP4DAR", 6);
+	
+	memcpy(packet->data + 48, ipv4_addr, 4);
 	
 	eth_set_src_mac_and_type(packet->data, 0x88cc);
 	

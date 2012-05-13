@@ -61,6 +61,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/lldp.h"
 #include "up_dstar/dcs.h"
 
+#include "up_net/dhcp.h"
+
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
 
@@ -119,7 +121,7 @@ static U32 counter_ROVR = 0;
 */
 
 
-static char tmp_buf[6];
+static char tmp_buf[7];
 
 
 
@@ -179,7 +181,7 @@ static char send_data [ 4];
 static const char YOUR[9] = "CQCQCQ  ";
 static const char RPT2[9] = "DB0DF  G";
 static const char RPT1[9] = "DB0DF  B";
-static const char MY1[9]  = "DL1BFF  ";
+// static const char MY1[9]  = "DL1BFF  ";
 static const char MY2[5]  = "2012";
 
 static int phy_frame_counter = 0;
@@ -216,7 +218,7 @@ static void phy_start_tx(void)
 	}
 	
 	for (short i=0; i<8; ++i){
-		header[28+i] = MY1[i];
+		header[28+i] = my_callsign[i]; //MY1[i];
 	}
 	
 	for (short i=0; i<4; ++i){
@@ -341,6 +343,18 @@ int debug1;
 
 int maxTXQ;
 
+int8_t lldp_counter = 0;
+
+
+static void show_dcs_state(void)
+{
+	char buf[10];
+	dcs_get_current_reflector_name(buf);
+	buf[8] = 0;
+	vdisp_prints_xy( 95, 27, VDISP_FONT_4x6, 
+		dcs_is_connected(), buf );
+}		
+
 static void vParTestToggleLED( portBASE_TYPE uxLED ) 
 {
 	
@@ -349,7 +363,27 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 	{
 	case 0:
 			{
-				
+			
+			int v = AVR32_ADC.cdr0;
+			
+			AVR32_ADC.cr = 2; // start new conversion
+			
+			v *= 330 * 430;  // 3.3V , r1+r2 = 43k
+			v /= 1023 * 56;  // inputmax=1023, r1=5.6k
+			
+			
+			if (v > 400)  // more than 4 volts
+			{
+				voltage = v * 10; // millivolt
+			}
+			else // voltage too low -> key pressed
+			{
+				vdisp_clear_rect (0, 0, 128, 64);
+				vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
+				dstarChangeMode(4);
+			}			
+			
+			
 			
 			// gpio_toggle_pin(AVR32_PIN_PB27);
 			
@@ -442,7 +476,8 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 						pwm_value --;
 						set_pwm(); */
 						
-						dcs_select_reflector(1);
+						dcs_select_reflector(0);
+						show_dcs_state();
 						touchKeyCounter[i] = 0;
 						
 						break;
@@ -452,7 +487,8 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 						pwm_value ++;
 						set_pwm(); */
 							
-						dcs_select_reflector(0);
+						dcs_select_reflector(1);
+						show_dcs_state();
 						touchKeyCounter[i] = 0;
 						break;
 						
@@ -487,37 +523,36 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			rtclock_disp_xy(84, 0, 2, 1);
 			
 			{
-			int v = AVR32_ADC.cdr0;
 			
-			v *= 330 * 430;  // 3.3V , r1+r2 = 43k
-			v /= 1023 * 56;  // inputmax=1023, r1=5.6k
 			
-			voltage = v * 10; // millivolt
-			
-			vdisp_i2s( tmp_buf, 4, 10, 0, v);
+			vdisp_i2s( tmp_buf, 5, 10, 0, voltage);
 			tmp_buf[3] = tmp_buf[2];
 			tmp_buf[2] = '.';
 			tmp_buf[4] = 'V';
 			tmp_buf[5] = 0;
 			
-			if (v > 400)  // more than 4 volts
-			{
-				vdisp_prints_xy( 63, 0, VDISP_FONT_4x6, 0, tmp_buf );
-			}
+			
+			vdisp_prints_xy( 55, 0, VDISP_FONT_4x6, 0, tmp_buf );
+			
 			
 						
 			
-			AVR32_ADC.cr = 2; // start conversion
+			
 			
 			
 			// ethernet status
 			
-			v = AVR32_MACB.MAN.data;
+			int v = AVR32_MACB.MAN.data;
+			
+			AVR32_MACB.man = 0x60C20000; // read register 0x10
 			
 			//  vdisp_i2s( tmp_buf, 4, 16, 1, maxTXQ );
 			//  vdisp_prints_xy( 80, 56, VDISP_FONT_6x8, 0, tmp_buf );
 			
 			const char * net_status = "     ";
+			
+			dhcp_set_link_state( v & 1 );
+			
 			if (v & 1)  // Ethernet link is active
 			{
 				v = ((v >> 1) & 0x03) ^ 0x01;
@@ -539,16 +574,30 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 				}
 				
 				AVR32_MACB.ncfgr = 0x00000800 | v;  // SPD, FD, CLK = MCK / 32 -> 1.875 MHz
+				
+				vdisp_prints_xy( 28, 0, VDISP_FONT_4x6, 
+					(dhcp_is_ready() != 0) ? 0 : 1, net_status );
+			}
+			else
+			{
+				vdisp_prints_xy( 28, 0, VDISP_FONT_4x6, 0, net_status );
 			}
 			
-			vdisp_prints_xy( 41, 0, VDISP_FONT_4x6, 0, net_status );
 			
-			AVR32_MACB.man = 0x60C20000; // read register 0x10
+			
+			dhcp_service();				
+			
 			
 			
 			 printDebug("Test von DL1BFF\r\n");
-			 
-			 lldp_send();
+			
+			lldp_counter --;
+			
+			if (lldp_counter < 0)
+			{ 
+				lldp_counter = 10;
+				lldp_send();
+			}				
 			 
 			 ipneigh_service();
 			 
@@ -557,11 +606,7 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			//  vdisp_prints_xy( 50, 48, VDISP_FONT_6x8, 0, buf );
 			
 			 dcs_service();
-			 char buf[10];
-			 dcs_get_current_reflector_name(buf);
-			 buf[8] = 0;
-			 vdisp_prints_xy( 95, 27, VDISP_FONT_4x6, 
-				dcs_is_connected(), buf );
+			 show_dcs_state();
 			
 			}
 		break;
@@ -872,8 +917,10 @@ static void vTXTask( void *pvParameters )
 				tx_state = 1;
 				ambe_start_encode();
 				phy_start_tx();
-				vTaskDelay(100); // pre-buffer audio
+				vTaskDelay(80); // pre-buffer audio while PHY sends header
 				dcs_reset_tx_counters();
+				ambe_q_flush(& microphone, 1);
+				vTaskDelay(45); // pre-buffer one AMBE frame
 				
 				session_id ++;
 			}
@@ -965,7 +1012,8 @@ int main (void)
 	vdisp_init(pixelBuf);
 	vdisp_clear_rect(0,0, 128, 64);
 	
-	ipneigh_init();
+	ipv4_init(); // includes ipneigh_init()
+	dhcp_init();
 		
 	vStartLEDFlashTasks( mainLED_TASK_PRIORITY );
 	
