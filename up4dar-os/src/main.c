@@ -609,7 +609,17 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			
 			dhcp_service();				
 			
-			
+			/*
+			 char buf[10];
+			 vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbsta );
+			  vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
+			  
+			  vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbfsm );
+			  vdisp_prints_xy( 30, 56, VDISP_FONT_6x8, 0, buf );
+			  
+			  vdisp_i2s(buf, 8, 16, 1, AVR32_USBB.usbcon );
+			  vdisp_prints_xy( 60, 56, VDISP_FONT_6x8, 0, buf );
+			  */
 			
 			 printDebug("Test von DL1BFF\r\n");
 			
@@ -619,13 +629,19 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			{ 
 				lldp_counter = 10;
 				lldp_send();
+				
+				 if ((AVR32_USBB.usbsta & 0x0400) == 0) // ID pin pulled low
+				 {
+					gpio_set_pin_low (AVR32_PIN_PB17); // turn on power
+				 }	
+				 else
+				 {
+					gpio_set_pin_high (AVR32_PIN_PB17);
+				 }		
 			}				
 			 
 			 ipneigh_service();
 			 
-			// char buf[10];
-			// vdisp_i2s(buf, 9, 16, 1, debug1 );
-			//  vdisp_prints_xy( 50, 48, VDISP_FONT_6x8, 0, buf );
 			
 			 dcs_service();
 			 show_dcs_state();

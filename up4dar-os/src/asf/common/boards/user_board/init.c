@@ -136,7 +136,20 @@ static const gpio_map_t usart_gpio_map = {
 	{ AVR32_USART1_TXD_0_0_PIN, AVR32_USART1_TXD_0_0_FUNCTION }					
 };
 
-	
+
+static const gpio_map_t usb_pin_gpio_map = {
+	{ AVR32_PIN_PB17, GPIO_DIR_OUTPUT | GPIO_INIT_HIGH },  // VBOF pin
+	{ AVR32_PIN_PA09, GPIO_DIR_INPUT | GPIO_PULL_UP },  // OverCurrent pin
+	{ AVR32_PIN_PB16, GPIO_DIR_INPUT | GPIO_PULL_UP }   // ID pin
+};
+
+static const gpio_map_t usb_module_gpio_map = {
+	// { AVR32_USBB_USB_VBOF_0_1_PIN, AVR32_USBB_USB_VBOF_0_1_FUNCTION },  // VBOF pin	
+	{ AVR32_USBB_USB_ID_0_1_PIN, AVR32_USBB_USB_ID_0_1_FUNCTION }  // ID pin
+			
+};
+
+
 void board_init(void)
 {
 	
@@ -185,6 +198,37 @@ void board_init(void)
 	
 	pm_switch_to_clock(&AVR32_PM, AVR32_PM_MCCTRL_MCSEL_PLL0); // switch to PLL0
 	
+	
+	// --------------------------------------
+	
+	// USB clock
+	
+	// Use 12MHz from OSC0 and generate 96 MHz
+	pm_pll_setup(&AVR32_PM, 1,  // pll.
+		  7,   // mul.
+		  1,   // div.
+		  0,   // osc.
+		  16); // lockcount.
+
+	pm_pll_set_option(&AVR32_PM, 1, // pll.
+		  1,  // pll_freq: choose the range 80-180MHz.
+		  1,  // pll_div2.
+		  0); // pll_wbwdisable.
+
+	// start PLL1 and wait forl lock
+	pm_pll_enable(&AVR32_PM, 1);
+
+	// Wait for PLL1 locked.
+	pm_wait_for_pll1_locked(&AVR32_PM);
+
+	pm_gc_setup(&AVR32_PM, AVR32_PM_GCLK_USBB,  // gc.
+				1,  // osc_or_pll: use Osc (if 0) or PLL (if 1).
+				1,  // pll_osc: select Osc0/PLL0 or Osc1/PLL1.
+				0,  // diven.
+				0); // div.
+	pm_gc_enable(&AVR32_PM, AVR32_PM_GCLK_USBB);
+	
+	// --------------------------------------
 	
 	// LCD display
 	
@@ -297,5 +341,23 @@ void board_init(void)
 	// USART
 	
 	gpio_enable_module( usart_gpio_map, sizeof( usart_gpio_map ) / sizeof( usart_gpio_map[0] ) );
+	
+	
+	// USB
+	
+	gpio_enable_gpio( usb_pin_gpio_map, sizeof( usb_pin_gpio_map ) / sizeof( usb_pin_gpio_map[0] ) );
+	
+	for (i=0; i < (sizeof( usb_pin_gpio_map ) / sizeof( usb_pin_gpio_map[0] )); i++)
+	{
+		gpio_configure_pin( usb_pin_gpio_map[i].pin, usb_pin_gpio_map[i].function);
+	}
+
+	
+	gpio_enable_module( usb_module_gpio_map, sizeof( usb_module_gpio_map ) / sizeof( usb_module_gpio_map[0] ) );
+	
+	// AVR32_USBB.usbcon = 0x03003000; // UIDE, VBUSPO, OTGPADE
+	// AVR32_USBB.usbcon = 0x0300B000; // UIDE, USBE, VBUSPO, OTGPADE
+	// AVR32_USBB.usbcon = 0x03006000; // default + VBUSPO
+	// AVR32_USBB.udcon = 0;
 	
 }
