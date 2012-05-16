@@ -386,6 +386,13 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 		int option_type = p[0];
 		int option_len = p[1];
 		
+		if (option_type == 0) // special NOP option
+		{
+			p += 1;
+			bytes_remaining -= 1;
+			continue;
+		}
+		
 		switch (option_type)
 		{
 			case 53: // message type

@@ -470,8 +470,8 @@ static void dcs_keepalive_response (void)
 
 void send_dcs (int session_id, int last_frame)
 {
-	if (dcs_state != DCS_CONNECTED)  // only send voice if connected
-		return;
+	if (dcs_state == DCS_CONNECTED)  // only send voice if connected
+	{
 		
 	int frame_size = DCS_VOICE_FRAME_SIZE;
 	
@@ -573,6 +573,8 @@ void send_dcs (int session_id, int last_frame)
 	
 	dcs_calc_chksum_and_send( packet, frame_size );
 	
+	} // if (dcs_state == DCS_CONNECTED)
+	
 	dcs_frame_counter ++;
 	
 	if (dcs_frame_counter >= 21)
@@ -581,6 +583,16 @@ void send_dcs (int session_id, int last_frame)
 	}
 	
 	dcs_tx_counter ++;
+	
+	int secs = dcs_tx_counter / 50;
+				
+	if ((last_frame != 0) || ((dcs_tx_counter & 0x0F) == 0x01)) // show seconds on every 16th call
+	{
+		char buf[4];
+		vdisp_i2s(buf, 3, 10, 0, secs);
+		vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, buf );
+		vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, "s" );
+	}
 	
 }
 
