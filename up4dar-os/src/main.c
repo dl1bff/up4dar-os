@@ -62,6 +62,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/dcs.h"
 
 #include "up_net/dhcp.h"
+#include "up_dstar/gps.h"
+
+#include "up_io/lcd.h"
 
 #define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
 #define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
@@ -100,9 +103,10 @@ static void vLEDFlashTask( void *pvParameters );
 
 static unsigned char x_counter = 0;
 
-
+/*
 
 static xComPortHandle debugOutput;
+
 
 
 static void printDebug(const char * s)
@@ -113,6 +117,7 @@ static void printDebug(const char * s)
 	}
 }
 
+*/
 
 /*
 static U32 counter_FRO = 0;
@@ -385,6 +390,25 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 	{
 	case 0:
 			{
+				
+			/*	
+			if (debugOutput >= 0)
+			{
+				signed char buf[1];
+		
+				if (xSerialGetChar(debugOutput, buf, 0) == pdTRUE)
+				{
+					x_counter ++;
+					
+					vdisp_i2s( tmp_buf, 5, 10, 0, x_counter);
+			
+			
+					vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, tmp_buf );
+					
+				}			
+			}
+				
+				*/
 			
 			int v = AVR32_ADC.cdr0;
 			
@@ -502,6 +526,10 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 						show_dcs_state();
 						touchKeyCounter[i] = 0;
 						
+						x_counter ++ ;
+						
+						lcd_show_layer( x_counter & 0x01);
+						
 						break;
 							
 					case 5:
@@ -538,7 +566,7 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			// gpio_toggle_pin(AVR32_PIN_PB28);
 			//gpio_toggle_pin(AVR32_PIN_PB18);
 			
-			x_counter ++;
+			// x_counter ++;
 			
 		
 			// rtclock_disp_xy(84, 0, x_counter & 0x02, 1);
@@ -621,7 +649,7 @@ static void vParTestToggleLED( portBASE_TYPE uxLED )
 			  vdisp_prints_xy( 60, 56, VDISP_FONT_6x8, 0, buf );
 			  */
 			
-			 printDebug("Test von DL1BFF\r\n");
+			// printDebug("Test von DL1BFF\r\n");
 			
 			lldp_counter --;
 			
@@ -800,143 +828,6 @@ static void vRXTXEthTask( void *pvParameters )
 
 
 
-#define LCD_PIN_RES		AVR32_PIN_PA02
-#define LCD_PIN_E		AVR32_PIN_PB12
-#define LCD_PIN_CS1		AVR32_PIN_PB13
-#define LCD_PIN_CS2		AVR32_PIN_PB14
-#define LCD_PIN_DI		AVR32_PIN_PB21
-#define LCD_PIN_RW		AVR32_PIN_PB22
-
-
-
-static void lcd_send(int linksrechts, int rs, int data)
-{
-	// uint32_t d = data << 24; 
-	
-	uint32_t d = 0;
-	int i;
-	
-	if (rs != 0)
-	{
-		gpio_set_pin_high(LCD_PIN_DI);
-	}
-	else
-	{
-		gpio_set_pin_low(LCD_PIN_DI);
-	}
-	
-	if (linksrechts == 1)
-	{
-		gpio_set_pin_high(LCD_PIN_CS1);
-	}
-	else
-	{
-		gpio_set_pin_high(LCD_PIN_CS2);
-	}
-	
-	for (i=0; i < 8; i++)
-	{
-		if ((data & 1) != 0)
-		{
-			d |= (1 << 23);
-		}
-		
-		d = d << 1;
-		data = data >> 1;
-	}		
-	 
-	
-	gpio_set_group_high(1 /* PORT B */, d);
-	gpio_set_group_low(1 /* PORT B */, d ^ 0xFF000000);
-	
-	
-	gpio_set_pin_high(LCD_PIN_E);
-	
-	taskYIELD();
-	
-	gpio_set_pin_low(LCD_PIN_E);
-	
-	
-	if (linksrechts == 1)
-	{
-		gpio_set_pin_low(LCD_PIN_CS1);
-	}
-	else
-	{
-		gpio_set_pin_low(LCD_PIN_CS2);
-	}
-	
-	taskYIELD();
-}
-
-static void vLCDTask( void *pvParameters )
-{
-	gpio_set_pin_low(LCD_PIN_RES);
-	gpio_set_pin_low(LCD_PIN_E);
-	gpio_set_pin_low(LCD_PIN_CS1);
-	gpio_set_pin_low(LCD_PIN_CS2);
-	gpio_set_pin_low(LCD_PIN_RW);
-	
-	gpio_set_pin_high(AVR32_PIN_PB19); // kontrast
-	gpio_set_pin_high(AVR32_PIN_PB18); // backlight
-	
-	vTaskDelay( 30 );
-	
-	gpio_set_pin_high(LCD_PIN_RES);
-	
-	vTaskDelay( 10 );
-	
-	lcd_send(1, 0, 0x3f);
-	lcd_send(2, 0, 0x3f);
-	
-	
-	unsigned char blob[8];
-	
-	for(;;)
-	{
-		int x,y,i;
-		
-		for (x=0; x < 16; x++)
-		{
-			for (y=0; y < 8; y++)
-			{
-				
-				int r = ((x >= 8) ? 2 : 1);
-				lcd_send(r, 0, 0x40 | ((x & 0x07) << 3));
-				lcd_send(r, 0, 0xB8 | (y & 0x07));
-
-				vdisp_get_pixel( x << 3, y << 3, blob );
-				
-				int mask = 0x80;
-				
-				for (i=0; i < 8; i++)
-				{
-					int m = 1;
-					int d = 0;
-					int j;
-					
-					for (j=0; j < 8; j++)
-					{
-						if ((blob[j] & mask) != 0)
-						{
-							d |= m;
-						}
-						m = m << 1;
-					}
-					
-					lcd_send(r, 1, d);
-
-					mask = mask >> 1;					
-				}
-			}
-		}
-		
-		vTaskDelay( 5 );
-	}
-	
-}
-
-
 
 
 static void vTXTask( void *pvParameters )
@@ -1035,13 +926,13 @@ int main (void)
 	board_init();
 	
 	
-	debugOutput = xSerialPortInitMinimal( 0, 115200, 10 );
+/*	debugOutput = xSerialPortInitMinimal( 0, 4800, 10 );
 	
 	if (debugOutput < 0)
 	{
 		// TODO: error handling
 	}
-	
+	*/
 
 	unsigned char * pixelBuf;
 	
@@ -1052,12 +943,13 @@ int main (void)
 	
 	ipv4_init(); // includes ipneigh_init()
 	dhcp_init();
+	
+	lcd_init();
 		
 	vStartLEDFlashTasks( mainLED_TASK_PRIORITY );
 	
 	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
-	xTaskCreate( vLCDTask, (signed char *) "LCD", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");
 	vdisp_prints_xy(0, 18, VDISP_FONT_8x12, 0, " Platform");
@@ -1084,12 +976,16 @@ int main (void)
 	wm8510Init( & audio_tx_q, & audio_rx_q );
 	
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+
+
+	gps_init();
 	
 	if (eth_txmem_init() != 0)
 	{
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
 	
+
 	vTaskStartScheduler();
   
 	return 0;

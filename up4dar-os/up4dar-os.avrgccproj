@@ -276,6 +276,12 @@
     <Compile Include="src\up_dstar\dstar.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\gps.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\gps.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\phycomm.c">
       <SubType>compile</SubType>
     </Compile>
@@ -319,6 +325,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_io\eth_txmem.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_io\lcd.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_io\lcd.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_io\serial.c">

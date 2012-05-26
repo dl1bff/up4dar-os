@@ -48,7 +48,11 @@ void vdisp_load_buf(void);
 void vdisp_i2s (char * buf, int size, int base, int leading_zero, unsigned int n);
 
 void vdisp_get_pixel ( int x, int y, unsigned char blob[8]);
-
+void vd_get_pixel ( int layer, int x, int y, unsigned char blob[8]);
+void vd_set_pixel ( int layer, int x, int y, int disp_inverse, unsigned char data, int numbits );
+void vd_printc_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_inverse, unsigned char c);
+void vd_prints_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_inverse, const char * s );
+void vd_clear_rect(int layer, int x, int y, int width, int height);
 extern struct vdisp_font vdisp_fonts[];
 
 

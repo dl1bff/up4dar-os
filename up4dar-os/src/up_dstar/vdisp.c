@@ -31,14 +31,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vdispfont.h"
 
 
-static unsigned char * pixelbuf;
+#define NUM_LAYERS 2
+
+static unsigned char * pixelbuf[NUM_LAYERS];
 
 static unsigned char pixelbuf2[1024];
-
+static unsigned char gps_pixelbuf[1024];
 
 void vdisp_init ( unsigned char * p )
 {
-	pixelbuf = p;
+	pixelbuf[0] = p;
+	
+	pixelbuf[1] = gps_pixelbuf;
 	
 }
 
@@ -52,7 +56,14 @@ struct vdisp_font vdisp_fonts[4] =
   };
 
 
+
+
 void vdisp_get_pixel ( int x, int y, unsigned char blob[8])
+{
+	vd_get_pixel(0, x, y, blob);
+}
+
+void vd_get_pixel ( int layer, int x, int y, unsigned char blob[8])
 {
 	int i;
 	int xb = x >> 3;
@@ -65,12 +76,17 @@ void vdisp_get_pixel ( int x, int y, unsigned char blob[8])
 		
 	for (i=0; i < 8; i++)
 	{
-		blob[i] = pixelbuf [((y + i) << 4) + xb];	
+		blob[i] = pixelbuf[layer] [((y + i) << 4) + xb];	
 	}
 }
 
 
 void vdisp_set_pixel ( int x, int y, int disp_inverse, unsigned char data, int numbits )
+{
+	vd_set_pixel(0, x, y, disp_inverse, data, numbits);
+}
+
+void vd_set_pixel ( int layer, int x, int y, int disp_inverse, unsigned char data, int numbits )
 {
 	int i;
 	
@@ -99,13 +115,13 @@ void vdisp_set_pixel ( int x, int y, int disp_inverse, unsigned char data, int n
 		b = b ^ m;
 	}
 	
-	pixelbuf [(y << 4) + xb] &=  ~(m >> 8);
-	pixelbuf [(y << 4) + xb] |=  (b >> 8);
+	pixelbuf[layer] [(y << 4) + xb] &=  ~(m >> 8);
+	pixelbuf[layer] [(y << 4) + xb] |=  (b >> 8);
 	
 	if (((m & 0xff) != 0) && (xb < 15))
 	{
-		pixelbuf [(y << 4) + xb + 1] &=  ~(m & 0xff);
-		pixelbuf [(y << 4) + xb + 1] |=  (b & 0xff);
+		pixelbuf[layer] [(y << 4) + xb + 1] &=  ~(m & 0xff);
+		pixelbuf[layer] [(y << 4) + xb + 1] |=  (b & 0xff);
 	}
 }
 
@@ -116,6 +132,16 @@ void vdisp_printc_xy ( int x, int y, struct vdisp_font * font, int disp_inverse,
 	for (i=0; i < font->height; i++)
 	{
 		vdisp_set_pixel ( x, y + i, disp_inverse, font->data[ c * font->height + i ], font->width );
+	}
+}
+
+void vd_printc_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_inverse, unsigned char c)
+{
+	int i;
+	
+	for (i=0; i < font->height; i++)
+	{
+		vd_set_pixel ( layer, x, y + i, disp_inverse, font->data[ c * font->height + i ], font->width );
 	}
 }
 
@@ -131,7 +157,24 @@ void vdisp_prints_xy ( int x, int y, struct vdisp_font * font, int disp_inverse,
 	}
 }
 
+void vd_prints_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_inverse, const char * s )
+{
+	int xx = x;
+	
+	while ( *s != 0 )	
+	{
+		vd_printc_xy( layer, xx, y, font, disp_inverse, ((int) *s) & 0xFF );
+		s++;
+		xx += font->width;
+	}
+}
+
 void vdisp_clear_rect(int x, int y, int width, int height)
+{
+	vd_clear_rect(0, x, y, width, height);
+}
+
+void vd_clear_rect(int layer, int x, int y, int width, int height)
 {
 	int i;
 	int j;
@@ -145,7 +188,7 @@ void vdisp_clear_rect(int x, int y, int width, int height)
 		while (k > 0)
 		{
 			int bits = (width > 8) ? 8 : width;
-			vdisp_set_pixel( j, i, 0, 0, bits );
+			vd_set_pixel( layer, j, i, 0, 0, bits );
 			k -= bits;
 			j += bits;
 		}	
@@ -158,7 +201,7 @@ void vdisp_save_buf(void)
 	
 	for (i=36*16; i < 64*16; i++)
 	{
-		pixelbuf2[i] = pixelbuf[i];		
+		pixelbuf2[i] = pixelbuf[0][i];		
 	}
 }
 
@@ -168,7 +211,7 @@ void vdisp_load_buf(void)
 	
 	for (i=36*16; i < 64*16; i++)
 	{
-		pixelbuf[i] = pixelbuf2[i];		
+		pixelbuf[0][i] = pixelbuf2[i];		
 	}
 }
 
