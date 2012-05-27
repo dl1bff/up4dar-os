@@ -42,6 +42,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vdisp.h"
 #include "up_io/eth.h"
 
+#include "up_dstar/gps.h"
+
 #include "dcs.h"
 
 
@@ -468,6 +470,9 @@ static void dcs_keepalive_response (void)
 }
 
 
+static int slow_data_count = 0;
+static uint8_t slow_data[5];
+
 void send_dcs (int session_id, int last_frame)
 {
 	if (dcs_state == DCS_CONNECTED)  // only send voice if connected
@@ -543,7 +548,8 @@ void send_dcs (int session_id, int last_frame)
 		{
 			extern const char dstar_tx_msg[20];
 			
-			if ((dcs_frame_counter >= 1) && (dcs_frame_counter <= 8))
+			if ((dcs_frame_counter >= 1) && (dcs_frame_counter <= 8)
+				&& (dcs_tx_counter < 20))  // send tx_msg only in first frame
 			{
 				int i = (dcs_frame_counter - 1) >> 1;
 				if (dcs_frame_counter & 1)
@@ -561,9 +567,39 @@ void send_dcs (int session_id, int last_frame)
 			}
 			else
 			{
-				d[55] = 0x16;  // NOP
-				d[56] = 0x29;
-				d[57] = 0xf5;
+				if (dcs_frame_counter & 1)
+				{
+					// slow_data_count = gps_get_slow_data(slow_data);
+					slow_data_count = 0;
+					if (slow_data_count == 0)
+					{
+						d[55] = 0x16;  // NOP
+						d[56] = 0x29;
+						d[57] = 0xf5;
+					}
+					else
+					{
+						d[55] = (0x30 + slow_data_count) ^ 0x70;
+						d[56] = slow_data[ 0 ] ^ 0x4F;
+						d[57] = slow_data[ 1 ] ^ 0x93;
+					}
+				}
+				else
+				{
+					if (slow_data_count <= 2)
+					{
+						d[55] = 0x16;  // NOP
+						d[56] = 0x29;
+						d[57] = 0xf5;
+					}
+					else
+					{
+						d[55] = slow_data[ 2 ] ^ 0x70;
+						d[56] = slow_data[ 3 ] ^ 0x4F;
+						d[57] = slow_data[ 4 ] ^ 0x93;
+					}
+				}
+				
 			}
 			
 		

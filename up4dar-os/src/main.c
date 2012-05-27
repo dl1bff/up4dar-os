@@ -241,6 +241,10 @@ static void phy_start_tx(void)
 	phy_frame_counter = 0;
 }
 
+
+static int slow_data_count;
+static uint8_t slow_data[5];
+
 const char dstar_tx_msg[20] = "Michael, Berlin, D23";
 // --------------------------- 12345678901234567890
 
@@ -274,9 +278,39 @@ static void send_phy ( const unsigned char * d )
 		}
 		else
 		{
-			send_data[1] = 0x66;
-			send_data[2] = 0x66;
-			send_data[3] = 0x66;
+				if (phy_frame_counter & 1)
+				{
+					slow_data_count = gps_get_slow_data(slow_data);
+					
+					if (slow_data_count == 0)
+					{
+						send_data[1] = 0x66;
+						send_data[2] = 0x66;
+						send_data[3] = 0x66;
+					}
+					else
+					{
+						send_data[1] = (0x30 + slow_data_count);
+						send_data[2] = slow_data[ 0 ];
+						send_data[3] = slow_data[ 1 ];
+					}
+				}
+				else
+				{
+					if (slow_data_count <= 2)
+					{
+						send_data[1] = 0x66;
+						send_data[2] = 0x66;
+						send_data[3] = 0x66;
+					}
+					else
+					{
+						send_data[1] = slow_data[ 2 ];
+						send_data[2] = slow_data[ 3 ];
+						send_data[3] = slow_data[ 4 ];
+					}
+				}
+			
 		}
 		
 		send_cmd(send_data, 4);
@@ -848,6 +882,7 @@ static void vTXTask( void *pvParameters )
 				phy_start_tx();
 				vTaskDelay(80); // pre-buffer audio while PHY sends header
 				dcs_reset_tx_counters();
+				gps_reset_slow_data();
 				ambe_q_flush(& microphone, 1);
 				vTaskDelay(45); // pre-buffer one AMBE frame
 				

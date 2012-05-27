@@ -32,7 +32,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 void gps_init(void);
-
-
+int gps_get_slow_data(uint8_t * slow_data);
+void gps_reset_slow_data(void);
 
 #endif /* GPS_H_ */

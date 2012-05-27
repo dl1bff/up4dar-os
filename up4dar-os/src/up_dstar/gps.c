@@ -345,6 +345,71 @@ static void recv_gpgsv(int num_sats)
 }
 
 
+
+static char rcvd_chksum1;
+static char rcvd_chksum2;
+
+
+static int slow_data_state = 0;
+static const char * slow_data_ptr = 0;
+static const char * gps_id = "DL1BFF  ,BN  *5B             \r\n";
+// ---------------------------12345678901234567890123456789
+// gps_id is always 29 bytes long
+
+#define DSTAR_GPS_MAXLINELEN 100
+
+static char gprmc_data[DSTAR_GPS_MAXLINELEN];
+static char gpgga_data[DSTAR_GPS_MAXLINELEN];
+
+
+static void copy_dstar_gps_line (char * dest, int num_fields)
+{
+	int ptr = 1;
+	dest[0] = '$';
+	
+	int i;
+	for (i=0; i < num_fields; i++)
+	{
+		const char * p = nmea_params[i];
+		
+		while (*p)
+		{
+			dest[ptr] = *p;
+			ptr ++;
+			p++;
+			
+			if (ptr >= (DSTAR_GPS_MAXLINELEN - 5))  // line too long!
+			{
+				dest[DSTAR_GPS_MAXLINELEN - 5] = 0;
+				return;
+			}
+		}
+		 
+		dest[ptr] = ',';
+		ptr ++;
+			
+		if (ptr >= (DSTAR_GPS_MAXLINELEN - 5))  // line too long!
+		{
+			dest[DSTAR_GPS_MAXLINELEN - 5] = 0;
+			return;
+		}
+	}
+	
+	// the last comma is modified to an asterisk with chksum afterwards
+	
+	dest[ptr - 1] = '*';
+	dest[ptr] = rcvd_chksum1;
+	dest[ptr + 1] = rcvd_chksum2;
+	dest[ptr + 2] = 13; // CR
+	dest[ptr + 3] = 10; // LF
+	dest[ptr + 4] = 0; // end of string
+	
+}
+
+
+
+
+
 static void gps_parse_nmea(void)
 {
 	int ptr = 1;
@@ -383,6 +448,9 @@ static void gps_parse_nmea(void)
 		nmea_params[num_params] = input_line + ptr;
 		num_params ++;
 	}
+	
+	rcvd_chksum1 = input_line[ptr + 1];
+	rcvd_chksum2 = input_line[ptr + 2];
 	
 	/*
 	vd_prints_xy(VDISP_GPS_LAYER, 0, pos, VDISP_FONT_4x6, 0, nmea_params[0]);
@@ -434,9 +502,135 @@ static void gps_parse_nmea(void)
 		{
 			recv_gpgsa();
 		}			
-	}		
+	}
+	else if (memcmp(nmea_params[0], "GPRMC", 6) == 0)
+	{
+		if ((num_params == 13) && (slow_data_state == 0))
+		{
+			copy_dstar_gps_line(gprmc_data, 13);
+			if (gpgga_data[0] != 0) // gpgga_data is not empty
+			{
+				slow_data_ptr = gprmc_data;
+				slow_data_state = 1;
+			}
+		}			
+	}
+	else if (memcmp(nmea_params[0], "GPGGA", 6) == 0)
+	{
+		if ((num_params == 15) && (slow_data_state == 0))
+		{
+			copy_dstar_gps_line(gpgga_data, 15);
+			if (gprmc_data[0] != 0) // gprmc_data is not empty
+			{
+				slow_data_ptr = gprmc_data;
+				slow_data_state = 1;
+			}
+		}			
+	}	
 }
 
+
+// static int chcount = 0;
+
+static int copy_slow_data( int * bytes_copied, uint8_t * slow_data)
+{
+	int count = 0;
+	
+	while ((*slow_data_ptr) && (count < 5))
+	{
+		slow_data[count] = (*slow_data_ptr);
+		
+		/* vdisp_printc_xy((chcount % 32) * 4, 8 + (chcount / 32) * 6,VDISP_FONT_4x6, 0, slow_data[count]);
+		chcount ++;
+		if (chcount >= (9 * 32))
+		{
+			chcount = 0;
+		} */
+		
+		
+		count ++;
+		slow_data_ptr ++;
+	}
+	
+	*bytes_copied = count;
+	
+	return ((*slow_data_ptr) == 0) ? 1 : 0;  // return 1 if at end of the string
+}
+
+
+void gps_reset_slow_data(void)
+{
+	gprmc_data[0] = 0;  // empty string, to be filled by NMEA data
+	gpgga_data[0] = 0;
+	slow_data_state = 0;
+}
+
+int gps_get_slow_data(uint8_t * slow_data)
+{
+	int ret_val = 0;
+	
+	slow_data[0] = 0x66; // NOP data
+	slow_data[1] = 0x66;
+	
+	vdisp_printc_xy(0,0,VDISP_FONT_6x8, 0, 0x30 + slow_data_state);
+	
+	switch (slow_data_state)
+	{
+		case 0:  // no data to send
+			break;
+			
+		case 1: // send GPRMC
+			if (slow_data_ptr == 0)
+			{
+				slow_data_state = 4; // end
+			}
+			else
+			{
+				if (copy_slow_data(&ret_val, slow_data) != 0) // if all bytes are copied
+				{
+					slow_data_state = 2;
+					slow_data_ptr = gpgga_data;
+				}
+			}
+			break;
+		
+		case 2: // send GPGGA
+			if (slow_data_ptr == 0)
+			{
+				slow_data_state = 4; // end
+			}
+			else
+			{
+				if (copy_slow_data(&ret_val, slow_data) != 0) // if all bytes are copied
+				{
+					slow_data_state = 3;
+					slow_data_ptr = gps_id;
+				}
+			}
+			break;
+			
+		case 3: // send gps_id
+			if (slow_data_ptr == 0)
+			{
+				slow_data_state = 4; // end
+			}
+			else
+			{
+				if (copy_slow_data(&ret_val, slow_data) != 0) // if all bytes are copied
+				{
+					slow_data_state = 4;
+					slow_data_ptr = 0;
+				}
+			}
+			break;
+			
+		case 4:
+			gps_reset_slow_data();
+			break;
+	}
+	
+	return ret_val;
+}
 
 static void vGPSTask( void *pvParameters )
 {
@@ -480,6 +674,7 @@ void gps_init(void)
 {
 	
 	gps_init_satlist();
+	gps_reset_slow_data();
 	
 	vd_clear_rect (VDISP_GPS_LAYER, 0, 0, 128, 64);
 	
