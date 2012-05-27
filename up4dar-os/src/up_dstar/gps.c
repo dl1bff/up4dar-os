@@ -38,6 +38,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_io\serial.h"
 
+#include "trigono.h"
+
 #include "gps.h"
 
 
@@ -160,11 +162,15 @@ static int get_nmea_num(int param)
 
 #define GPGSA_NUM_DATA 12
 
-unsigned short gpgsa_data[GPGSA_NUM_DATA];
+static unsigned short gpgsa_data[GPGSA_NUM_DATA];
+
+static int gps_fix = 0;
 
 static void recv_gpgsa(void)
 {
 	int i;
+	
+	gps_fix = get_nmea_num( 2 );
 	
 	for (i=0; i < GPGSA_NUM_DATA; i++)
 	{
@@ -194,7 +200,7 @@ static void recv_gpgsv(int num_sats)
 	
 	
 	
-	
+	int j;
 	int i;
 	
 	for (i=0; i < num_sats; i++)
@@ -222,14 +228,46 @@ static void recv_gpgsv(int num_sats)
 	{
 		vd_clear_rect (VDISP_GPS_LAYER, 0, 0, 128, 64);
 		
+		if (gps_fix >= 2)
+		{
+			buf[0] = 0x30 + gps_fix;
+			buf[1] = 0;
+			
+			vd_prints_xy(VDISP_GPS_LAYER, 0, 0, VDISP_FONT_6x8, 0, buf);
+		}
+		else
+		{
+			vd_prints_xy(VDISP_GPS_LAYER, 0, 0, VDISP_FONT_6x8, 0, "-");
+		}
+		
+		/*
+		for (i=0; i < 360; i+= 45)
+		{
+			vd_set_pixel(VDISP_GPS_LAYER, 32 + (fixpoint_sin(i) / 700),
+				32 + (fixpoint_cos(i) / 700), 0, 1, 1);
+		}
+		*/
+		
+		for (i=0; i < 360; i+= 10)
+		{
+			vd_set_pixel(VDISP_GPS_LAYER, 32 + (fixpoint_sin(i) / 357),
+				32 + (fixpoint_cos(i) / 357), 0, 1, 1);
+		}			
+				
+		vd_prints_xy(VDISP_GPS_LAYER, 0, 28, VDISP_FONT_6x8, 0, "W");
+		vd_prints_xy(VDISP_GPS_LAYER, 58, 28, VDISP_FONT_6x8, 0, "E");
+		vd_prints_xy(VDISP_GPS_LAYER, 29, 0, VDISP_FONT_6x8, 0, "N");
+		vd_prints_xy(VDISP_GPS_LAYER, 29, 56, VDISP_FONT_6x8, 0, "S");
+		
+		
 		for (i=0; i < MAX_SATELLITES; i++)
 		{
 			if (sats[i].sat_id != NO_SAT)
 			{
-				int x = (i & 0x01) ? 64 : 0;
-				int y = ( i >> 1 ) * 6;
+				int x = 120 - (i % 6) * 10;
+				int y = (i / 6) * 21;
 				
-				int j;
+				
 				
 				int used_in_fix = 0;
 				
@@ -241,6 +279,41 @@ static void recv_gpgsv(int num_sats)
 					}
 				}
 				
+				if (sats[i].elevation > 0)
+				{
+					int xx = 28 + fixpoint_cos(sats[i].elevation) * fixpoint_sin(sats[i].azimuth) / 3570000;
+					int yy = 29 - fixpoint_cos(sats[i].elevation) * fixpoint_cos(sats[i].azimuth) / 3570000;
+					
+					vdisp_i2s(buf, 2, 10, 1, sats[i].sat_id);
+					vd_prints_xy(VDISP_GPS_LAYER, xx, yy+1, VDISP_FONT_4x6, used_in_fix, buf);
+					
+					for (j=0; j < 8; j++)
+					{
+						vd_set_pixel(VDISP_GPS_LAYER, xx + j, yy, 0, used_in_fix, 1);
+					}
+					
+					for (j=0; j < 7; j++)
+					{
+						vd_set_pixel(VDISP_GPS_LAYER, xx + 8, yy + j, 0, used_in_fix, 1);
+					}
+				}
+				
+				vdisp_i2s(buf, 2, 10, 1, sats[i].sat_id);
+				vd_prints_xy(VDISP_GPS_LAYER, x, y + 14, VDISP_FONT_4x6, 0, buf);
+				
+				int v = fixpoint_sin(sats[i].snr) / 833;
+				
+				vd_set_pixel(VDISP_GPS_LAYER, x+1, y + 12, 0, 0x7F, 7);
+				
+				for (j=1; j < v; j++)
+				{
+					vd_set_pixel(VDISP_GPS_LAYER, x+1, y + 12 - j, 0,
+						used_in_fix ? 0x7F : 0x41 , 7);
+				}
+				
+				vd_set_pixel(VDISP_GPS_LAYER, x+1, y + 12 - v, 0, 0x7F, 7);
+				
+				/*
 				vdisp_i2s(buf, 3, 10, 1, sats[i].sat_id);
 				vd_prints_xy(VDISP_GPS_LAYER, x +  0, y, VDISP_FONT_4x6, used_in_fix, buf);
 			
@@ -252,18 +325,23 @@ static void recv_gpgsv(int num_sats)
 				
 				vdisp_i2s(buf, 2, 10, 1, sats[i].snr);
 				vd_prints_xy(VDISP_GPS_LAYER, x + 44, y, VDISP_FONT_4x6, 0, buf);	
+				
+				*/
 			}
 		}
+		
+		
 	}
 	
 	
-	
+	/*
 	vdisp_i2s(buf, 2, 10, 1, get_nmea_num(1));
 	vd_prints_xy(VDISP_GPS_LAYER, 0, 58, VDISP_FONT_4x6, 0, buf);
 	vdisp_i2s(buf, 2, 10, 1, get_nmea_num(2));
 	vd_prints_xy(VDISP_GPS_LAYER, 12, 58, VDISP_FONT_4x6, 0, buf);
 	vdisp_i2s(buf, 2, 10, 1, get_nmea_num(3));
 	vd_prints_xy(VDISP_GPS_LAYER, 24, 58, VDISP_FONT_4x6, 0, buf);
+	*/
 }
 
 

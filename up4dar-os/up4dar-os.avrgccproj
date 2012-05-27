@@ -300,6 +300,12 @@
     <Compile Include="src\up_dstar\rx_dstar_crc_header.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\trigono.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\trigono.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\txtest.c">
       <SubType>compile</SubType>
     </Compile>
