@@ -50,6 +50,11 @@ static xComPortHandle gpsSerialHandle;
 #define MAXLINELEN 100
 static char input_line[MAXLINELEN];
 
+
+#define FIXDATA_MAXLEN 13
+static char fix_data[4][FIXDATA_MAXLEN];
+
+
 // static int  pos = 0;
 
 
@@ -165,6 +170,9 @@ static int get_nmea_num(int param)
 static unsigned short gpgsa_data[GPGSA_NUM_DATA];
 
 static int gps_fix = 0;
+static int gpgga_fix_info = 0;
+static int gprmc_fix_mode = 0;
+static int gprmc_status = 0;
 
 static void recv_gpgsa(void)
 {
@@ -238,6 +246,42 @@ static void recv_gpgsv(int num_sats)
 		else
 		{
 			vd_prints_xy(VDISP_GPS_LAYER, 0, 0, VDISP_FONT_6x8, 0, "-");
+		}
+		
+		if (gpgga_fix_info > 0)
+		{
+			buf[0] = 0x30 + gpgga_fix_info;
+			buf[1] = 0;
+			
+			vd_prints_xy(VDISP_GPS_LAYER, 0, 56, VDISP_FONT_6x8, 0, buf);
+		}
+		else
+		{
+			vd_prints_xy(VDISP_GPS_LAYER, 0, 56, VDISP_FONT_6x8, 0, "-");
+		}
+		
+		if (gprmc_fix_mode > 0)
+		{
+			buf[0] = gprmc_fix_mode;
+			buf[1] = 0;
+			
+			vd_prints_xy(VDISP_GPS_LAYER, 6, 0, VDISP_FONT_6x8, 0, buf);
+		}
+		else
+		{
+			vd_prints_xy(VDISP_GPS_LAYER, 6, 0, VDISP_FONT_6x8, 0, "-");
+		}
+		
+		if (gprmc_status > 0)
+		{
+			buf[0] = gprmc_status;
+			buf[1] = 0;
+			
+			vd_prints_xy(VDISP_GPS_LAYER, 12, 0, VDISP_FONT_6x8, 0, buf);
+		}
+		else
+		{
+			vd_prints_xy(VDISP_GPS_LAYER, 12, 0, VDISP_FONT_6x8, 0, "-");
 		}
 		
 		/*
@@ -332,6 +376,12 @@ static void recv_gpgsv(int num_sats)
 		
 		
 	}
+	
+	
+	for (i=0; i < 4; i++)
+	{
+		vd_prints_xy(VDISP_GPS_LAYER, 56, 40 + (i*6), VDISP_FONT_4x6, 0, fix_data[i]);
+	}	
 	
 	
 	/*
@@ -507,6 +557,19 @@ static void gps_parse_nmea(void)
 	{
 		if ((num_params == 13) && (slow_data_state == 0))
 		{
+			gprmc_fix_mode = nmea_params[12][0];
+			gprmc_status = nmea_params[2][0];
+		
+		/*
+			int i;	
+			for (i = 0; i < 3; i++)
+			{
+				memcpy(fix_data[i], nmea_params[1 + (i*2)], FIXDATA_MAXLEN);
+				fix_data[i][FIXDATA_MAXLEN - 1] = 0;
+			}
+			*/
+			
+			
 			copy_dstar_gps_line(gprmc_data, 13);
 			if (gpgga_data[0] != 0) // gpgga_data is not empty
 			{
@@ -519,6 +582,14 @@ static void gps_parse_nmea(void)
 	{
 		if ((num_params == 15) && (slow_data_state == 0))
 		{
+			memcpy(fix_data[0], nmea_params[1], FIXDATA_MAXLEN);
+			fix_data[0][FIXDATA_MAXLEN - 1] = 0;
+			memcpy(fix_data[1], nmea_params[2], FIXDATA_MAXLEN);
+			fix_data[1][FIXDATA_MAXLEN - 1] = 0;
+			memcpy(fix_data[2], nmea_params[4], FIXDATA_MAXLEN);
+			fix_data[2][FIXDATA_MAXLEN - 1] = 0;
+				
+			gpgga_fix_info = get_nmea_num(6);
 			copy_dstar_gps_line(gpgga_data, 15);
 			if (gprmc_data[0] != 0) // gprmc_data is not empty
 			{
@@ -526,7 +597,15 @@ static void gps_parse_nmea(void)
 				slow_data_state = 1;
 			}
 		}			
-	}	
+	}
+	else if (memcmp(nmea_params[0], "GPZDA", 6) == 0)
+	{
+		if (num_params == 7)
+		{
+			memcpy(fix_data[3], nmea_params[1], FIXDATA_MAXLEN);
+			fix_data[3][FIXDATA_MAXLEN - 1] = 0;
+		}	
+	}		
 }
 
 
@@ -636,6 +715,80 @@ static void vGPSTask( void *pvParameters )
 {
 	int input_ptr = 0;
 	
+/*
+#define FIXINTERVAL "$PMTK300,1000,0,0,0,0*1C\r\n"	
+#define WAAS_SET1 "$PMTK313,1*2E\r\n"
+#define WAAS_SET2 "$PMTK301,2*2E\r\n"
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, FIXINTERVAL);
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, FIXINTERVAL);
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, WAAS_SET1);
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, WAAS_SET2);
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, WAAS_SET1);
+
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, "$PMTK104*37\r\n");   // full reset
+	
+	*/
+
+	
+	
+/*	vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS
+	
+	vTaskDelay(1000);
+	
+	vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	
+	vTaskDelay(1000); */
+	
+	// vSerialPutString(gpsSerialHandle, "$PMTK101*32\r\n");   // hot reset
+	
+	//vSerialPutString(gpsSerialHandle, "$PMTK104*37\r\n");   // full reset
+	
+	// vTaskDelay(1000);
+	// vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
+	// vTaskDelay(1000); 
+	// vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	// vTaskDelay(1000);
+	// vSerialPutString(gpsSerialHandle, "$PMTK313,1*2E\r\n"); // enable SBAS satellite search
+	// vTaskDelay(1000); 
+	// vSerialPutString(gpsSerialHandle, "$PMTK301,2*2E\r\n"); // enable WAAS
+	// vTaskDelay(1000); 
+	// vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
+	// vTaskDelay(1000); 
+	// vSerialPutString(gpsSerialHandle, "$PMTK220,2000*1C\r\n");   // data every 2 seconds
+	// vTaskDelay(1000); 
+	// vSerialPutString(gpsSerialHandle, "$PMTK300,2000,0,0,0,0*1F\r\n");   // data every 2 seconds
+	// vTaskDelay(1000); 
+	// vSerialPutString(gpsSerialHandle, "$PMTK314,0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0*29\r\n"); 
+	
+	/*
+	 vTaskDelay(1000);
+	 vSerialPutString(gpsSerialHandle, "$PMTK104*37\r\n");   // cold reset
+	 vTaskDelay(1000); 
+	 vSerialPutString(gpsSerialHandle, "$PMTK314,0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0*29\r\n");
+	 */
+	 vTaskDelay(1000); 
+	 vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	 vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
+	 vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
+	 
 	for (;;)
 	{
 		if (xSerialGetChar(gpsSerialHandle, (signed char *) input_line + input_ptr, 1000) == pdTRUE)  // one second timeout

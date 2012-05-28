@@ -413,7 +413,7 @@ const char *pxNext;
 	pxNext = ( const char * ) pcString;
 	while( *pxNext )
 	{
-		xSerialPutChar( pxPort, *pxNext, 10 );  // 10ms block time 
+		xSerialPutChar( pxPort, *pxNext, 100 );  // 100ms block time 
 		pxNext++;
 	}
 }
