@@ -37,6 +37,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_dstar/audio_q.h"
 
+#include "up_dstar/fixpoint_math.h"
+
 
 
 static int send_wm8510 (int reg, int value)
@@ -58,9 +60,17 @@ static int send_wm8510 (int reg, int value)
 }
 
 
+static int beep_counter = 0;
+static int beep_phase = 0;
+static int beep_phase_incr = 0;
+static int beep_volume = 0;
+static int beep_fade_in = 0;
+
 
 static int chip_init(void)
 {
+	beep_counter = 0;
+	
 	AVR32_TWI.cr = 0x24; // MSEN + SVDIS
 	AVR32_TWI.mmr =  0x001A0100;    // DADR= 0011010   , One-byte internal device address, MREAD = 0
 	
@@ -126,6 +136,8 @@ static int16_t * rx_buf[2];
 static int curr_tx_buf = 0;
 static int curr_rx_buf = 0;
 
+
+
 static portTASK_FUNCTION( wm8510Task, pvParameters )
 {
 	int audio_state = 0;
@@ -174,6 +186,37 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 				AVR32_PDCA.channel[2].tcrr = BUF_SIZE;
 				
 				audio_q_get( audio_tx_q, tx_buf[curr_tx_buf]);
+				
+				if (beep_counter > 0)
+				{
+					int i;
+					
+					for (i=0; i < BUF_SIZE; i++)
+					{
+						int vol = beep_volume;
+						
+						if (beep_counter == 1) // at the end of the beep
+						{
+							vol = (BUF_SIZE - i) * beep_volume / BUF_SIZE; // fade out
+						}
+						else if (beep_fade_in != 0) // start of beep
+						{
+							beep_fade_in = 0;
+							vol = (i + 1) * beep_volume / BUF_SIZE; // fade in
+						}
+						
+						tx_buf[curr_tx_buf][i] = (tx_buf[curr_tx_buf][i] / 2) + 
+							(vol * fixpoint_sin(beep_phase)) / 100;
+						beep_phase += beep_phase_incr;
+						if (beep_phase >= 360)
+						{
+							beep_phase -= 360;
+						}
+					}						
+					
+					beep_counter --;	
+				}
+				
 			}			
 			if ( (AVR32_PDCA.channel[3].tcrr == 0)
 				&& (AVR32_PDCA.channel[3].tcr < BUF_SIZE))
@@ -194,6 +237,33 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 }	
 
 
+#define SAMPLE_RATE 8000
+
+void wm8510_beep(int duration_ms, int frequency_hz, int volume_percent)
+{
+	if ((duration_ms <= 0) || (volume_percent <= 0))
+		return;
+
+	beep_counter = duration_ms  *  SAMPLE_RATE / ( configTICK_RATE_HZ * BUF_SIZE ) ;
+	
+	beep_volume = volume_percent;
+	
+	if (beep_volume < 0)
+	{
+		beep_volume = 0;
+	}
+	
+	if (beep_volume > 100)
+	{
+		beep_volume = 100;
+	}
+	
+	beep_phase = 0;
+	
+	beep_phase_incr = (360 * frequency_hz) / SAMPLE_RATE;
+	
+	beep_fade_in = 1;
+}
 
 
 

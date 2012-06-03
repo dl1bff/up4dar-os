@@ -38,7 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_io\serial.h"
 
-#include "trigono.h"
+#include "fixpoint_math.h"
 
 #include "gps.h"
 
@@ -783,11 +783,12 @@ static void vGPSTask( void *pvParameters )
 	 vSerialPutString(gpsSerialHandle, "$PMTK104*37\r\n");   // cold reset
 	 vTaskDelay(1000); 
 	 vSerialPutString(gpsSerialHandle, "$PMTK314,0,1,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0*29\r\n");
-	 */
-	 vTaskDelay(1000); 
+	*/
+	 vTaskDelay(1000);
+	 // vSerialPutString(gpsSerialHandle, "$PMTK102*31\r\n");   // warm reset
 	 vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
-	 vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
-	 vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
+	 // vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
+	 // vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
 	 
 	for (;;)
 	{

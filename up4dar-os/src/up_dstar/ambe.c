@@ -377,7 +377,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 						if (ambe_q_get_sd (& ambe_output_q, (uint8_t *) (chan_tx_data + 12)) == 0)
 						{
 							 // if buffer not empty set silence_counter
-							silence_counter = 200;  // output audio for another 200 samples
+							silence_counter = 150;  // output audio for another 150 samples
 													// after queue is empty
 						}
 						
@@ -426,6 +426,11 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 						{
 							silence_counter --;
 							audio_q_put( audio_output_q, abuf );
+							
+							if (silence_counter == 0)
+							{
+								wm8510_beep(100, 1000, 10);
+							}
 						}													
 					}
 				}

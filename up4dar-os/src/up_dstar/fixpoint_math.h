@@ -17,18 +17,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 /*
- * trigono.h
  *
  * Created: 27.05.2012 02:57:30
  *  Author: mdirska
  */ 
 
 
-#ifndef TRIGONO_H_
-#define TRIGONO_H_
+#ifndef FIXPOINT_MATH_H_
+#define FIXPOINT_MATH_H_
 
 int fixpoint_sin (int degree);
 int fixpoint_cos (int degree);
+int fixpoint_centiBel (uint32_t value);
 
-
-#endif /* TRIGONO_H_ */
+#endif /* FIXPOINT_MATH_H_ */

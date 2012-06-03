@@ -66,10 +66,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_io/lcd.h"
 
-#define mainLED_TASK_PRIORITY     ( tskIDLE_PRIORITY + 1 )
-#define ledSTACK_SIZE		configMINIMAL_STACK_SIZE
 
-// #define ledSTACK_SIZE		300
+#define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
 
 U32 counter = 0;
@@ -87,17 +85,6 @@ int snmp_get_voltage(int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
 	return snmp_encode_int( voltage, res, res_len, maxlen );
 }
-
-/* Structure used to pass parameters to the LED tasks. */
-typedef struct LED_PARAMETERS
-{
-	unsigned portBASE_TYPE uxLED;		/*< The output the task should use. */
-	portTickType xFlashRate;	/*< The rate at which the LED should flash. */
-} xLEDParameters;
-
-/* The task that is created eight times - each time with a different xLEDParaemtes 
-structure passed in as the parameter. */
-static void vLEDFlashTask( void *pvParameters );
 
 
 
@@ -400,6 +387,16 @@ static void fw_upload(void)
 static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0, 0 };
 	
 	
+static const int button_pins[NUMBER_OF_KEYS] = {
+			AVR32_PIN_PA18,
+			AVR32_PIN_PA19,
+			AVR32_PIN_PA20,
+			AVR32_PIN_PA28, // SW3 -> analog channel
+			AVR32_PIN_PA22,
+			AVR32_PIN_PA23,
+			AVR32_PIN_PA28
+		};
+	
 int debug1;
 
 int maxTXQ;
@@ -416,438 +413,280 @@ static void show_dcs_state(void)
 		dcs_is_connected(), buf );
 }		
 
-static void vParTestToggleLED( portBASE_TYPE uxLED ) 
+static void vButtonTask( void *pvParameters )
 {
 	
-	
-	switch(uxLED)
+	for(;;)
 	{
-	case 0:
-			{
-				
-			/*	
-			if (debugOutput >= 0)
-			{
-				signed char buf[1];
-		
-				if (xSerialGetChar(debugOutput, buf, 0) == pdTRUE)
-				{
-					x_counter ++;
-					
-					vdisp_i2s( tmp_buf, 5, 10, 0, x_counter);
+		vTaskDelay(100); 			
+			
+		int v = AVR32_ADC.cdr0;
+			
+		AVR32_ADC.cr = 2; // start new conversion
+			
+		v *= 330 * 430;  // 3.3V , r1+r2 = 43k
+		v /= 1023 * 56;  // inputmax=1023, r1=5.6k
 			
 			
-					vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, tmp_buf );
-					
-				}			
-			}
-				
-				*/
-			
-			int v = AVR32_ADC.cdr0;
-			
-			AVR32_ADC.cr = 2; // start new conversion
-			
-			v *= 330 * 430;  // 3.3V , r1+r2 = 43k
-			v /= 1023 * 56;  // inputmax=1023, r1=5.6k
-			
-			
-			if (v > 400)  // more than 4 volts
-			{
-				voltage = v * 10; // millivolt
-			}
-			else // voltage too low -> key pressed
-			{
-				vdisp_clear_rect (0, 0, 128, 64);
-				vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
-				dstarChangeMode(4);
-			}			
+		if (v > 400)  // more than 4 volts
+		{
+			voltage = v * 10; // millivolt
+		}
+		else // voltage too low -> key pressed
+		{
+			vdisp_clear_rect (0, 0, 128, 64);
+			vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
+			dstarChangeMode(4);
+		}			
 			
 			
 			
-			// gpio_toggle_pin(AVR32_PIN_PB27);
+		// gpio_toggle_pin(AVR32_PIN_PB27);
 			
-			// gpio_toggle_pin(AVR32_PIN_PB19);
+		// gpio_toggle_pin(AVR32_PIN_PB19);
 			
-			// eth_send_vdisp_frame();
+		// eth_send_vdisp_frame();
 	
-			const int pins[NUMBER_OF_KEYS] = {
-				AVR32_PIN_PA18,
-				AVR32_PIN_PA19,
-				AVR32_PIN_PA20,
-				AVR32_PIN_PA28, // SW3 -> analog channel
-				AVR32_PIN_PA22,
-				AVR32_PIN_PA23,
-				AVR32_PIN_PA28
-			};
-			int i;
-				
-			for (i=0; i < NUMBER_OF_KEYS; i++)
-			{
-				if (gpio_get_pin_value(pins[i]) == 0)
-				{
-					touchKeyCounter[i] ++;
-				}
-				else
-				{
-					touchKeyCounter[i] = 0;
-					
-					/*
-					if (i==6)  // PTT off
-					{
-						ambe_stop_encode();
-					}
-					*/
-				}					
-					
-				if ((touchKeyCounter[i] == 2) && (tx_active == 0))
-				{
-					switch(i)
-					{
-					case 0:
-						vdisp_clear_rect (0, 0, 128, 64);
-						
-#if defined(FWUPLOAD_BUTTON)
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "FW upload" );
-						
-						fw_upload();
-						
-						vdisp_prints_xy( 30, 38, VDISP_FONT_6x8, 0, "FW upload done!" );
-#else
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Service Mode" );
-						dstarChangeMode(1);
-#endif
-						break;
-
-					case 1:
-						/*
-						vdisp_clear_rect (0, 0, 128, 64);
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "TX test" );
-						dstarResetCounters();
-						tx_active = 1;	
-						*/
-						//send_dcs(0x0001, 1);
-						dcs_on_off();
-						break;
-										
-					case 2:
-						vdisp_clear_rect (0, 0, 128, 64);
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
-						dstarChangeMode(2);
-						// vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
-						// dstarChangeMode(4);
-						break;
-					
-					/*					
-					case 3:
-						vdisp_clear_rect (0, 0, 128, 64);
-						vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
-						dstarChangeMode(2);
-						break;
-						*/
-							
-					case 4:
-						/* vdisp_clear_rect (0, 0, 128, 64);
-							dstarResetCounters();
-						tx_active = 1;
-						*/
-							
-						/*
-						pwm_value --;
-						set_pwm(); */
-						
-						dcs_select_reflector(0);
-						show_dcs_state();
-						touchKeyCounter[i] = 0;
-						
-						x_counter ++ ;
-						
-						lcd_show_layer( x_counter & 0x01);
-						
-						break;
-							
-					case 5:
-							/*
-						pwm_value ++;
-						set_pwm(); */
-							
-						dcs_select_reflector(1);
-						show_dcs_state();
-						touchKeyCounter[i] = 0;
-						break;
-						
-						
-					// case 6: // PTT
-					
-					//	ambe_start_encode();
-						
-						/*
-						{
-							extern int audio_max;
-							audio_max = 0;
-						}
-						*/							
-					//	break;			
-					}
-				}
-
-			}
 		
-			}		
-		break;
-		
-	case 1:
-			// gpio_toggle_pin(AVR32_PIN_PB28);
-			//gpio_toggle_pin(AVR32_PIN_PB18);
-			
-			// x_counter ++;
-			
-		
-			// rtclock_disp_xy(84, 0, x_counter & 0x02, 1);
-			rtclock_disp_xy(84, 0, 2, 1);
-			
+		int i;
+				
+		for (i=0; i < NUMBER_OF_KEYS; i++)
+		{
+			if (gpio_get_pin_value(button_pins[i]) == 0)
 			{
-			
-			
-			vdisp_i2s( tmp_buf, 5, 10, 0, voltage);
-			tmp_buf[3] = tmp_buf[2];
-			tmp_buf[2] = '.';
-			tmp_buf[4] = 'V';
-			tmp_buf[5] = 0;
-			
-			
-			vdisp_prints_xy( 55, 0, VDISP_FONT_4x6, 0, tmp_buf );
-			
-			
-						
-			
-			
-			
-			
-			// ethernet status
-			
-			int v = AVR32_MACB.MAN.data;
-			
-			AVR32_MACB.man = 0x60C20000; // read register 0x10
-			
-			//  vdisp_i2s( tmp_buf, 4, 16, 1, maxTXQ );
-			//  vdisp_prints_xy( 80, 56, VDISP_FONT_6x8, 0, tmp_buf );
-			
-			const char * net_status = "     ";
-			
-			dhcp_set_link_state( v & 1 );
-			
-			if (v & 1)  // Ethernet link is active
-			{
-				v = ((v >> 1) & 0x03) ^ 0x01;
-				
-				switch (v)
-				{
-					case 0:
-						net_status = " 10HD";
-						break;
-					case 1:
-						net_status = "100HD";
-						break;
-					case 2:
-						net_status = " 10FD";
-						break;
-					case 3:
-						net_status = "100FD";
-						break;
-				}
-				
-				AVR32_MACB.ncfgr = 0x00000800 | v;  // SPD, FD, CLK = MCK / 32 -> 1.875 MHz
-				
-				vdisp_prints_xy( 28, 0, VDISP_FONT_4x6, 
-					(dhcp_is_ready() != 0) ? 0 : 1, net_status );
+				touchKeyCounter[i] ++;
 			}
 			else
 			{
-				vdisp_prints_xy( 28, 0, VDISP_FONT_4x6, 0, net_status );
-			}
-			
-			
-			
-			dhcp_service();				
-			
-			/*
-			 char buf[10];
-			 vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbsta );
-			  vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
-			  
-			  vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbfsm );
-			  vdisp_prints_xy( 30, 56, VDISP_FONT_6x8, 0, buf );
-			  
-			  vdisp_i2s(buf, 8, 16, 1, AVR32_USBB.usbcon );
-			  vdisp_prints_xy( 60, 56, VDISP_FONT_6x8, 0, buf );
-			  */
-			
-			// printDebug("Test von DL1BFF\r\n");
-			
-			lldp_counter --;
-			
-			if (lldp_counter < 0)
-			{ 
-				lldp_counter = 10;
-				lldp_send();
-				
-				 if ((AVR32_USBB.usbsta & 0x0400) == 0) // ID pin pulled low
-				 {
-					gpio_set_pin_low (AVR32_PIN_PB17); // turn on power
-				 }	
-				 else
-				 {
-					gpio_set_pin_high (AVR32_PIN_PB17);
-				 }		
-			}				
-			 
-			 ipneigh_service();
-			 
-			
-			 dcs_service();
-			 show_dcs_state();
-			
-			}
-		break;
-	}
+				touchKeyCounter[i] = 0;
+					
+				/*
+				if (i==6)  // PTT off
+				{
+					ambe_stop_encode();
+				}
+				*/
+			}					
+					
+			if ((touchKeyCounter[i] == 2) && (tx_active == 0))
+			{
+				switch(i)
+				{
+				case 0:
+					vdisp_clear_rect (0, 0, 128, 64);
+						
+#if defined(FWUPLOAD_BUTTON)
+					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "FW upload" );
+						
+					fw_upload();
+						
+					vdisp_prints_xy( 30, 38, VDISP_FONT_6x8, 0, "FW upload done!" );
+#else
+					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Service Mode" );
+					dstarChangeMode(1);
+#endif
+					break;
 
-}
-
-/*-----------------------------------------------------------*/
-
-static void vStartLEDFlashTasks( unsigned portBASE_TYPE uxPriority )
-{
-unsigned portBASE_TYPE uxLEDTask;
-xLEDParameters *pxLEDParameters;
-const unsigned portBASE_TYPE uxNumOfLEDs = 2;
-// const portTickType xFlashRate = 900;
-
-	/* Create the eight tasks. */
-	for( uxLEDTask = 0; uxLEDTask < uxNumOfLEDs; ++uxLEDTask )
-	{
-		/* Create and complete the structure used to pass parameters to the next 
-		created task. */
-		pxLEDParameters = ( xLEDParameters * ) pvPortMalloc( sizeof( xLEDParameters ) );
-		pxLEDParameters->uxLED = uxLEDTask;
+				case 1:
+					/*
+					vdisp_clear_rect (0, 0, 128, 64);
+					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "TX test" );
+					dstarResetCounters();
+					tx_active = 1;	
+					*/
+					//send_dcs(0x0001, 1);
+					dcs_on_off();
+					break;
+										
+				case 2:
+					vdisp_clear_rect (0, 0, 128, 64);
+					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
+					dstarChangeMode(2);
+					// vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
+					// dstarChangeMode(4);
+					break;
+					
+				/*					
+				case 3:
+					vdisp_clear_rect (0, 0, 128, 64);
+					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
+					dstarChangeMode(2);
+					break;
+					*/
+							
+				case 4:
+					/* vdisp_clear_rect (0, 0, 128, 64);
+						dstarResetCounters();
+					tx_active = 1;
+					*/
+							
+					/*
+					pwm_value --;
+					set_pwm(); */
+						
+					dcs_select_reflector(0);
+					show_dcs_state();
+					touchKeyCounter[i] = 0;
+						
+					x_counter ++ ;
+						
+					lcd_show_layer( x_counter & 0x01);
+						
+					break;
+							
+				case 5:
+						/*
+					pwm_value ++;
+					set_pwm(); */
+							
+					dcs_select_reflector(1);
+					show_dcs_state();
+					touchKeyCounter[i] = 0;
+					break;
+						
+						
+				// case 6: // PTT
+					
+				//	ambe_start_encode();
+						
+					/*
+					{
+						extern int audio_max;
+						audio_max = 0;
+					}
+					*/							
+				//	break;	
+						
+				} // switch
+			} // if	
+		}  // for Buttons
 		
-		if (uxLEDTask == 0)
+	
+	}	// for(;;)
+		
+}
+		
+		
+static void vServiceTask( void *pvParameters )
+{
+
+	for (;;)
+	{	
+		
+		vTaskDelay(500); 
+		
+		// gpio_toggle_pin(AVR32_PIN_PB28);
+		//gpio_toggle_pin(AVR32_PIN_PB18);
+			
+		// x_counter ++;
+			
+		
+		// rtclock_disp_xy(84, 0, x_counter & 0x02, 1);
+		rtclock_disp_xy(84, 0, 2, 1);
+			
+			
+			
+		vdisp_i2s( tmp_buf, 5, 10, 0, voltage);
+		tmp_buf[3] = tmp_buf[2];
+		tmp_buf[2] = '.';
+		tmp_buf[4] = 'V';
+		tmp_buf[5] = 0;
+			
+			
+		vdisp_prints_xy( 55, 0, VDISP_FONT_4x6, 0, tmp_buf );
+			
+			
+		// ethernet status
+			
+		int v = AVR32_MACB.MAN.data;
+			
+		AVR32_MACB.man = 0x60C20000; // read register 0x10
+			
+		//  vdisp_i2s( tmp_buf, 4, 16, 1, maxTXQ );
+		//  vdisp_prints_xy( 80, 56, VDISP_FONT_6x8, 0, tmp_buf );
+			
+		const char * net_status = "     ";
+			
+		dhcp_set_link_state( v & 1 );
+			
+		if (v & 1)  // Ethernet link is active
 		{
-			pxLEDParameters->xFlashRate =  200;  // configTICK_RATE_HZ / 5;
+			v = ((v >> 1) & 0x03) ^ 0x01;
+				
+			switch (v)
+			{
+				case 0:
+					net_status = " 10HD";
+					break;
+				case 1:
+					net_status = "100HD";
+					break;
+				case 2:
+					net_status = " 10FD";
+					break;
+				case 3:
+					net_status = "100FD";
+					break;
+			}
+				
+			AVR32_MACB.ncfgr = 0x00000800 | v;  // SPD, FD, CLK = MCK / 32 -> 1.875 MHz
+				
+			vdisp_prints_xy( 28, 0, VDISP_FONT_4x6, 
+				(dhcp_is_ready() != 0) ? 0 : 1, net_status );
 		}
 		else
 		{
-			pxLEDParameters->xFlashRate = configTICK_RATE_HZ;
-			// pxLEDParameters->xFlashRate /= portTICK_RATE_MS;
+			vdisp_prints_xy( 28, 0, VDISP_FONT_4x6, 0, net_status );
 		}
-
-		
-		
-
-		/* Spawn the task. */
-		xTaskCreate( vLEDFlashTask, (signed char *) "LEDx", ledSTACK_SIZE, ( void * ) pxLEDParameters, uxPriority, ( xTaskHandle * ) NULL );
+			
+			
+			
+		dhcp_service();				
+			
+		/*
+			char buf[10];
+			vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbsta );
+			vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
+			  
+			vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbfsm );
+			vdisp_prints_xy( 30, 56, VDISP_FONT_6x8, 0, buf );
+			  
+			vdisp_i2s(buf, 8, 16, 1, AVR32_USBB.usbcon );
+			vdisp_prints_xy( 60, 56, VDISP_FONT_6x8, 0, buf );
+			*/
+			
+		// printDebug("Test von DL1BFF\r\n");
+			
+		lldp_counter --;
+			
+		if (lldp_counter < 0)
+		{ 
+			lldp_counter = 10;
+			lldp_send();
+				
+				if ((AVR32_USBB.usbsta & 0x0400) == 0) // ID pin pulled low
+				{
+				gpio_set_pin_low (AVR32_PIN_PB17); // turn on power
+				}	
+				else
+				{
+				gpio_set_pin_high (AVR32_PIN_PB17);
+				}		
+		}				
+			 
+		ipneigh_service();
+			 
+			
+		dcs_service();
+		show_dcs_state();
+			
 	}
 }
+
+
 /*-----------------------------------------------------------*/
 
 
-static void vLEDFlashTask( void *pvParameters )
-{
-xLEDParameters *pxParameters;
-
-	/* Queue a message for printing to say the task has started. */
-	//vPrintDisplayMessage( &pcTaskStartMsg );
-
-	pxParameters = ( xLEDParameters * ) pvParameters;
-
-	for(;;)
-	{
-		/* Delay for half the flash period then turn the LED on. */
-		vTaskDelay( pxParameters->xFlashRate / ( portTickType ) 2 );
-		vParTestToggleLED( pxParameters->uxLED );
-
-		/* Delay for half the flash period then turn the LED off. */
-		vTaskDelay( pxParameters->xFlashRate / ( portTickType ) 2 );
-		vParTestToggleLED( pxParameters->uxLED );
-	}
-}
-
-// ---------------
-
-/*-----------------------------------------------------------*/
-
-
-/*
-
-static volatile avr32_usart_t  *usart0 = (&AVR32_USART0);
-
-static void vUSART0Task( void *pvParameters )
-{
-	
-	unsigned char blob[8];
-	
-	for(;;)
-	{
-		int x,y,i;
-		
-		for (x=0; x < 16; x++)
-		{
-			for (y=0; y < 8; y++)
-			{
-				while ((usart0->csr & AVR32_USART_CSR_TXEMPTY_MASK) == 0)
-				{
-					// vTaskDelay( 1 );
-					taskYIELD();
-				}
-				usart0->thr = 0x80 | (x << 3) | y;
-
-				vdisp_get_pixel( x << 3, y << 3, blob );
-				
-				int mask = 0x80;
-				
-				for (i=0; i < 8; i++)
-				{
-					int m = 1;
-					int d = 0;
-					int j;
-					
-					for (j=0; j < 8; j++)
-					{
-						if ((blob[j] & mask) != 0)
-						{
-							d |= m;
-						}
-						m = m << 1;
-					}
-							
-					while ((usart0->csr & AVR32_USART_CSR_TXEMPTY_MASK) == 0)
-					{
-						//vTaskDelay( 1 );
-						taskYIELD();
-					}
-								
-					usart0->thr = d;
-
-					mask = mask >> 1;					
-				}
-			}
-		}
-		
-		vTaskDelay( 1 );
-		for (i=0; i < 9; i++)
-		{
-			while ((usart0->csr & AVR32_USART_CSR_TXEMPTY_MASK) == 0)
-			{
-				//vTaskDelay( 1 );
-				taskYIELD();
-			}
-			usart0->thr = 0x0d;
-		}					
-	}
-	
-}
-
-*/
 
 static void vRXTXEthTask( void *pvParameters )
 {
@@ -923,7 +762,7 @@ static void vTXTask( void *pvParameters )
 			{
 				send_dcs( session_id, 1); // send end frame
 				send_phy ( dcs_ambe_data );
-				tx_state = 0; // wait for PTT
+				tx_state = 3; // wait for PTT
 			}
 			else
 			{
@@ -937,6 +776,7 @@ static void vTXTask( void *pvParameters )
 			if (gpio_get_pin_value(AVR32_PIN_PA28) != 0)  // PTT released
 			{
 				tx_state = 0;
+				wm8510_beep(200, 440, 100);
 			}
 			else
 			{
@@ -981,9 +821,16 @@ int main (void)
 	
 	lcd_init();
 		
-	vStartLEDFlashTasks( mainLED_TASK_PRIORITY );
+
 	
-	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	xTaskCreate( vServiceTask, (signed char *) "srv", configMINIMAL_STACK_SIZE, ( void * ) 0, 
+			standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+			
+	xTaskCreate( vButtonTask, (signed char *) "button", configMINIMAL_STACK_SIZE, ( void * ) 0, 
+			standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	
+	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0,
+			standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	
 	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");
@@ -1010,7 +857,7 @@ int main (void)
 	
 	wm8510Init( & audio_tx_q, & audio_rx_q );
 	
-	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, mainLED_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 
 
 	gps_init();
