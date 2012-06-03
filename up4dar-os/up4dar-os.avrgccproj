@@ -300,10 +300,10 @@
     <Compile Include="src\up_dstar\rx_dstar_crc_header.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\up_dstar\trigono.c">
+    <Compile Include="src\up_dstar\fixpoint_math.c">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\up_dstar\trigono.h">
+    <Compile Include="src\up_dstar\fixpoint_math.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\txtest.c">
