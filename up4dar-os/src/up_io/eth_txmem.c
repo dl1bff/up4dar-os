@@ -77,12 +77,12 @@ int eth_txmem_init(void)
 	
 	for (i=0; i < NUM_MEM_CFG; i++)
 	{	
-		txmem_pool[i] = (eth_txmem_t *) malloc ( mem_cfg[i].num * (sizeof (eth_txmem_t)));
+		txmem_pool[i] = (eth_txmem_t *) pvPortMalloc ( mem_cfg[i].num * (sizeof (eth_txmem_t)));
 	
 		if (txmem_pool[i] == NULL)
 			return -1;
 			
-		uint8_t * data = (uint8_t *) malloc ( mem_cfg[i].num *  mem_cfg[i].size );
+		uint8_t * data = (uint8_t *) pvPortMalloc ( mem_cfg[i].num *  mem_cfg[i].size );
 		
 		if (data == NULL)
 			return -1;
