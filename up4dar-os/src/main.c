@@ -65,6 +65,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/gps.h"
 
 #include "up_io/lcd.h"
+#include "up_dstar/settings.h"
 
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
@@ -776,7 +777,11 @@ static void vTXTask( void *pvParameters )
 			if (gpio_get_pin_value(AVR32_PIN_PA28) != 0)  // PTT released
 			{
 				tx_state = 0;
-				wm8510_beep(200, 440, 100);
+				wm8510_beep(
+					SETTING_SHORT(S_PTT_BEEP_DURATION),
+					SETTING_SHORT(S_PTT_BEEP_FREQUENCY),
+					SETTING_CHAR(C_PTT_BEEP_VOLUME)
+					);
 			}
 			else
 			{
@@ -811,6 +816,8 @@ int main (void)
 
 	unsigned char * pixelBuf;
 	
+	settings_init();
+	
 	eth_init(& pixelBuf);
 	
 	vdisp_init(pixelBuf);
@@ -821,6 +828,7 @@ int main (void)
 	
 	lcd_init();
 		
+	
 
 	
 	xTaskCreate( vServiceTask, (signed char *) "srv", configMINIMAL_STACK_SIZE, ( void * ) 0, 

@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_dstar/audio_q.h"
 #include "up_dstar/ambe_q.h"
+#include "settings.h"
 
 
 
@@ -429,7 +430,11 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 							
 							if (silence_counter == 0)
 							{
-								wm8510_beep(100, 1000, 10);
+								wm8510_beep(
+									SETTING_SHORT(S_STANDBY_BEEP_DURATION),
+									SETTING_SHORT(S_STANDBY_BEEP_FREQUENCY),
+									SETTING_CHAR(C_STANDBY_BEEP_VOLUME)
+									  );
 							}
 						}													
 					}
