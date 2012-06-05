@@ -72,7 +72,7 @@
 // #include <nlao_cpu.h>
 // #include <nlao_usart.h>
 
-#include <malloc.h>
+// #include <malloc.h>
 
 /* Scheduler includes. */
 #include "FreeRTOS.h"
@@ -209,6 +209,7 @@ void __malloc_unlock(struct _reent *ptr)
 /*-----------------------------------------------------------*/
 
 /* Added as there is no such function in FreeRTOS. */
+/*  commented out (2012-06-05 md)
 void *pvPortRealloc( void *pv, size_t xWantedSize )
 {
 void *pvReturn;
@@ -221,6 +222,7 @@ void *pvReturn;
 
 	return pvReturn;
 }
+*/
 /*-----------------------------------------------------------*/
 
 /* The cooperative scheduler requires a normal IRQ service routine to
