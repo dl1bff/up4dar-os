@@ -49,7 +49,6 @@
 //! @{
 //! \verbatim
 
-
   // This must be linked @ 0x80000000 if it is to be run upon reset.
   .section  .reset, "ax", @progbits
 
