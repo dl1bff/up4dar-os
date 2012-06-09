@@ -172,6 +172,7 @@ static void icmpv4_input (const uint8_t * p, int len, const uint8_t * ipv4_heade
 
 }	
 
+/*
 
 static const unsigned char snmp_reply_header [] =
 {
@@ -183,7 +184,52 @@ static const unsigned char snmp_reply_header [] =
 	0x80, 0x11, 0x00, 0x00,  // UDP, TTL=128
 	0x00, 0x00, 0x00, 0x00,  // source
 	0x00, 0x00, 0x00, 0x00  // destination
-};	
+};
+
+*/
+
+void ipv4_udp_prepare_packet( eth_txmem_t * packet, const uint8_t * dest_ipv4_addr, int udp_data_length,
+	int udp_src_port, int udp_dest_port )
+{
+	uint8_t * p = packet->data;
+	
+	memset(p, 0, 14 + 20); // fill eth+ip header with zeros
+	
+	eth_set_src_mac_and_type(p, 0x0800); // IP packet
+	
+	p[14] = 0x45; // IPv4, 20 Bytes Header
+	p[20] = 0x40; // don't fragment
+	p[22] = 128;  // TTL=128
+	p[23] = 17;  // next header -> UDP
+	
+	memcpy(p + 26, ipv4_addr, sizeof ipv4_addr); // src IP
+	memcpy(p + 30, dest_ipv4_addr, sizeof ipv4_addr); // dest IP
+	
+	int total_length = udp_data_length + 8 + 20;
+	
+	((unsigned short *) (p + 14)) [1] = total_length;
+	
+	int sum = 0;
+	int i;
+	
+	for (i=0; i < 10; i++) // 20 Byte Header
+	{
+		if (i != 5)  // das checksum-feld weglassen
+		{
+			sum += ((unsigned short *) (p + 14)) [i];
+		}
+	}
+	
+	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	
+	((unsigned short *) (p + 14)) [5] = sum; // checksumme setzen
+	
+	((unsigned short *) (p + 14)) [10] = udp_dest_port & 0xFFFF;
+	((unsigned short *) (p + 14)) [11] = udp_src_port & 0xFFFF;
+	((unsigned short *) (p + 14)) [12] = udp_data_length + 8;
+	((unsigned short *) (p + 14)) [13] = 0;  // chksum
+	
+}
 
 
 static void snmp_send_reply (const uint8_t * p, int len, const uint8_t * ipv4_header)
@@ -201,6 +247,7 @@ static void snmp_send_reply (const uint8_t * p, int len, const uint8_t * ipv4_he
 		return; 
 	}		
 		
+	/*
 	uint8_t * snmp_reply_buf = packet->data;
 	
 	memcpy(snmp_reply_buf, snmp_reply_header, sizeof snmp_reply_header);
@@ -229,16 +276,20 @@ static void snmp_send_reply (const uint8_t * p, int len, const uint8_t * ipv4_he
 	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
 	
 	((unsigned short *) (snmp_reply_buf + 14)) [5] = sum; // checksumme setzen
-	
+	*/
 	// UDP
 	
 	int src_port = (p[0] << 8) | p[1];
 	int dest_port = (p[2] << 8) | p[3];
 	
+	/*
 	((unsigned short *) (snmp_reply_buf + 14)) [10] = dest_port & 0xFFFF;
 	((unsigned short *) (snmp_reply_buf + 14)) [11] = src_port & 0xFFFF;
 	((unsigned short *) (snmp_reply_buf + 14)) [12] = data_length + 8;
 	((unsigned short *) (snmp_reply_buf + 14)) [13] = 0;  // chksum
+	*/
+	
+	ipv4_udp_prepare_packet(packet, ipv4_header + 12, data_length, src_port, dest_port);
 	
 	
 	ip_addr_t  tmp_addr;

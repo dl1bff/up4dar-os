@@ -30,9 +30,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 // void eth_init(void);
-void eth_init(unsigned char ** p);
+// void eth_init(unsigned char ** p);
+void eth_init(void);
 // void eth_send_frame (void);
-void eth_send_vdisp_frame (void);
+// void eth_send_vdisp_frame (void);
 
 
 void eth_send_raw ( unsigned char * b, int len );

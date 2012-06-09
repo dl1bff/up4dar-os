@@ -342,7 +342,7 @@ static const uint8_t dcs_frame_header[] =
 
 static eth_txmem_t * dcs_get_packet_mem (int udp_size)
 {
-	eth_txmem_t * packet = eth_txmem_get( udp_size + 8 + 20 + 14 );
+	eth_txmem_t * packet = eth_txmem_get( UDP_PACKET_SIZE(udp_size) );
 	
 	if (packet == NULL)
 	{

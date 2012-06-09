@@ -25,25 +25,47 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *  Author: mdirska
  */ 
 
+#include "FreeRTOS.h"
 
 #include "vdisp.h"
 
 #include "vdispfont.h"
 
 
-#define NUM_LAYERS 2
 
-static unsigned char * pixelbuf[NUM_LAYERS];
+#define MAX_NUM_SCREEN 20
 
-static unsigned char pixelbuf2[1024];
-static unsigned char gps_pixelbuf[1024];
+static unsigned char * pixelbuf[MAX_NUM_SCREEN];
 
-void vdisp_init ( unsigned char * p )
+// static unsigned char pixelbuf2[1024];
+
+static uint8_t num_screen;
+
+
+void vdisp_init ( void )
 {
-	pixelbuf[0] = p;
+	num_screen = 0;
+}
+
+int vd_new_screen (void)
+{
+	if (num_screen >= MAX_NUM_SCREEN)
+	{
+		return -1;
+	}
 	
-	pixelbuf[1] = gps_pixelbuf;
+	uint8_t * b = pvPortMalloc( 1024 );
 	
+	if (b == NULL)
+	{
+		return -1;
+	}
+	
+	pixelbuf[num_screen] = b;
+	
+	num_screen ++;
+	
+	return (num_screen - 1);
 }
 
 
@@ -195,6 +217,17 @@ void vd_clear_rect(int layer, int x, int y, int width, int height)
 	}
 }
 
+void vd_copy_screen (int dst, int src, int y_from, int y_to)
+{
+	int i;
+	
+	for (i=y_from*16; i < y_to*16; i++)
+	{
+		pixelbuf[dst][i] = pixelbuf[src][i];		
+	}
+}
+
+/*
 void vdisp_save_buf(void)
 {
 	int i;
@@ -214,6 +247,7 @@ void vdisp_load_buf(void)
 		pixelbuf[0][i] = pixelbuf2[i];		
 	}
 }
+*/
 
 void vdisp_i2s (char * buf, int size, int base, int leading_zero, unsigned int n)
 {

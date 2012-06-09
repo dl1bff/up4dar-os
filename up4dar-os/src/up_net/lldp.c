@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io/eth.h"
 #include "up_net/ipneigh.h"
 #include "up_net/ipv4.h"
+#include "up_net/snmp.h"
 
 
 #include "lldp.h"
@@ -71,6 +72,9 @@ const uint8_t lldp_frame[] =
 };
 
 
+#define UP4DAR_UDP_IDENT_PORT  45233
+
+
 void lldp_send (void)
 {
 	eth_txmem_t * packet = eth_txmem_get( sizeof lldp_frame );
@@ -88,6 +92,28 @@ void lldp_send (void)
 	memcpy(packet->data + 48, ipv4_addr, 4);
 	
 	eth_set_src_mac_and_type(packet->data, 0x88cc);
+	
+	eth_txmem_send(packet);
+	
+	// UDP ident
+	packet = eth_txmem_get( UDP_PACKET_SIZE(8) );
+	
+	if (packet == NULL) // nomem
+		return;
+	
+	memcpy(packet->data + UDP_PACKET_SIZE(0), my_callsign, 8);
+	
+	uint8_t dest_ipv4_addr[4];
+	int i;
+	
+	for (i=0; i < 4; i++)
+	{
+		dest_ipv4_addr[i] = ipv4_addr[i] | (ipv4_netmask[i] ^ 0xFF);  // ipv4 subnet broadcast
+	}
+	
+	ipv4_udp_prepare_packet(packet, dest_ipv4_addr, 8, UP4DAR_UDP_IDENT_PORT, UP4DAR_UDP_IDENT_PORT);
+	
+	memset(packet->data, 0xFF, 6); // broadcast address
 	
 	eth_txmem_send(packet);
 }

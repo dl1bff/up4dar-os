@@ -32,12 +32,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/audio_q.h"
 #include "up_dstar/ambe_q.h"
 
-void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio, ambe_q_t * microphone );
 void ambe_start_encode(void);
 void ambe_stop_encode(void);
 
 
 void ambe_input_data( const uint8_t * d);
 void ambe_input_data_sd( const uint8_t * d);
+void ambe_init( audio_q_t * decoded_audio, audio_q_t * input_audio, ambe_q_t * microphone );
 
 #endif /* AMBE_H_ */

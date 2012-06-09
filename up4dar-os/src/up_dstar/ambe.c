@@ -54,7 +54,7 @@ static uint32_t out_buf2[BUF_SIZE];
 static uint32_t in_buf1[BUF_SIZE];
 static uint32_t in_buf2[BUF_SIZE];
 
-static unsigned short * sound_buf;
+// static unsigned short * sound_buf;
 
 #define SOUND_BUF_SIZE 160
 static int sound_buf2_ptr = 0;
@@ -182,7 +182,7 @@ static void put_sound_data( unsigned short d )
 	
 	if (sound_buf2_ptr >= SOUND_BUF_SIZE)
 	{
-		memcpy( sound_buf, sound_buf2, sizeof sound_buf2 );
+		// memcpy( sound_buf, sound_buf2, sizeof sound_buf2 );
 		sound_buf2_ptr = 0;
 		
 		//eth_send_vdisp_frame();
@@ -522,10 +522,10 @@ void ambe_input_data_sd( const uint8_t * d)
 	ambe_q_put_sd ( & ambe_output_q, d );
 }
 
-void ambeInit( unsigned char * pixelBuf, audio_q_t * decoded_audio, audio_q_t * input_audio,
+void ambe_init( audio_q_t * decoded_audio, audio_q_t * input_audio,
 		ambe_q_t * microphone )
 {
-	sound_buf = (unsigned short *)  (pixelBuf + 1024);
+	// sound_buf = (unsigned short *)  (pixelBuf + 1024);
 
 	audio_output_q = decoded_audio;
 	audio_input_q = input_audio;

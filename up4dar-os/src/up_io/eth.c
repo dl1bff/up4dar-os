@@ -55,7 +55,7 @@ U32 eth_counter3 = 0;
 int eth_ptr = 0;
 
 
-
+/*
 
 static unsigned char vdisp_frame[1024 + 42 + 320] =
 	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -78,7 +78,7 @@ static unsigned char vdisp_frame[1024 + 42 + 320] =
 		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08
 };
 
-
+*/
 
 
 #define RECV_BUF_COUNT  64
@@ -93,7 +93,8 @@ unsigned char mac_addr[6] = { 0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x00 };
 
 
 
-void eth_init(unsigned char ** p)
+//void eth_init(unsigned char ** p)
+void eth_init(void)
 {	
 	
 	// Ethernet MAC address
@@ -114,10 +115,11 @@ void eth_init(unsigned char ** p)
 	
 	AVR32_MACB.ncr = 0x0018; // TE + MDE
 	
+	/*
 	if (p != 0)
 	{
 		*p = vdisp_frame + 42;
-	}
+	}  */
 	
 	unsigned long rx_addr = ((unsigned long) & rx_mem) & 0xFFFFFFFC; 
 	
@@ -153,7 +155,7 @@ void eth_init(unsigned char ** p)
 
 	eth_ptr = 0;
 	
-	
+	/*
 	// 2kHz tone:
 	for (i=(1024 + 42); i < (sizeof vdisp_frame); i+=8)
 	{
@@ -193,7 +195,7 @@ void eth_init(unsigned char ** p)
 	((unsigned short *) (vdisp_frame + 14)) [5] = sum; // checksumme setzen
 	
 	
-	
+	*/
 	
 }
 
@@ -414,6 +416,7 @@ void eth_rx (void)
 	
 }
 
+/*
 
 void eth_send_vdisp_frame (void)
 {
@@ -421,4 +424,6 @@ void eth_send_vdisp_frame (void)
   eth_send_raw( vdisp_frame, sizeof vdisp_frame );  
 
 }
+
+*/
 

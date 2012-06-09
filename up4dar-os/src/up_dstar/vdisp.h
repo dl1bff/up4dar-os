@@ -38,13 +38,14 @@ struct vdisp_font
   };
   
   
-void vdisp_init ( unsigned char * p );
+void vdisp_init ( void );
+
 void vdisp_prints_xy ( int x, int y, struct vdisp_font * font, int disp_inverse, const char * s );
 void vdisp_clear_rect(int x, int y, int width, int height);
 void vdisp_printc_xy ( int x, int y, struct vdisp_font * font, int disp_inverse, unsigned char c);
 void vdisp_set_pixel ( int x, int y, int disp_inverse, unsigned char data, int numbits );
-void vdisp_save_buf(void);
-void vdisp_load_buf(void);
+// void vdisp_save_buf(void);
+// void vdisp_load_buf(void);
 void vdisp_i2s (char * buf, int size, int base, int leading_zero, unsigned int n);
 
 void vdisp_get_pixel ( int x, int y, unsigned char blob[8]);
@@ -53,6 +54,8 @@ void vd_set_pixel ( int layer, int x, int y, int disp_inverse, unsigned char dat
 void vd_printc_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_inverse, unsigned char c);
 void vd_prints_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_inverse, const char * s );
 void vd_clear_rect(int layer, int x, int y, int width, int height);
+int vd_new_screen (void);
+void vd_copy_screen (int dst, int src, int y_from, int y_to);
 extern struct vdisp_font vdisp_fonts[];
 
 

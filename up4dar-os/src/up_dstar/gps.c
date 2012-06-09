@@ -555,7 +555,7 @@ static void gps_parse_nmea(void)
 	}
 	else if (memcmp(nmea_params[0], "GPRMC", 6) == 0)
 	{
-		if ((num_params == 13) && (slow_data_state == 0))
+		if (num_params == 13)
 		{
 			gprmc_fix_mode = nmea_params[12][0];
 			gprmc_status = nmea_params[2][0];
@@ -569,18 +569,20 @@ static void gps_parse_nmea(void)
 			}
 			*/
 			
-			
-			copy_dstar_gps_line(gprmc_data, 13);
-			if (gpgga_data[0] != 0) // gpgga_data is not empty
+			if (slow_data_state == 0)
 			{
-				slow_data_ptr = gprmc_data;
-				slow_data_state = 1;
-			}
+				copy_dstar_gps_line(gprmc_data, 13);
+				if (gpgga_data[0] != 0) // gpgga_data is not empty
+				{
+					slow_data_ptr = gprmc_data;
+					slow_data_state = 1;
+				}
+			}				
 		}			
 	}
 	else if (memcmp(nmea_params[0], "GPGGA", 6) == 0)
 	{
-		if ((num_params == 15) && (slow_data_state == 0))
+		if (num_params == 15)
 		{
 			memcpy(fix_data[0], nmea_params[1], FIXDATA_MAXLEN);
 			fix_data[0][FIXDATA_MAXLEN - 1] = 0;
@@ -590,12 +592,16 @@ static void gps_parse_nmea(void)
 			fix_data[2][FIXDATA_MAXLEN - 1] = 0;
 				
 			gpgga_fix_info = get_nmea_num(6);
-			copy_dstar_gps_line(gpgga_data, 15);
-			if (gprmc_data[0] != 0) // gprmc_data is not empty
-			{
-				slow_data_ptr = gprmc_data;
-				slow_data_state = 1;
-			}
+			
+			if (slow_data_state == 0)
+			{							
+				copy_dstar_gps_line(gpgga_data, 15);
+				if (gprmc_data[0] != 0) // gprmc_data is not empty
+				{
+					slow_data_ptr = gprmc_data;
+					slow_data_state = 1;
+				}
+			}			
 		}			
 	}
 	else if (memcmp(nmea_params[0], "GPZDA", 6) == 0)
@@ -786,7 +792,8 @@ static void vGPSTask( void *pvParameters )
 	*/
 	 vTaskDelay(1000);
 	 // vSerialPutString(gpsSerialHandle, "$PMTK102*31\r\n");   // warm reset
-	 vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	 //vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	 vSerialPutString(gpsSerialHandle, "$PMTK301,2*2E\r\n"); // enable WAAS
 	 // vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
 	 // vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
 	 

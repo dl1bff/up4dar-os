@@ -318,8 +318,6 @@ static void send_phy ( const unsigned char * d )
 
 
 
-
-
 // #define FWUPLOAD_BUTTON 1
 
 #if defined(FWUPLOAD_BUTTON)
@@ -425,9 +423,11 @@ static void vButtonTask( void *pvParameters )
 			
 		AVR32_ADC.cr = 2; // start new conversion
 			
-		v *= 330 * 430;  // 3.3V , r1+r2 = 43k
-		v /= 1023 * 56;  // inputmax=1023, r1=5.6k
-			
+		// v *= 330 * 430;  // 3.3V , r1+r2 = 43k
+		// v /= 1023 * 56;  // inputmax=1023, r1=5.6k
+		
+		v *= 330 * 347;  // 3.3V , r1+r2 = 34.7k
+		v /= 1023 * 47;  // inputmax=1023, r1=4.7k
 			
 		if (v > 400)  // more than 4 volts
 		{
@@ -814,13 +814,35 @@ int main (void)
 	}
 	*/
 
-	unsigned char * pixelBuf;
+	// unsigned char * pixelBuf;
 	
 	settings_init();
 	
-	eth_init(& pixelBuf);
+	eth_init();
 	
-	vdisp_init(pixelBuf);
+	vdisp_init();
+	
+	int main_screen = vd_new_screen();
+	
+	if (main_screen != 0)
+	{
+		// error handling..
+	}
+	
+	int gps_screen = vd_new_screen();
+	
+	if (gps_screen != 1)
+	{
+		// error handling..
+	}
+	
+	int save_screen = vd_new_screen();
+	
+	if (save_screen != 2)
+	{
+		// error handling..
+	}
+	
 	vdisp_clear_rect(0,0, 128, 64);
 	
 	ipv4_init(); // includes ipneigh_init()
@@ -861,7 +883,7 @@ int main (void)
 	
 	ambe_q_initialize(& microphone);
 	
-	ambeInit(pixelBuf, & audio_tx_q, & audio_rx_q, & microphone);
+	ambe_init(& audio_tx_q, & audio_rx_q, & microphone);
 	
 	wm8510Init( & audio_tx_q, & audio_rx_q );
 	

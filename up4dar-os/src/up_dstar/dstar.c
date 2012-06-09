@@ -308,7 +308,9 @@ static void dstarStateChange(unsigned char n)
 			syncPackets = 0;
 			sdHeaderPos = 0;
 			
-			vdisp_save_buf();
+			// vdisp_save_buf();
+			vd_copy_screen(2, 0, 36, 64);
+			
 			vdisp_clear_rect (0, 0, 128, 64);
 			vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 1, "  0s" );
 			repeater_msg = 0;
@@ -344,7 +346,9 @@ static void dstarStateChange(unsigned char n)
 			}
 			else
 			{
-				vdisp_load_buf();
+				// vdisp_load_buf();
+				
+				vd_copy_screen(0, 2, 36, 64);
 			}
 
 			
