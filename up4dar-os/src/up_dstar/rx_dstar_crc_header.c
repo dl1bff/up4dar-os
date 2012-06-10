@@ -62,3 +62,29 @@ unsigned short rx_dstar_crc_header(const unsigned char* header){
   // in "LSB first" Reihenfolge.
   return (crc ^ 0xffff);        // invertiere das Ergebnis
 }
+
+
+unsigned short rx_dstar_crc_data(const unsigned char* data, int num){
+  // Generatorpolynom G(x) = x^16 + x^12 + x^5 + 1
+  // ohne die fuehrende 1 UND in umgekehrter Reihenfolge
+  register const unsigned short genpoly = 0x8408;
+  
+  register unsigned short crc = 0xffff;
+  
+  for (int i=0; i<num; ++i){
+    crc ^= *data++;
+    for (char j=0; j<8; ++j){
+      if ( crc & 0x1 ) {
+        crc >>= 1;
+        crc ^= genpoly;
+      } else {
+        crc >>= 1;
+      }
+    }
+  }
+  
+  // Beachte die Reihenfolge der CRC-Bytes!!!
+  // Zunaechst kommt Low- und dann High-Byte
+  // in "LSB first" Reihenfolge.
+  return (crc ^ 0xffff);        // invertiere das Ergebnis
+}

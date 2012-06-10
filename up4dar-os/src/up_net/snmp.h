@@ -34,7 +34,7 @@ struct snmpReq {
 	int data;
 };
 
-extern char my_callsign[8];
+// extern char my_callsign[8];
 
 eth_txmem_t * snmp_process_request( const uint8_t * req, int req_len, int * data_len );
 

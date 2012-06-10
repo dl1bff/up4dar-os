@@ -38,6 +38,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gcc_builtin.h"
 
+#include "up_dstar/settings.h"
+
 
 #define BER_INTEGER			0x02
 #define BER_OCTETSTRING		0x04
@@ -54,7 +56,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-char my_callsign[8] = "DL1BFF  ";
+// char my_callsign[8] = "DL1BFF  ";
 
 
 int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
@@ -90,18 +92,18 @@ int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
 
 static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 {
-	if (req_len > (sizeof my_callsign))
+	if (req_len > (sizeof settings.s.my_callsign))
 		return 1;
 		
-	memset(my_callsign, ' ', (sizeof my_callsign));
-	memcpy(my_callsign, req, req_len);
+	memset(settings.s.my_callsign, ' ', (sizeof settings.s.my_callsign));
+	memcpy(settings.s.my_callsign, req, req_len);
 	return 0;
 }
 
 static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	memcpy(res, my_callsign, sizeof my_callsign);
-	*res_len = sizeof my_callsign;
+	memcpy(res, settings.s.my_callsign, sizeof settings.s.my_callsign);
+	*res_len = sizeof settings.s.my_callsign;
 	return 0;
 }
 
@@ -172,8 +174,18 @@ static const struct snmp_table_struct {
 	{ "280", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 6},
 			
 	{ "30",    BER_OCTETSTRING,	get_callsign,   set_callsign,		 0},
-	{ "40", 	BER_INTEGER,	snmp_get_voltage,			0		, 0}
+	{ "40", 	BER_INTEGER,	snmp_get_voltage,			0		, 0},
+	{ "50", 	BER_INTEGER,	snmp_get_flashstatus,	snmp_set_flashstatus , 0},
+		
+	// audio
+	{ "610",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_STANDBY_BEEP_DURATION},
+	{ "620",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_STANDBY_BEEP_FREQUENCY},
+	{ "630",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_STANDBY_BEEP_VOLUME},
 	
+	{ "640",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PTT_BEEP_DURATION},
+	{ "650",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PTT_BEEP_FREQUENCY},
+	{ "660",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PTT_BEEP_VOLUME}
+		
 };	
 
 

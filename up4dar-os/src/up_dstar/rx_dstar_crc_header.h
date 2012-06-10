@@ -31,6 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 unsigned short rx_dstar_crc_header(const unsigned char* header);
-
+unsigned short rx_dstar_crc_data(const unsigned char* data, int num);
 
 #endif /* RX_DSTAR_CRC_HEADER_H_ */

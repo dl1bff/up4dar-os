@@ -44,6 +44,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/ipv4.h"
 #include "up_net/snmp.h"
 
+#include "up_dstar/settings.h"
+
 
 #include "lldp.h"
 
@@ -101,7 +103,7 @@ void lldp_send (void)
 	if (packet == NULL) // nomem
 		return;
 	
-	memcpy(packet->data + UDP_PACKET_SIZE(0), my_callsign, 8);
+	memcpy(packet->data + UDP_PACKET_SIZE(0), settings.s.my_callsign, 8);
 	
 	uint8_t dest_ipv4_addr[4];
 	int i;

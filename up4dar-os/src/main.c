@@ -211,7 +211,7 @@ static void phy_start_tx(void)
 	}
 	
 	for (short i=0; i<8; ++i){
-		header[28+i] = my_callsign[i]; //MY1[i];
+		header[28+i] = settings.s.my_callsign[i]; //MY1[i];
 	}
 	
 	for (short i=0; i<4; ++i){

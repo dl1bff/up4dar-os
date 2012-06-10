@@ -45,7 +45,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/gps.h"
 
 #include "dcs.h"
-
+#include "up_dstar/settings.h"
 
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 				   "<td width=\"4%\"><img border=\"0\" src=dongle.jpg></td>"
@@ -423,7 +423,7 @@ static void dcs_link_to (int module)
 	
 	uint8_t * d = packet->data + 42; // skip ip+udp header
 	
-	memcpy (d, my_callsign, 7);
+	memcpy (d, settings.s.my_callsign, 7);
 	
 	d[7] = ' ';
 	d[8] = 'B'; // my repeater module B
@@ -454,7 +454,7 @@ static void dcs_keepalive_response (void)
 	
 	uint8_t * d = packet->data + 42; // skip ip+udp header
 	
-	memcpy (d, my_callsign, 7);
+	memcpy (d, settings.s.my_callsign, 7);
 	
 	d[7] = ' ';
 	d[8] = 0;
@@ -514,7 +514,7 @@ void send_dcs (int session_id, int last_frame)
 	memcpy (d + 7, buf, 8);
 	memcpy (d + 15, buf, 8);
 	memcpy(d + 23, "CQCQCQ  ", 8); 
-	memcpy (d + 31, my_callsign, 8);
+	memcpy (d + 31, settings.s.my_callsign, 8);
 	memcpy (d + 39, "    ", 4);
 	
 	d[43] = (session_id >> 8) & 0xFF;

@@ -46,6 +46,16 @@ SNMP_GET_FUNC ( snmp_get_phy_sysinfo )
 SNMP_GET_FUNC ( snmp_get_phy_sysparam )
 SNMP_SET_FUNC ( snmp_set_phy_sysparam )
 
+SNMP_GET_FUNC ( snmp_get_flashstatus )
+SNMP_SET_FUNC ( snmp_set_flashstatus )
 
+SNMP_GET_FUNC ( snmp_get_setting_long )
+SNMP_SET_FUNC ( snmp_set_setting_long )
+
+SNMP_GET_FUNC ( snmp_get_setting_short )
+SNMP_SET_FUNC ( snmp_set_setting_short )
+
+SNMP_GET_FUNC ( snmp_get_setting_char )
+SNMP_SET_FUNC ( snmp_set_setting_char )
 
 #endif /* SNMP_DATA_H_ */

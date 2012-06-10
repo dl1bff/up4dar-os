@@ -32,6 +32,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "settings.h"
 
+#include "up_net/snmp_data.h"
+#include "flashc.h"
+#include "rx_dstar_crc_header.h"
+
 
 settings_t settings;
 
@@ -58,28 +62,21 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 };
 
 
-static uint32_t calc_chksum(void)
-{
-	uint32_t  v = 0x837454A1;
-	
-	int i;
-	
-	for (i=0; i < 127; i++)
-	{
-		v ^= settings.settings_words[i];
-	}
-	
-	return v;
-}
+
+
+#define USER_PAGE_CHECKSUM  126
+#define BOOT_LOADER_CONFIGURATION 127
+
+
 
 
 void settings_init(void)
 {
 	memcpy(& settings, (const void *) AVR32_FLASHC_USER_PAGE, 512);
 	
-	uint32_t chk = calc_chksum();
+	uint32_t chk = rx_dstar_crc_data( (uint8_t *) &settings, 504);
 	
-	if (chk != settings.settings_words[127])  // checksum wrong, set default values
+	if (chk != settings.settings_words[USER_PAGE_CHECKSUM])  // checksum wrong, set default values
 	{
 		int i;
 		
@@ -97,5 +94,142 @@ void settings_init(void)
 		{
 			settings.s.char_values[i] = char_values_limits[i].init_value;
 		}
+		
+		memcpy(settings.s.my_callsign, "NOCALL  ", 8);
+		
+		
 	}
 }
+
+
+int snmp_get_flashstatus (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	uint32_t chk = rx_dstar_crc_data( (uint8_t *) &settings, 504);
+	
+	if (chk != settings.settings_words[USER_PAGE_CHECKSUM])
+	{
+		res[0] = 1;  // settings have changed
+	}
+	else
+	{
+		res[0] = 0; // settings are identical to flash
+	}		
+		
+	*res_len = 1;
+	
+	return 0;
+}
+
+int snmp_set_flashstatus (int32_t arg, const uint8_t * req, int req_len)
+{
+	if (req[ req_len - 1] == 2) // least significant byte == 2
+	{
+		uint32_t chk = rx_dstar_crc_data( (uint8_t *) &settings, 504);
+	
+		if (chk != settings.settings_words[USER_PAGE_CHECKSUM])
+		{
+			settings.settings_words[USER_PAGE_CHECKSUM] = chk;
+			settings.settings_words[BOOT_LOADER_CONFIGURATION] = 0x929E1424; // boot loader config word
+			
+			flashc_memcpy(AVR32_FLASHC_USER_PAGE, & settings, 512, TRUE);
+		}
+	}
+	
+	return 0;
+}
+
+int snmp_get_setting_long (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	memcpy(res, settings.s.long_values + arg, 4); // assuming big-endian		
+	*res_len = 4;
+	return 0;
+}
+
+int snmp_get_setting_short (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	memcpy(res, settings.s.short_values + arg, 2); // assuming big-endian		
+	*res_len = 2;
+	return 0;
+}
+
+int snmp_get_setting_char (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	*res = settings.s.char_values[arg]; 	
+	*res_len = 1;
+	return 0;
+}
+
+int snmp_set_setting_long (int32_t arg, const uint8_t * req, int req_len)
+{
+	limits_t limit = long_values_limits[arg];
+	int value = 0;
+	if ((req[0] & 0x80) != 0)
+	{
+		value = -1;
+	}
+	int i;
+	for (i=0; i < req_len; i++)
+	{
+		value = (value << 8) | req[i];
+	}
+	if (value > limit.max_value)
+	{
+		return 1;
+	}
+	if (value < limit.min_value)
+	{
+		return 1;
+	}
+	settings.s.long_values[arg] = value;
+	return 0;
+}	
+
+int snmp_set_setting_short (int32_t arg, const uint8_t * req, int req_len)
+{
+	limits_t limit = short_values_limits[arg];
+	int value = 0;
+	if ((req[0] & 0x80) != 0)
+	{
+		value = -1;
+	}
+	int i;
+	for (i=0; i < req_len; i++)
+	{
+		value = (value << 8) | req[i];
+	}
+	if (value > limit.max_value)
+	{
+		return 1;
+	}
+	if (value < limit.min_value)
+	{
+		return 1;
+	}
+	settings.s.short_values[arg] = value;
+	return 0;
+}	
+
+int snmp_set_setting_char (int32_t arg, const uint8_t * req, int req_len)
+{
+	limits_t limit = char_values_limits[arg];
+	int value = 0;
+	if ((req[0] & 0x80) != 0)
+	{
+		value = -1;
+	}
+	int i;
+	for (i=0; i < req_len; i++)
+	{
+		value = (value << 8) | req[i];
+	}
+	if (value > limit.max_value)
+	{
+		return 1;
+	}
+	if (value < limit.min_value)
+	{
+		return 1;
+	}
+	settings.s.char_values[arg] = value;
+	return 0;
+}	
