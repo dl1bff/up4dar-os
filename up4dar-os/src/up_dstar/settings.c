@@ -51,14 +51,30 @@ const limits_t short_values_limits[NUM_SHORT_VALUES] = {
 	// #define S_PTT_BEEP_FREQUENCY			2
 	{  200,		3000,		600  },
 	// #define S_PTT_BEEP_DURATION			3
-	{  20,		500,		100  }
+	{  20,		500,		100  },
+	// #define S_PHY_TXDELAY				4
+	{  0,		255,		50  },
+	// #define S_PHY_MATFST					5
+	{  0,		255,		0  },
+	// #define S_PHY_LENGTHOFVW				6
+	{  0,		255,		1  }
 };
 
 const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_STANDBY_BEEP_VOLUME		0
 	{  0,		100,		10  },
 	// #define C_PTT_BEEP_VOLUME			1
-	{  0,		100,		50  }	
+	{  0,		100,		50  },
+	//	#define C_PHY_TXGAIN				2
+	{  -128,		127,		16  },
+	// #define C_PHY_RXINV					3
+	{  0,		 1,			0  },
+	// #define C_PHY_TXDCSHIFT				4
+	{  -128,		127,		30  },
+	// #define C_DV_USE_RPTR_SETTING		5
+	{  1,		 5,			1  },
+	// #define C_DV_USE_URCALL_SETTING		6
+	{  1,		 10,		1  }
 };
 
 
@@ -68,13 +84,17 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 #define BOOT_LOADER_CONFIGURATION 127
 
 
+static uint32_t get_crc(void)
+{
+	return rx_dstar_crc_data( (uint8_t *) &settings, 504) | (SETTINGS_VERSION << 16);
+}
 
 
 void settings_init(void)
 {
 	memcpy(& settings, (const void *) AVR32_FLASHC_USER_PAGE, 512);
 	
-	uint32_t chk = rx_dstar_crc_data( (uint8_t *) &settings, 504);
+	uint32_t chk = get_crc();
 	
 	if (chk != settings.settings_words[USER_PAGE_CHECKSUM])  // checksum wrong, set default values
 	{
@@ -94,9 +114,17 @@ void settings_init(void)
 		{
 			settings.s.char_values[i] = char_values_limits[i].init_value;
 		}
+				
+		memset(settings.s.rpt1, ' ', CALLSIGN_LENGTH * NUM_RPT_SETTINGS);
+		memset(settings.s.rpt2, ' ', CALLSIGN_LENGTH * NUM_RPT_SETTINGS);
+		memset(settings.s.urcall, ' ', CALLSIGN_LENGTH * NUM_URCALL_SETTINGS);
 		
-		memcpy(settings.s.my_callsign, "NOCALL  ", 8);
-		
+		memcpy(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH);
+		memcpy(settings.s.rpt1, "DB0DF  B", CALLSIGN_LENGTH);
+		memcpy(settings.s.rpt2, "DB0DF  G", CALLSIGN_LENGTH);
+		memcpy(settings.s.urcall + (0*CALLSIGN_LENGTH), "CQCQCQ  ", CALLSIGN_LENGTH);
+		memcpy(settings.s.urcall + (1*CALLSIGN_LENGTH), "       U", CALLSIGN_LENGTH);
+		memcpy(settings.s.urcall + (2*CALLSIGN_LENGTH), "CQCQ DVR", CALLSIGN_LENGTH);
 		
 	}
 }
@@ -104,7 +132,7 @@ void settings_init(void)
 
 int snmp_get_flashstatus (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	uint32_t chk = rx_dstar_crc_data( (uint8_t *) &settings, 504);
+	uint32_t chk = get_crc();
 	
 	if (chk != settings.settings_words[USER_PAGE_CHECKSUM])
 	{
@@ -124,7 +152,7 @@ int snmp_set_flashstatus (int32_t arg, const uint8_t * req, int req_len)
 {
 	if (req[ req_len - 1] == 2) // least significant byte == 2
 	{
-		uint32_t chk = rx_dstar_crc_data( (uint8_t *) &settings, 504);
+		uint32_t chk = get_crc();
 	
 		if (chk != settings.settings_words[USER_PAGE_CHECKSUM])
 		{

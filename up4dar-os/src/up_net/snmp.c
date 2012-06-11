@@ -90,20 +90,68 @@ int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
 }
 
 
+static char * get_callsign_pointer(int arg)
+{
+	switch ((arg & 0xF000) >> 12)
+	{
+		case 1:
+			return settings.s.rpt1 + (CALLSIGN_LENGTH * ((arg - 1) & 0x1F));
+		
+		case 2:
+			return settings.s.rpt2 + (CALLSIGN_LENGTH * ((arg - 1) & 0x1F));
+		
+		case 3:
+			return settings.s.urcall + (CALLSIGN_LENGTH * ((arg - 1) & 0x1F));
+	}
+	
+	return settings.s.my_callsign;
+}
+
 static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 {
-	if (req_len > (sizeof settings.s.my_callsign))
-		return 1;
+	char * dest = get_callsign_pointer(arg);
+	
+	int cs_len = req_len;
+	
+	if (req_len > CALLSIGN_LENGTH)
+	{
+		cs_len = CALLSIGN_LENGTH;
+	}
 		
-	memset(settings.s.my_callsign, ' ', (sizeof settings.s.my_callsign));
-	memcpy(settings.s.my_callsign, req, req_len);
+	int i;
+	
+	for (i=0; i < CALLSIGN_LENGTH; i++)
+	{
+		char c = ' ';
+		if ((req[i] >= '0') && (req[i] <= '9'))
+		{
+			c = req[i];
+		}
+		else if ((req[i] >= 'A') && (req[i] <= 'Z'))
+		{
+			c = req[i];
+		}
+		else if ((req[i] >= 'a') && (req[i] <= 'z'))
+		{
+			c = req[i] - 32;
+		}
+		else if (req[i] == '/')
+		{
+			c = req[i];
+		}
+		
+		dest[i] = c;
+	}
+	
 	return 0;
 }
 
 static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	memcpy(res, settings.s.my_callsign, sizeof settings.s.my_callsign);
-	*res_len = sizeof settings.s.my_callsign;
+	char * src = get_callsign_pointer(arg);
+	
+	memcpy(res, src, CALLSIGN_LENGTH);
+	*res_len = CALLSIGN_LENGTH;
 	return 0;
 }
 
@@ -116,10 +164,11 @@ static int test_return_string (int32_t arg, uint8_t * res, int * res_len, int ma
 	return 0;
 }
 
-static int test_return_integer (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+static int snmp_return_integer (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
 	return snmp_encode_int( arg, res, res_len, maxlen );
 }
+
 
 
 // static const unsigned char * id_data = (unsigned char *) 0x80800204;
@@ -147,31 +196,39 @@ static const struct snmp_table_struct {
 	{ "120",	BER_OCTETSTRING,	get_cpu_id,		0			, 0},
 		
 		
-	{ "14111",	BER_INTEGER,		test_return_integer,		0		, 1},
-	{ "14112",	BER_INTEGER,		test_return_integer,		0		, 2},
-	{ "14113",	BER_INTEGER,		test_return_integer,		0		, 3},
+	{ "14111",	BER_INTEGER,		snmp_return_integer,		0		, 1},
+	{ "14112",	BER_INTEGER,		snmp_return_integer,		0		, 2},
+	{ "14113",	BER_INTEGER,		snmp_return_integer,		0		, 3},
 		
 	{ "14121",	BER_OCTETSTRING,	test_return_string,			0		, 1},
 	{ "14122",	BER_OCTETSTRING,	test_return_string,			0		, 5},
 	{ "14123",	BER_OCTETSTRING,	test_return_string,			0		, 6},
 	
 		
-	{ "14131",	BER_INTEGER,		test_return_integer,		0		, 10},
-	{ "14132",	BER_INTEGER,		test_return_integer,		0		, 10},
-	{ "14133",	BER_INTEGER,		test_return_integer,		0		, -10},
+	{ "14131",	BER_INTEGER,		snmp_return_integer,		0		, 10},
+	{ "14132",	BER_INTEGER,		snmp_return_integer,		0		, 10},
+	{ "14133",	BER_INTEGER,		snmp_return_integer,		0		, -10},
 		
-	{ "14141",	BER_INTEGER,		test_return_integer,		0		, 100},
-	{ "14142",	BER_INTEGER,		test_return_integer,		0		, 200},
-	{ "14143",	BER_INTEGER,		test_return_integer,		0		, 439462500},
+	{ "14141",	BER_INTEGER,		snmp_return_integer,		0		, 100},
+	{ "14142",	BER_INTEGER,		snmp_return_integer,		0		, 200},
+	{ "14143",	BER_INTEGER,		snmp_return_integer,		0		, 439462500},
 		
 	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
 	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
+	/*
 	{ "230", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 1},
 	{ "240", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 2},
 	{ "250", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 3},
 	{ "260", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 4},
 	{ "270", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 5},
 	{ "280", 	BER_INTEGER,	snmp_get_phy_sysparam,	snmp_set_phy_sysparam	, 6},
+		*/
+	{ "230",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PHY_TXDELAY},
+	{ "240",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PHY_TXGAIN},
+	{ "250",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PHY_RXINV},
+	{ "260",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PHY_TXDCSHIFT},
+	{ "270",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PHY_MATFST},
+	{ "280",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PHY_LENGTHOFVW},
 			
 	{ "30",    BER_OCTETSTRING,	get_callsign,   set_callsign,		 0},
 	{ "40", 	BER_INTEGER,	snmp_get_voltage,			0		, 0},
@@ -184,8 +241,57 @@ static const struct snmp_table_struct {
 	
 	{ "640",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PTT_BEEP_DURATION},
 	{ "650",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PTT_BEEP_FREQUENCY},
-	{ "660",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PTT_BEEP_VOLUME}
+	{ "660",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PTT_BEEP_VOLUME},
+	
+	// dv
+	
+	{ "710",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_DV_USE_RPTR_SETTING},
 		
+	// rpt1+rpt2 table
+	
+	{ "72111",	BER_INTEGER,		snmp_return_integer,		0		, 1},
+	{ "72112",	BER_INTEGER,		snmp_return_integer,		0		, 2},
+	{ "72113",	BER_INTEGER,		snmp_return_integer,		0		, 3},
+	{ "72114",	BER_INTEGER,		snmp_return_integer,		0		, 4},
+	{ "72115",	BER_INTEGER,		snmp_return_integer,		0		, 5},
+		
+	{ "72121",BER_OCTETSTRING,get_callsign, set_callsign,  0x1001},
+	{ "72122",BER_OCTETSTRING,get_callsign, set_callsign,  0x1002},
+	{ "72123",BER_OCTETSTRING,get_callsign, set_callsign,  0x1003},
+	{ "72124",BER_OCTETSTRING,get_callsign, set_callsign,  0x1004},
+	{ "72125",BER_OCTETSTRING,get_callsign, set_callsign,  0x1005},
+		
+	{ "72131",BER_OCTETSTRING,get_callsign, set_callsign,  0x2001},
+	{ "72132",BER_OCTETSTRING,get_callsign, set_callsign,  0x2002},
+	{ "72133",BER_OCTETSTRING,get_callsign, set_callsign,  0x2003},
+	{ "72134",BER_OCTETSTRING,get_callsign, set_callsign,  0x2004},
+	{ "72135",BER_OCTETSTRING,get_callsign, set_callsign,  0x2005},
+			
+			
+	{ "730",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_DV_USE_URCALL_SETTING},
+	// urcall table
+	{ "74111",	BER_INTEGER,		snmp_return_integer,		0		, 1},
+	{ "74112",	BER_INTEGER,		snmp_return_integer,		0		, 2},
+	{ "74113",	BER_INTEGER,		snmp_return_integer,		0		, 3},
+	{ "74114",	BER_INTEGER,		snmp_return_integer,		0		, 4},
+	{ "74115",	BER_INTEGER,		snmp_return_integer,		0		, 5},
+	{ "74116",	BER_INTEGER,		snmp_return_integer,		0		, 6},
+	{ "74117",	BER_INTEGER,		snmp_return_integer,		0		, 7},
+	{ "74118",	BER_INTEGER,		snmp_return_integer,		0		, 8},
+	{ "74119",	BER_INTEGER,		snmp_return_integer,		0		, 9},
+	{ "7411A",	BER_INTEGER,		snmp_return_integer,		0		, 10},
+		
+	{ "74121",BER_OCTETSTRING,get_callsign, set_callsign,  0x3001},
+	{ "74122",BER_OCTETSTRING,get_callsign, set_callsign,  0x3002},
+	{ "74123",BER_OCTETSTRING,get_callsign, set_callsign,  0x3003},
+	{ "74124",BER_OCTETSTRING,get_callsign, set_callsign,  0x3004},
+	{ "74125",BER_OCTETSTRING,get_callsign, set_callsign,  0x3005},
+	{ "74126",BER_OCTETSTRING,get_callsign, set_callsign,  0x3006},
+	{ "74127",BER_OCTETSTRING,get_callsign, set_callsign,  0x3007},
+	{ "74128",BER_OCTETSTRING,get_callsign, set_callsign,  0x3008},
+	{ "74129",BER_OCTETSTRING,get_callsign, set_callsign,  0x3009},
+	{ "7412A",BER_OCTETSTRING,get_callsign, set_callsign,  0x300A}
+
 };	
 
 

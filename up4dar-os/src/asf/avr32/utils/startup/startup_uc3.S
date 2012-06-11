@@ -59,7 +59,8 @@ _start:
   
     // Jump to the C runtime startup routine.
   // lda.w   pc, _stext
-   rjmp    p_start
+  
+     rjmp    p_start
 
    .org  PROGRAM_START_OFFSET
 p_start:

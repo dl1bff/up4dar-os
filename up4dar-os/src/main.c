@@ -412,6 +412,24 @@ static void show_dcs_state(void)
 		dcs_is_connected(), buf );
 }		
 
+static void set_phy_parameters(void) 
+{	
+	uint8_t value;
+	
+	value = SETTING_SHORT(S_PHY_TXDELAY) & 0xFF;
+	snmp_set_phy_sysparam(1, &value, 1);
+	value = SETTING_CHAR(C_PHY_TXGAIN) & 0xFF;
+	snmp_set_phy_sysparam(2, &value, 1);
+	value = SETTING_CHAR(C_PHY_RXINV) & 0xFF;
+	snmp_set_phy_sysparam(3, &value, 1);
+	value = SETTING_CHAR(C_PHY_TXDCSHIFT) & 0xFF;
+	snmp_set_phy_sysparam(4, &value, 1);
+	value = SETTING_SHORT(S_PHY_MATFST) & 0xFF;
+	snmp_set_phy_sysparam(5, &value, 1);
+	value = SETTING_SHORT(S_PHY_LENGTHOFVW) & 0xFF;
+	snmp_set_phy_sysparam(6, &value, 1);
+}
+
 static void vButtonTask( void *pvParameters )
 {
 	
@@ -502,6 +520,9 @@ static void vButtonTask( void *pvParameters )
 				case 2:
 					vdisp_clear_rect (0, 0, 128, 64);
 					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
+					
+					set_phy_parameters();
+					
 					dstarChangeMode(2);
 					// vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
 					// dstarChangeMode(4);

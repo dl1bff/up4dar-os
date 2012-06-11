@@ -246,9 +246,9 @@ void board_init(void)
 	
 	
 	// Backlight
-	AVR32_PWM.channel[6].CMR.cpre = 8;
+	AVR32_PWM.channel[6].CMR.cpre = 3;
 	AVR32_PWM.channel[6].cprd = 1000;
-	AVR32_PWM.channel[6].cdty = 200;
+	AVR32_PWM.channel[6].cdty = 500;
 	
 	AVR32_PWM.ENA.chid6 = 1;
 	
