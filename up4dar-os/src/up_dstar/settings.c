@@ -57,7 +57,9 @@ const limits_t short_values_limits[NUM_SHORT_VALUES] = {
 	// #define S_PHY_MATFST					5
 	{  0,		255,		0  },
 	// #define S_PHY_LENGTHOFVW				6
-	{  0,		255,		1  }
+	{  0,		255,		1  },
+	// #define S_PHY_RXDEVFACTOR			7
+	{  0,		2000,		45  }
 };
 
 const limits_t char_values_limits[NUM_CHAR_VALUES] = {
@@ -74,7 +76,9 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DV_USE_RPTR_SETTING		5
 	{  1,		 5,			1  },
 	// #define C_DV_USE_URCALL_SETTING		6
-	{  1,		 10,		1  }
+	{  1,		 10,		1  },
+	// #define C_DV_DIRECT					7
+	{  0,		 1,			0  }
 };
 
 
@@ -120,6 +124,7 @@ void settings_init(void)
 		memset(settings.s.urcall, ' ', CALLSIGN_LENGTH * NUM_URCALL_SETTINGS);
 		
 		memcpy(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH);
+		memcpy(settings.s.my_ext, "    ", CALLSIGN_EXT_LENGTH);
 		memcpy(settings.s.rpt1, "DB0DF  B", CALLSIGN_LENGTH);
 		memcpy(settings.s.rpt2, "DB0DF  G", CALLSIGN_LENGTH);
 		memcpy(settings.s.urcall + (0*CALLSIGN_LENGTH), "CQCQCQ  ", CALLSIGN_LENGTH);

@@ -34,7 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "semphr.h"
 
-#define AUDIO_Q_TRANSFERLEN 16
+// #define AUDIO_Q_TRANSFERLEN 16
+#define AUDIO_Q_TRANSFERLEN 32
+
 #define AUDIO_Q_BUFLEN  (AUDIO_Q_TRANSFERLEN * 4)
 
 struct audio_q {

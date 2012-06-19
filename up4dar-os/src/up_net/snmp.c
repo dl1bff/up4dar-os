@@ -102,6 +102,9 @@ static char * get_callsign_pointer(int arg)
 		
 		case 3:
 			return settings.s.urcall + (CALLSIGN_LENGTH * ((arg - 1) & 0x1F));
+			
+		case 4:
+			return settings.s.my_ext;
 	}
 	
 	return settings.s.my_callsign;
@@ -111,35 +114,45 @@ static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 {
 	char * dest = get_callsign_pointer(arg);
 	
+	int max_cs_len = CALLSIGN_LENGTH;
+	
+	if (arg == 0x4000)
+	{
+		max_cs_len = CALLSIGN_EXT_LENGTH;
+	}		
+	
 	int cs_len = req_len;
 	
-	if (req_len > CALLSIGN_LENGTH)
+	if (req_len > max_cs_len)
 	{
-		cs_len = CALLSIGN_LENGTH;
+		cs_len = max_cs_len;
 	}
 		
 	int i;
 	
-	for (i=0; i < CALLSIGN_LENGTH; i++)
+	for (i=0; i < max_cs_len; i++)
 	{
 		char c = ' ';
-		if ((req[i] >= '0') && (req[i] <= '9'))
-		{
-			c = req[i];
-		}
-		else if ((req[i] >= 'A') && (req[i] <= 'Z'))
-		{
-			c = req[i];
-		}
-		else if ((req[i] >= 'a') && (req[i] <= 'z'))
-		{
-			c = req[i] - 32;
-		}
-		else if (req[i] == '/')
-		{
-			c = req[i];
-		}
 		
+		if (cs_len > i)
+		{
+			if ((req[i] >= '0') && (req[i] <= '9'))
+			{
+				c = req[i];
+			}
+			else if ((req[i] >= 'A') && (req[i] <= 'Z'))
+			{
+				c = req[i];
+			}
+			else if ((req[i] >= 'a') && (req[i] <= 'z'))
+			{
+				c = req[i] - 32;
+			}
+			else if (req[i] == '/')
+			{
+				c = req[i];
+			}
+		}		
 		dest[i] = c;
 	}
 	
@@ -150,8 +163,15 @@ static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
 	char * src = get_callsign_pointer(arg);
 	
-	memcpy(res, src, CALLSIGN_LENGTH);
-	*res_len = CALLSIGN_LENGTH;
+	int max_cs_len = CALLSIGN_LENGTH;
+	
+	if (arg == 0x4000)
+	{
+		max_cs_len = CALLSIGN_EXT_LENGTH;
+	}
+	
+	memcpy(res, src, max_cs_len);
+	*res_len = max_cs_len;
 	return 0;
 }
 
@@ -229,7 +249,8 @@ static const struct snmp_table_struct {
 	{ "260",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PHY_TXDCSHIFT},
 	{ "270",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PHY_MATFST},
 	{ "280",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PHY_LENGTHOFVW},
-			
+	{ "290",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PHY_RXDEVFACTOR},
+				
 	{ "30",    BER_OCTETSTRING,	get_callsign,   set_callsign,		 0},
 	{ "40", 	BER_INTEGER,	snmp_get_voltage,			0		, 0},
 	{ "50", 	BER_INTEGER,	snmp_get_flashstatus,	snmp_set_flashstatus , 0},
@@ -290,14 +311,17 @@ static const struct snmp_table_struct {
 	{ "74127",BER_OCTETSTRING,get_callsign, set_callsign,  0x3007},
 	{ "74128",BER_OCTETSTRING,get_callsign, set_callsign,  0x3008},
 	{ "74129",BER_OCTETSTRING,get_callsign, set_callsign,  0x3009},
-	{ "7412A",BER_OCTETSTRING,get_callsign, set_callsign,  0x300A}
+	{ "7412A",BER_OCTETSTRING,get_callsign, set_callsign,  0x300A},
 
+    { "750",BER_OCTETSTRING,get_callsign, set_callsign,  0x4000},
+	
+	{ "760",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_DV_DIRECT}
 };	
 
 
  // OID root  1.3.6.1.3.5573.1
 static const uint8_t up4dar_oid[] = { 0x2b, 0x06, 0x01, 0x03, 0xab, 0x45, 0x01 };
-	
+
 
 static int parse_len;
 static const uint8_t * parse_ptr;

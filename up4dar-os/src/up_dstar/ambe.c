@@ -47,7 +47,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-#define BUF_SIZE 64
+#define BUF_SIZE  (AUDIO_Q_TRANSFERLEN * 4)
 
 static uint32_t out_buf1[BUF_SIZE];
 static uint32_t out_buf2[BUF_SIZE];
@@ -305,6 +305,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 			{
 				switch (chan_tx_state)
 				{
+					/*
 					case 1:
 						b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) ];
 						break;
@@ -324,6 +325,21 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 							b[i] = AMBE_CS_IDLE;
 						}
 						break;
+						*/
+					case 1:
+						b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) ];
+						break;
+					case 2:
+						if ((i >> 2) < 28)
+						{
+							b[i] = AMBE_CS_CHAN | chan_tx_data[ (i >> 2) + 32 ];
+						}
+						else
+						{
+							b[i] = AMBE_CS_IDLE;
+						}
+						break;
+						
 					default:
 						b[i] = AMBE_CS_IDLE;
 				}
@@ -344,7 +360,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 					sample = -3276;
 				}
 				
-				b[i] = AMBE_CS_CODEC | ((unsigned short ) (sample * 10)); // x10 = 10dB Gain
+				b[i] = AMBE_CS_CODEC | ((unsigned short ) (sample * 10)); // x10 = 20dB Gain
 			}				
 			
 			switch (chan_tx_state)

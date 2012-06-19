@@ -171,13 +171,15 @@ static char header[40];
 static char send_voice[11];
 static char send_data [ 4];
 
-static const char YOUR[9] = "CQCQCQ  ";
-static const char RPT2[9] = "DB0DF  G";
-static const char RPT1[9] = "DB0DF  B";
+// static const char YOUR[9] = "CQCQCQ  ";
+// static const char RPT2[9] = "DB0DF  G";
+// static const char RPT1[9] = "DB0DF  B";
 // static const char MY1[9]  = "DL1BFF  ";
-static const char MY2[5]  = "    ";
+// static const char MY2[5]  = "    ";
 
 static int phy_frame_counter = 0;
+
+static const char direct_callsign[8] = "DIRECT  ";
 
 static void phy_start_tx(void)
 {
@@ -189,33 +191,47 @@ static void phy_start_tx(void)
 	// Bereite einen Header vor
 	
 	header[0] = 0x20;
-	header[1] = (					// "1st control byte"
+	header[1] = (SETTING_CHAR(C_DV_DIRECT) == 1) ? 0 :	// "1st control byte"
 				  (1 << 6)	// Setze den Repeater-Flag
-				);
+				;
 				
 	
 	
 	header[2] = 0x0;				// "2nd control byte"
 	header[3] = 0x0;				// "3rd control byte"
 	
-	for (short i=0; i<8; ++i){
-		header[4+i] = RPT2[i];
+	for (short i=0; i<CALLSIGN_LENGTH; ++i){
+		if (SETTING_CHAR(C_DV_DIRECT) == 1)
+		{
+			header[4+i] = direct_callsign[i];
+		}
+		else
+		{
+			header[4+i] = settings.s.rpt2[ ((SETTING_CHAR(C_DV_USE_RPTR_SETTING) - 1)*CALLSIGN_LENGTH) + i];
+		}		
 	}
 	
-	for (short i=0; i<8; ++i){
-		header[12+i] = RPT1[i];
+	for (short i=0; i<CALLSIGN_LENGTH; ++i){
+		if (SETTING_CHAR(C_DV_DIRECT) == 1)
+		{
+			header[12+i] = direct_callsign[i];
+		}
+		else
+		{
+			header[12+i] = settings.s.rpt1[ ((SETTING_CHAR(C_DV_USE_RPTR_SETTING) - 1)*CALLSIGN_LENGTH) + i];
+		}
 	}
 	
-	for (short i=0; i<8; ++i){
-		header[20+i] = YOUR[i];
+	for (short i=0; i<CALLSIGN_LENGTH; ++i){
+		header[20+i] = settings.s.urcall[ ((SETTING_CHAR(C_DV_USE_URCALL_SETTING  ) - 1)*CALLSIGN_LENGTH) + i];
 	}
 	
-	for (short i=0; i<8; ++i){
-		header[28+i] = settings.s.my_callsign[i]; //MY1[i];
+	for (short i=0; i<CALLSIGN_LENGTH; ++i){
+		header[28+i] = settings.s.my_callsign[i];
 	}
 	
-	for (short i=0; i<4; ++i){
-		header[36+i] = MY2[i];
+	for (short i=0; i<CALLSIGN_EXT_LENGTH; ++i){
+		header[36+i] = settings.s.my_ext[i];
 	}
 	
 	// Bis zu 70ms kann man sich Zeit lassen, bevor die Header-Daten uebergeben werden.

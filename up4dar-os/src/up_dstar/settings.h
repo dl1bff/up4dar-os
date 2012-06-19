@@ -37,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NUM_CHAR_VALUES		30
 
 #define CALLSIGN_LENGTH		8
+#define CALLSIGN_EXT_LENGTH		4
 #define NUM_RPT_SETTINGS	5
 #define NUM_URCALL_SETTINGS		10
 
@@ -52,6 +53,7 @@ typedef union settings_union
 		char rpt1[CALLSIGN_LENGTH * NUM_RPT_SETTINGS];
 		char rpt2[CALLSIGN_LENGTH * NUM_RPT_SETTINGS];
 		char urcall[CALLSIGN_LENGTH * NUM_URCALL_SETTINGS];
+		char my_ext[CALLSIGN_EXT_LENGTH];
 	} s;
 	
 } settings_t;
@@ -84,6 +86,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define S_PHY_TXDELAY				4
 #define S_PHY_MATFST				5
 #define S_PHY_LENGTHOFVW			6
+#define S_PHY_RXDEVFACTOR			7
 
 
 // CHAR values
@@ -94,6 +97,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_PHY_TXDCSHIFT				4
 #define C_DV_USE_RPTR_SETTING		5
 #define C_DV_USE_URCALL_SETTING		6
+#define C_DV_DIRECT					7
 
 
 #define SETTING_LONG(a) (settings.s.long_values[a])

@@ -127,6 +127,7 @@ static int chip_init(void)
 static audio_q_t * audio_tx_q;
 static audio_q_t * audio_rx_q;
 
+// #define BUF_SIZE   (AUDIO_Q_TRANSFERLEN * 2)
 #define BUF_SIZE   (AUDIO_Q_TRANSFERLEN)
 static int16_t tx_buf0[BUF_SIZE];
 static int16_t tx_buf1[BUF_SIZE];
@@ -161,7 +162,8 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 				AVR32_PDCA.channel[2].mar = (unsigned long) tx_buf[curr_tx_buf];
 				AVR32_PDCA.channel[2].tcr = BUF_SIZE ; 
 				
-				audio_q_get( audio_tx_q, tx_buf[curr_tx_buf]);
+				audio_q_get( audio_tx_q, tx_buf[curr_tx_buf]); // first half
+				// audio_q_get( audio_tx_q, tx_buf[curr_tx_buf] + AUDIO_Q_TRANSFERLEN);  // second half
 				
 				AVR32_PDCA.channel[3].mr = AVR32_PDCA_HALF_WORD; // 16 bit transfer
 				AVR32_PDCA.channel[3].psr = AVR32_PDCA_PID_SSC_RX; // select peripherial
@@ -187,7 +189,8 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 				AVR32_PDCA.channel[2].marr = (unsigned long) tx_buf[curr_tx_buf];
 				AVR32_PDCA.channel[2].tcrr = BUF_SIZE;
 				
-				audio_q_get( audio_tx_q, tx_buf[curr_tx_buf]);
+				audio_q_get( audio_tx_q, tx_buf[curr_tx_buf]); // first half
+				// audio_q_get( audio_tx_q, tx_buf[curr_tx_buf] + AUDIO_Q_TRANSFERLEN); // second half
 				
 				if (beep_counter > 0)
 				{
@@ -228,9 +231,12 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 				AVR32_PDCA.channel[3].tcrr = BUF_SIZE;
 				
 				// if (gpio_get_pin_value(AVR32_PIN_PA28) == 0)
-				{
-					audio_q_put( audio_rx_q, rx_buf[curr_rx_buf]);
-				}					
+				// {
+				
+				audio_q_put( audio_rx_q, rx_buf[curr_rx_buf]); // first half
+				// audio_q_put( audio_rx_q, rx_buf[curr_rx_buf] + AUDIO_Q_TRANSFERLEN); // second half
+				
+				// }					
 			}			
 			break;
 		}

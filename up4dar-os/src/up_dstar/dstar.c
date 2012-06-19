@@ -44,6 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_net/snmp_data.h"
 #include "up_net/snmp.h"
+#include "settings.h"
 
 
 static xQueueHandle dstarQueue;
@@ -56,8 +57,8 @@ static struct dstarPacket dp;
 static int diagram_displayed;
 static int repeater_msg;
 
-static int hub_min = 3000;
-static int hub_max = 0;
+// static int hub_min = 3000;
+// static int hub_max = 0;
 
 #define PPM_BUFSIZE 10
 int ppm_buf[PPM_BUFSIZE];
@@ -298,7 +299,7 @@ static unsigned char frameSync[FRAMESYNC_LEN];
 static void dstarStateChange(unsigned char n)
 {
 	int i;
-	int lastValue = 128;
+	// int lastValue = 128;
 	
 	switch(n)
 	{
@@ -354,7 +355,7 @@ static void dstarStateChange(unsigned char n)
 			
 			
 			
-			
+			/*
 			
 			for (i=0; i < FRAMESYNC_LEN; i++)
 			{
@@ -374,7 +375,7 @@ static void dstarStateChange(unsigned char n)
 					
 				
 				lastValue = k;
-			}
+			}  */
 			break;
 			
 		case 10:
@@ -398,7 +399,7 @@ static void print_diagram(int mean_value)
 	
 	for (i=0; i < FRAMESYNC_LEN; i++)
 	{
-		int d = mean_value - frameSync[i];
+		int d = (mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
 					
 		if ((d > -20) && (d < 20))
 		{
@@ -680,13 +681,13 @@ static void processPacket(void)
 				print_diagram(dp.data[0]);	
 				
 				char buf[5];
-				int hub = dp.data[1] * 71 - 52;
+				int hub = dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR);
 				
 				vdisp_i2s(buf, 4, 10, 0, hub);
 				vdisp_prints_xy( 0, 10, VDISP_FONT_6x8, 0, buf );
 				vdisp_prints_xy( 24, 10, VDISP_FONT_6x8, 0, "Hz" );
 				vdisp_prints_xy( 0, 18, VDISP_FONT_6x8, 0, "Hub" );
-				
+				/*
 				if (hub > hub_max)
 				{
 					hub_max = hub;
@@ -696,7 +697,7 @@ static void processPacket(void)
 				{
 					hub_min = hub;
 				}
-				
+				*/
 				diagram_displayed = 1;
 				
 			} 
