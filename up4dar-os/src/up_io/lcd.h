@@ -30,6 +30,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void lcd_init(void);
 void lcd_show_layer (int layer);
-
-
+void lcd_set_backlight (int v);
+void lcd_set_contrast (int v);
 #endif /* LCD_H_ */

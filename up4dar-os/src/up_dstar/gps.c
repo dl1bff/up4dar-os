@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "fixpoint_math.h"
 
 #include "gps.h"
+#include "settings.h"
 
 
 #define VDISP_GPS_LAYER 1
@@ -402,7 +403,10 @@ static char rcvd_chksum2;
 
 static int slow_data_state = 0;
 static const char * slow_data_ptr = 0;
+/*
 static const char * gps_id = "DL1BFF  ,BN  *5B             \r\n";
+*/
+char gps_id[32];
 // ---------------------------12345678901234567890123456789
 // gps_id is always 29 bytes long
 
@@ -650,6 +654,28 @@ void gps_reset_slow_data(void)
 	slow_data_state = 0;
 }
 
+static const char * const dprs_symbol[6] =
+  {
+	  "HS  ", // Jogger
+	  "MV  ", // Car
+	  "BN  ", // House
+	  "PY  ", // Boat
+	  "LB  ", // Bicycle
+	  "LV  "  // Van
+  };
+  
+
+static int hex_char (int i)
+{
+	if (i < 10)
+	{
+		return 0x30 | i;
+	}
+	
+	return 'A' + i - 10;
+}
+
+
 int gps_get_slow_data(uint8_t * slow_data)
 {
 	int ret_val = 0;
@@ -688,6 +714,39 @@ int gps_get_slow_data(uint8_t * slow_data)
 			{
 				if (copy_slow_data(&ret_val, slow_data) != 0) // if all bytes are copied
 				{
+					memcpy (gps_id, settings.s.my_callsign, CALLSIGN_LENGTH);
+					gps_id[8] = ',';
+					memcpy (gps_id + 9, dprs_symbol[SETTING_CHAR(C_DPRS_SYMBOL)], 4);
+					
+					memset (gps_id + 13, ' ', 16); // spaces
+					gps_id[29] = 13;
+					gps_id[30] = 10;
+					gps_id[31] = 0;
+					
+					memcpy (gps_id + 13, settings.s.dprs_msg, 13);
+					
+					int i = 26;
+					while (i > 13)
+					{
+						if (gps_id[i-1] != ' ') // space
+							break;
+						
+						i--;
+					}
+					
+					int chksum = 0;
+					
+					int j;
+					
+					for (j=0; j < i; j++)
+					{
+						chksum = chksum ^ gps_id[j];
+					}
+					
+					gps_id[i] = '*';
+					gps_id[i+1] = hex_char(chksum >> 4);
+					gps_id[i+2] = hex_char(chksum & 0x0F);
+					
 					slow_data_state = 3;
 					slow_data_ptr = gps_id;
 				}

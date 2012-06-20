@@ -117,6 +117,17 @@ void lcd_show_layer (int layer)
 	current_layer = layer;
 }
 
+void lcd_set_backlight (int v)
+{
+	AVR32_PWM.channel[6].cdty = 1000 - (v * 10);  // v = 0..100
+}
+
+void lcd_set_contrast (int v)
+{
+	AVR32_PWM.channel[0].cdty = v * 10;  // v = 0..100
+}
+
+
 static void vLCDTask( void *pvParameters )
 {
 	gpio_set_pin_low(LCD_PIN_RES);

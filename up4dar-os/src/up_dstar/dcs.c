@@ -546,7 +546,6 @@ void send_dcs (int session_id, int last_frame)
 		}
 		else
 		{
-			extern const char dstar_tx_msg[20];
 			
 			if ((dcs_frame_counter >= 1) && (dcs_frame_counter <= 8)
 				&& (dcs_tx_counter < 20))  // send tx_msg only in first frame
@@ -555,14 +554,14 @@ void send_dcs (int session_id, int last_frame)
 				if (dcs_frame_counter & 1)
 				{
 					d[55] = (0x40 + i) ^ 0x70;
-					d[56] = dstar_tx_msg[ i * 5 + 0 ] ^ 0x4F;
-					d[57] = dstar_tx_msg[ i * 5 + 1 ] ^ 0x93;
+					d[56] = settings.s.txmsg[ i * 5 + 0 ] ^ 0x4F;
+					d[57] = settings.s.txmsg[ i * 5 + 1 ] ^ 0x93;
 				}
 				else
 				{
-					d[55] = dstar_tx_msg[ i * 5 + 2 ] ^ 0x70;
-					d[56] = dstar_tx_msg[ i * 5 + 3 ] ^ 0x4F;
-					d[57] = dstar_tx_msg[ i * 5 + 4 ] ^ 0x93;
+					d[55] = settings.s.txmsg[ i * 5 + 2 ] ^ 0x70;
+					d[56] = settings.s.txmsg[ i * 5 + 3 ] ^ 0x4F;
+					d[57] = settings.s.txmsg[ i * 5 + 4 ] ^ 0x93;
 				}
 			}
 			else

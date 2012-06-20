@@ -38,8 +38,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define CALLSIGN_LENGTH		8
 #define CALLSIGN_EXT_LENGTH		4
+#define DPRS_MSG_LENGTH		13
+#define TXMSG_LENGTH		20
+
 #define NUM_RPT_SETTINGS	5
 #define NUM_URCALL_SETTINGS		10
+
 
 typedef union settings_union
 {
@@ -54,6 +58,8 @@ typedef union settings_union
 		char rpt2[CALLSIGN_LENGTH * NUM_RPT_SETTINGS];
 		char urcall[CALLSIGN_LENGTH * NUM_URCALL_SETTINGS];
 		char my_ext[CALLSIGN_EXT_LENGTH];
+		char txmsg[TXMSG_LENGTH];
+		char dprs_msg[DPRS_MSG_LENGTH];
 	} s;
 	
 } settings_t;
@@ -98,6 +104,10 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DV_USE_RPTR_SETTING		5
 #define C_DV_USE_URCALL_SETTING		6
 #define C_DV_DIRECT					7
+#define C_DPRS_ENABLED				8
+#define C_DPRS_SYMBOL				9
+#define C_DISP_CONTRAST				10
+#define C_DISP_BACKLIGHT			11
 
 
 #define SETTING_LONG(a) (settings.s.long_values[a])

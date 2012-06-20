@@ -78,7 +78,16 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DV_USE_URCALL_SETTING		6
 	{  1,		 10,		1  },
 	// #define C_DV_DIRECT					7
-	{  0,		 1,			0  }
+	{  0,		 1,			0  },
+	// #define C_DPRS_ENABLED				8
+	{  0,		 1,			0  },
+	// #define C_DPRS_SYMBOL				9
+	{  0,		 5,			2  },
+	// #define C_DISP_CONTRAST				10
+	{  0,		 100,			50  },
+	// #define C_DISP_BACKLIGHT				11
+	{  0,		 100,			50  }
+
 };
 
 

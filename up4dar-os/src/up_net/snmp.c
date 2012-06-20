@@ -105,10 +105,52 @@ static char * get_callsign_pointer(int arg)
 			
 		case 4:
 			return settings.s.my_ext;
+			
+		case 5:
+			return settings.s.dprs_msg;
 	}
 	
 	return settings.s.my_callsign;
 }
+
+
+static int set_txmsg (int32_t arg, const uint8_t * req, int req_len)
+{
+	int cs_len = req_len;
+	
+	if (req_len > TXMSG_LENGTH)
+	{
+		cs_len = TXMSG_LENGTH;
+	}
+	
+	int i;
+	
+	for (i=0; i < TXMSG_LENGTH; i++)
+	{
+		char c = ' ';
+		
+		if (cs_len > i)
+		{
+			if ((req[i] >= 32) && (req[i] <= 126))
+			{
+				c = req[i];
+			}
+		}
+		settings.s.txmsg[i] = c;
+	}
+	
+	return 0;
+}
+
+static int get_txmsg (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	if (maxlen < TXMSG_LENGTH)
+		return 1;
+	
+	memcpy(res, settings.s.txmsg, TXMSG_LENGTH);
+	*res_len = TXMSG_LENGTH;
+	return 0;
+}	
 
 static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 {
@@ -119,7 +161,11 @@ static int set_callsign (int32_t arg, const uint8_t * req, int req_len)
 	if (arg == 0x4000)
 	{
 		max_cs_len = CALLSIGN_EXT_LENGTH;
-	}		
+	}	
+	else if (arg == 0x5000)
+	{
+		max_cs_len = DPRS_MSG_LENGTH;
+	}	
 	
 	int cs_len = req_len;
 	
@@ -169,6 +215,10 @@ static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 	{
 		max_cs_len = CALLSIGN_EXT_LENGTH;
 	}
+	else if (arg == 0x5000)
+	{
+		max_cs_len = DPRS_MSG_LENGTH;
+	}
 	
 	memcpy(res, src, max_cs_len);
 	*res_len = max_cs_len;
@@ -181,6 +231,15 @@ static int test_return_string (int32_t arg, uint8_t * res, int * res_len, int ma
 	memcpy(res, "TESTxTEST.TEST.", 15);
 	res[4] = 0x30 | arg;
 	*res_len = 15;
+	return 0;
+}
+
+static int gps_return_string (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	extern char gps_id[];
+	
+	memcpy(res, gps_id, 29);
+	*res_len = 29;
 	return 0;
 }
 
@@ -214,7 +273,8 @@ static const struct snmp_table_struct {
 {  // this table must be sorted (oid string)
 	{ "110",	BER_OCTETSTRING,	test_return_string,		0			, 1},
 	{ "120",	BER_OCTETSTRING,	get_cpu_id,		0			, 0},
-		
+	
+	{ "130",	BER_OCTETSTRING,	gps_return_string,		0			, 0},
 		
 	{ "14111",	BER_INTEGER,		snmp_return_integer,		0		, 1},
 	{ "14112",	BER_INTEGER,		snmp_return_integer,		0		, 2},
@@ -315,7 +375,20 @@ static const struct snmp_table_struct {
 
     { "750",BER_OCTETSTRING,get_callsign, set_callsign,  0x4000},
 	
-	{ "760",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_DV_DIRECT}
+	{ "760",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_DV_DIRECT},
+		
+	{ "770",BER_OCTETSTRING,get_txmsg, set_txmsg,  0},
+	
+	// GPS
+	
+	{ "810", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_DPRS_ENABLED },
+	{ "820", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_DPRS_SYMBOL },
+	{ "830", BER_OCTETSTRING, get_callsign, set_callsign,  0x5000 },
+		
+	// Display
+	
+	{ "910", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_DISP_CONTRAST },
+	{ "920", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_DISP_BACKLIGHT }
 };	
 
 
