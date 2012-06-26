@@ -48,11 +48,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/settings.h"
 
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
-				   "<td width=\"4%\"><img border=\"0\" src=dongle.jpg></td>"
-				   "<td width=\"96%\"><font size=\"2\">"
-				   "<b>UP4DAR</b>"
-				   "</font></td>"
-				   "</tr></table>";
+
+                              "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
+
+                              "<td width=\"96%\">"
+
+                              "<font size=\"1\">Universal Platform for Digital Amateur Radio</br></font>"
+
+                              "<font size=\"2\"><b>www.UP4DAR.de</b></font>"
+
+                              "</td>"
+
+                              "</tr></table>";
+
 
 
 #define UDP_MIN_PORT 11000
@@ -515,7 +523,7 @@ void send_dcs (int session_id, int last_frame)
 	memcpy (d + 15, buf, 8);
 	memcpy(d + 23, "CQCQCQ  ", 8); 
 	memcpy (d + 31, settings.s.my_callsign, 8);
-	memcpy (d + 39, "    ", 4);
+	memcpy (d + 39, settings.s.my_ext, 4);
 	
 	d[43] = (session_id >> 8) & 0xFF;
 	d[44] = session_id & 0xFF;
