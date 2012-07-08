@@ -1,7 +1,7 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 11.00
 # AvrStudio Solution File, Format Version 11.00
-Project("{D1100916-62DA-4D80-A9B4-55A1E7CCEEB3}") = "up4dar-os", "up4dar-os\up4dar-os.avrgccproj", "{7572EF25-E2AE-4003-B347-6EC9C7F7B672}"
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "up4dar-os", "up4dar-os\up4dar-os.cproj", "{7572EF25-E2AE-4003-B347-6EC9C7F7B672}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
