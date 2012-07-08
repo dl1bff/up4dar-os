@@ -86,7 +86,7 @@ static int dcs_retry_counter;
 static int current_module;
 static int current_server;
 
-#define NUM_SERVERS 2
+#define NUM_SERVERS 3
 
 const static struct dcs_servers
  {
@@ -94,7 +94,8 @@ const static struct dcs_servers
 	uint8_t ipv4_a[4];
  } servers[NUM_SERVERS] = {
   	 {  "DCS001",   { 87, 106, 3, 249 } },
-	 {  "DCS002",   { 87, 106, 48, 7 } }   	 
+	 {  "DCS002",   { 87, 106, 48, 7 } },
+     {  "DCS009",   { 212, 236, 224, 2 } }  	 
 };
 
 void dcs_init(void)

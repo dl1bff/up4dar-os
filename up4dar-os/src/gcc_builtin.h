@@ -14,5 +14,6 @@ extern void * memcpy(void *, const void *, size_t );
 extern int memcmp(const void *, const void *, size_t );
 extern void * memset(void *, int, size_t );
 
+extern void * strncpy(char *, const char *, size_t );
 
 #endif /* GCC_BUILTIN_H_ */

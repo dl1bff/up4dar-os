@@ -32,4 +32,6 @@ void lcd_init(void);
 void lcd_show_layer (int layer);
 void lcd_set_backlight (int v);
 void lcd_set_contrast (int v);
+void lcd_show_help_layer(int help_layer);
+
 #endif /* LCD_H_ */

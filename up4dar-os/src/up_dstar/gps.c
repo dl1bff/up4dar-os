@@ -237,18 +237,21 @@ static void recv_gpgsv(int num_sats)
 	{
 		vd_clear_rect (VDISP_GPS_LAYER, 0, 0, 128, 64);
 		
+		
 		if (gps_fix >= 2)
 		{
 			buf[0] = 0x30 + gps_fix;
 			buf[1] = 0;
 			
-			vd_prints_xy(VDISP_GPS_LAYER, 0, 0, VDISP_FONT_6x8, 0, buf);
+			vd_prints_xy(VDISP_GPS_LAYER, 62, 46, VDISP_FONT_4x6, 0, buf);
+			vd_prints_xy(VDISP_GPS_LAYER, 66, 46, VDISP_FONT_4x6, 0, "D FIX");
 		}
 		else
 		{
-			vd_prints_xy(VDISP_GPS_LAYER, 0, 0, VDISP_FONT_6x8, 0, "-");
+			vd_prints_xy(VDISP_GPS_LAYER, 62, 46, VDISP_FONT_4x6, 0, "NO FIX");
 		}
 		
+		/*
 		if (gpgga_fix_info > 0)
 		{
 			buf[0] = 0x30 + gpgga_fix_info;
@@ -284,6 +287,7 @@ static void recv_gpgsv(int num_sats)
 		{
 			vd_prints_xy(VDISP_GPS_LAYER, 12, 0, VDISP_FONT_6x8, 0, "-");
 		}
+		*/
 		
 		/*
 		for (i=0; i < 360; i+= 45)
@@ -379,9 +383,9 @@ static void recv_gpgsv(int num_sats)
 	}
 	
 	
-	for (i=0; i < 4; i++)
+	for (i=0; i < 2; i++)
 	{
-		vd_prints_xy(VDISP_GPS_LAYER, 56, 40 + (i*6), VDISP_FONT_4x6, 0, fix_data[i]);
+		vd_prints_xy(VDISP_GPS_LAYER, 56, 52 + (i*6), VDISP_FONT_4x6, 0, fix_data[i]);
 	}	
 	
 	
@@ -588,11 +592,11 @@ static void gps_parse_nmea(void)
 	{
 		if (num_params == 15)
 		{
-			memcpy(fix_data[0], nmea_params[1], FIXDATA_MAXLEN);
-			fix_data[0][FIXDATA_MAXLEN - 1] = 0;
-			memcpy(fix_data[1], nmea_params[2], FIXDATA_MAXLEN);
+			// memcpy(fix_data[0], nmea_params[1], FIXDATA_MAXLEN);
+			// fix_data[0][FIXDATA_MAXLEN - 1] = 0;
+			memcpy(fix_data[0], nmea_params[2], FIXDATA_MAXLEN);
 			fix_data[1][FIXDATA_MAXLEN - 1] = 0;
-			memcpy(fix_data[2], nmea_params[4], FIXDATA_MAXLEN);
+			memcpy(fix_data[1], nmea_params[4], FIXDATA_MAXLEN);
 			fix_data[2][FIXDATA_MAXLEN - 1] = 0;
 				
 			gpgga_fix_info = get_nmea_num(6);
@@ -608,6 +612,7 @@ static void gps_parse_nmea(void)
 			}			
 		}			
 	}
+	/*
 	else if (memcmp(nmea_params[0], "GPZDA", 6) == 0)
 	{
 		if (num_params == 7)
@@ -615,7 +620,7 @@ static void gps_parse_nmea(void)
 			memcpy(fix_data[3], nmea_params[1], FIXDATA_MAXLEN);
 			fix_data[3][FIXDATA_MAXLEN - 1] = 0;
 		}	
-	}		
+	} */		
 }
 
 
@@ -683,7 +688,7 @@ int gps_get_slow_data(uint8_t * slow_data)
 	slow_data[0] = 0x66; // NOP data
 	slow_data[1] = 0x66;
 	
-	vdisp_printc_xy(0,0,VDISP_FONT_6x8, 0, 0x30 + slow_data_state);
+	// vdisp_printc_xy(0,0,VDISP_FONT_6x8, 0, 0x30 + slow_data_state);
 	
 	switch (slow_data_state)
 	{
@@ -851,8 +856,8 @@ static void vGPSTask( void *pvParameters )
 	*/
 	 vTaskDelay(1000);
 	 // vSerialPutString(gpsSerialHandle, "$PMTK102*31\r\n");   // warm reset
-	 //vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
-	 vSerialPutString(gpsSerialHandle, "$PMTK301,2*2E\r\n"); // enable WAAS
+	 vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	 //vSerialPutString(gpsSerialHandle, "$PMTK301,2*2E\r\n"); // enable WAAS
 	 // vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
 	 // vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
 	 

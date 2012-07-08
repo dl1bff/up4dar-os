@@ -112,9 +112,50 @@ static void lcd_send(int linksrechts, int rs, int data)
 
 static int current_layer = 0;
 
+static uint8_t display_layer[128];
+
 void lcd_show_layer (int layer)
 {
 	current_layer = layer;
+	
+	int i;
+	
+	for (i=0; i < 128; i++)
+	{
+		display_layer[i] = current_layer;
+	}
+}
+
+static const uint8_t help_lines[4] = { 1, 2, 4, 5 };
+
+void lcd_show_help_layer(int help_layer)
+{
+	if (help_layer == 0) // turn off help_layer
+	{
+		lcd_show_layer(current_layer);
+		return;
+	}
+	
+	int i;
+	int j;
+	
+	for (j=0; j < ((sizeof help_lines) / (sizeof help_lines[0])); j++)
+	{		
+		for (i=help_lines[j]*16 + 11; i < ((help_lines[j]+1)*16); i++ )
+		{
+			display_layer[i] = help_layer;
+		}
+	}
+	
+	for (i=0; i < 6; i++)
+	{
+		display_layer[i] = help_layer;
+	}	
+	
+	for (i=7*16; i < 126; i++)
+	{
+		display_layer[i] = help_layer;
+	}
 }
 
 void lcd_set_backlight (int v)
@@ -164,7 +205,7 @@ static void vLCDTask( void *pvParameters )
 				lcd_send(r, 0, 0x40 | ((x & 0x07) << 3));
 				lcd_send(r, 0, 0xB8 | (y & 0x07));
 
-				vd_get_pixel( current_layer, x << 3, y << 3, blob );
+				vd_get_pixel( display_layer[(y << 4) | x], x << 3, y << 3, blob );
 				
 				int mask = 0x80;
 				

@@ -67,6 +67,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io/lcd.h"
 #include "up_dstar/settings.h"
 
+#include "up_app/a_lib.h"
+#include "up_app/a_lib_internal.h"
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
@@ -89,7 +91,7 @@ int snmp_get_voltage(int32_t arg, uint8_t * res, int * res_len, int maxlen)
 
 
 
-static unsigned char x_counter = 0;
+// static unsigned char x_counter = 0;
 
 /*
 
@@ -404,20 +406,12 @@ static void fw_upload(void)
 
 
 
-#define NUMBER_OF_KEYS  7
+#define NUMBER_OF_KEYS  6
 
-static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0, 0 };
+static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0 };
 	
 	
-static const int button_pins[NUMBER_OF_KEYS] = {
-			AVR32_PIN_PA18,
-			AVR32_PIN_PA19,
-			AVR32_PIN_PA20,
-			AVR32_PIN_PA28, // SW3 -> analog channel
-			AVR32_PIN_PA22,
-			AVR32_PIN_PA23,
-			AVR32_PIN_PA28
-		};
+
 	
 int debug1;
 
@@ -435,8 +429,105 @@ static void show_dcs_state(void)
 		dcs_is_connected(), buf );
 }		
 
-static void set_phy_parameters(void) 
-{	
+
+
+static const int button_pins[NUMBER_OF_KEYS] = {
+	AVR32_PIN_PA21,  // dummy entry for app_manager_key SW3
+	AVR32_PIN_PA18,  // Button 1
+	AVR32_PIN_PA19,  // Button 2
+	AVR32_PIN_PA20,  // Button 3
+	AVR32_PIN_PA23,  // Button UP
+	AVR32_PIN_PA22   // Button DOWN
+};
+
+
+
+static void vButtonTask( void *pvParameters )
+{
+	
+	for(;;)
+	{
+		vTaskDelay(10); 			
+		
+		int sw3_pressed = 0;
+			
+		int v = AVR32_ADC.cdr0; // result of last conversion
+			
+		AVR32_ADC.cr = 2; // start new conversion
+			
+		// v *= 330 * 430;  // 3.3V , r1+r2 = 43k
+		// v /= 1023 * 56;  // inputmax=1023, r1=5.6k
+		
+		v *= 330 * 347;  // 3.3V , r1+r2 = 34.7k
+		v /= 1023 * 47;  // inputmax=1023, r1=4.7k
+			
+		if (v > 400)  // more than 4 volts
+		{
+			voltage = v * 10; // millivolt
+		}
+		else // voltage too low -> key pressed
+		{
+			sw3_pressed = 1;
+		}					
+		
+		int i;
+				
+		for (i=0; i < NUMBER_OF_KEYS; i++)
+		{
+			int button_pressed = (gpio_get_pin_value(button_pins[i]) == 0);
+			
+			if (i == A_KEY_BUTTON_APP_MANAGER) // analog pin SW3
+			{
+				button_pressed = sw3_pressed;
+			}
+			
+			if (button_pressed)
+			{
+				touchKeyCounter[i] ++;
+			}
+			else
+			{
+				if (touchKeyCounter[i] >= 2)
+				{
+					a_dispatch_key_event( i, A_KEY_RELEASED);
+				}
+				touchKeyCounter[i] = 0;					
+			}					
+					
+			if (touchKeyCounter[i] == 2)
+			{
+				a_dispatch_key_event( i, A_KEY_PRESSED);
+			} 
+			else if (touchKeyCounter[i] == 50)
+			{
+				a_dispatch_key_event( i, A_KEY_HOLD_500MS);
+			}
+			else if (touchKeyCounter[i] == 200)
+			{
+				a_dispatch_key_event( i, A_KEY_HOLD_2S);
+			}
+			
+			if (touchKeyCounter[i] > 63) // start repeat after 630ms
+			{
+				if ((touchKeyCounter[i] & 0x07) == 0) // every 80ms
+				{
+					a_dispatch_key_event( i, A_KEY_REPEAT);
+				}
+			}
+			
+			
+		}  // for Buttons
+		
+	
+	}	// for(;;)
+		
+}
+		
+		
+		
+
+static void set_phy_parameters(void)
+{
 	uint8_t value;
 	
 	value = SETTING_SHORT(S_PHY_TXDELAY) & 0xFF;
@@ -453,170 +544,13 @@ static void set_phy_parameters(void)
 	snmp_set_phy_sysparam(6, &value, 1);
 }
 
-static void vButtonTask( void *pvParameters )
-{
-	
-	for(;;)
-	{
-		vTaskDelay(100); 			
-			
-		int v = AVR32_ADC.cdr0;
-			
-		AVR32_ADC.cr = 2; // start new conversion
-			
-		// v *= 330 * 430;  // 3.3V , r1+r2 = 43k
-		// v /= 1023 * 56;  // inputmax=1023, r1=5.6k
-		
-		v *= 330 * 347;  // 3.3V , r1+r2 = 34.7k
-		v /= 1023 * 47;  // inputmax=1023, r1=4.7k
-			
-		if (v > 400)  // more than 4 volts
-		{
-			voltage = v * 10; // millivolt
-		}
-		else // voltage too low -> key pressed
-		{
-			vdisp_clear_rect (0, 0, 128, 64);
-			vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
-			dstarChangeMode(4);
-		}			
-			
-			
-			
-		// gpio_toggle_pin(AVR32_PIN_PB27);
-			
-		// gpio_toggle_pin(AVR32_PIN_PB19);
-			
-		// eth_send_vdisp_frame();
-	
-		
-		int i;
-				
-		for (i=0; i < NUMBER_OF_KEYS; i++)
-		{
-			if (gpio_get_pin_value(button_pins[i]) == 0)
-			{
-				touchKeyCounter[i] ++;
-			}
-			else
-			{
-				touchKeyCounter[i] = 0;
-					
-				/*
-				if (i==6)  // PTT off
-				{
-					ambe_stop_encode();
-				}
-				*/
-			}					
-					
-			if ((touchKeyCounter[i] == 2) && (tx_active == 0))
-			{
-				switch(i)
-				{
-				case 0:
-					vdisp_clear_rect (0, 0, 128, 64);
-						
-#if defined(FWUPLOAD_BUTTON)
-					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "FW upload" );
-						
-					fw_upload();
-						
-					vdisp_prints_xy( 30, 38, VDISP_FONT_6x8, 0, "FW upload done!" );
-#else
-					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Service Mode" );
-					dstarChangeMode(1);
-#endif
-					break;
-
-				case 1:
-					/*
-					vdisp_clear_rect (0, 0, 128, 64);
-					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "TX test" );
-					dstarResetCounters();
-					tx_active = 1;	
-					*/
-					//send_dcs(0x0001, 1);
-					dcs_on_off();
-					break;
-										
-				case 2:
-					vdisp_clear_rect (0, 0, 128, 64);
-					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
-					
-					set_phy_parameters();
-					
-					dstarChangeMode(2);
-					// vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 4 (DVR)" );
-					// dstarChangeMode(4);
-					break;
-					
-				/*					
-				case 3:
-					vdisp_clear_rect (0, 0, 128, 64);
-					vdisp_prints_xy( 30, 48, VDISP_FONT_6x8, 0, "Mode 2 (SUM)" );
-					dstarChangeMode(2);
-					break;
-					*/
-							
-				case 4:
-					/* vdisp_clear_rect (0, 0, 128, 64);
-						dstarResetCounters();
-					tx_active = 1;
-					*/
-							
-					/*
-					pwm_value --;
-					set_pwm(); */
-						
-					dcs_select_reflector(0);
-					show_dcs_state();
-					touchKeyCounter[i] = 0;
-						
-					x_counter ++ ;
-						
-					lcd_show_layer( x_counter & 0x01);
-						
-					break;
-							
-				case 5:
-						/*
-					pwm_value ++;
-					set_pwm(); */
-							
-					dcs_select_reflector(1);
-					show_dcs_state();
-					touchKeyCounter[i] = 0;
-					break;
-						
-						
-				// case 6: // PTT
-					
-				//	ambe_start_encode();
-						
-					/*
-					{
-						extern int audio_max;
-						audio_max = 0;
-					}
-					*/							
-				//	break;	
-						
-				} // switch
-			} // if	
-		}  // for Buttons
-		
-	
-	}	// for(;;)
-		
-}
-		
 		
 static void vServiceTask( void *pvParameters )
 {
 	
 	int last_backlight = -1;
 	int last_contrast = -1;
+	int last_dcs_mode = 0;
 	
 
 	for (;;)
@@ -724,10 +658,36 @@ static void vServiceTask( void *pvParameters )
 		}				
 			 
 		ipneigh_service();
+		
+		a_app_manager_service();
 			 
 			
 		dcs_service();
-		show_dcs_state();
+		
+		if (dcs_mode != last_dcs_mode)
+		{
+			vdisp_clear_rect(0,0,128,64);
+			
+			if (dcs_mode != 0)
+			{
+				dstarChangeMode(1); // Service mode
+			}
+			else
+			{				
+				dstarChangeMode(1);
+				set_phy_parameters();
+				dstarChangeMode(2); // single user mode
+			}
+			
+			last_dcs_mode = dcs_mode;
+		}
+		
+		if (dcs_mode != 0)
+		{
+			show_dcs_state();
+		}
+		
+		
 		
 		if (last_backlight != SETTING_CHAR(C_DISP_BACKLIGHT))
 		{
@@ -769,6 +729,15 @@ static void vTXTask( void *pvParameters )
 	int tx_state = 0;
 	
 	int session_id = 5555;
+	
+	
+	vTaskDelay(1000); // 1secs
+	
+	dstarChangeMode(1);
+	set_phy_parameters();
+	dstarChangeMode(2);
+	
+	vdisp_clear_rect(0,0,128,64);
 
 	for(;;)
 	{
@@ -952,10 +921,13 @@ int main (void)
 
 	gps_init();
 	
+	a_app_manager_init();
+	
 	if (eth_txmem_init() != 0)
 	{
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
+	
 	
 
 	vTaskStartScheduler();
