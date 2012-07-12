@@ -69,6 +69,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_app/a_lib.h"
 #include "up_app/a_lib_internal.h"
+#include "up_io/sdcard.h"
+
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
@@ -922,6 +924,8 @@ int main (void)
 	gps_init();
 	
 	a_app_manager_init();
+	
+	sdcard_init(& audio_tx_q);
 	
 	if (eth_txmem_init() != 0)
 	{

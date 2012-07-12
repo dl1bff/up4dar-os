@@ -150,6 +150,17 @@ static const gpio_map_t usb_module_gpio_map = {
 };
 
 
+static const gpio_map_t sdcard_gpio_map = {
+	{ AVR32_USART3_RXD_0_0_PIN, AVR32_USART3_RXD_0_0_FUNCTION },
+	{ AVR32_USART3_TXD_0_0_PIN, AVR32_USART3_TXD_0_0_FUNCTION },
+	{ AVR32_USART3_CLK_0_PIN, AVR32_USART3_CLK_0_FUNCTION }	
+};
+
+static const gpio_map_t sdcard_pin_gpio_map = {
+	{ AVR32_PIN_PA04, GPIO_DIR_OUTPUT | GPIO_INIT_HIGH }  // CS pin
+};
+
+
 void board_init(void)
 {
 	
@@ -275,6 +286,9 @@ void board_init(void)
 	
 	gpio_enable_module( adc_gpio_map, sizeof( adc_gpio_map ) / sizeof( adc_gpio_map[0] ) );
 	
+	AVR32_ADC.mr = 0x0F031E20;     // SHTIM = 15,  STARTUP = 3, PRESCAL = 30, SLEEP Mode
+	AVR32_ADC.cher = 1; // enable ADC0
+	AVR32_ADC.cr = 2; // start conversion
 	
 	// AMBE interface
 	
@@ -287,9 +301,7 @@ void board_init(void)
 	
 	gpio_enable_module( ambe_spi_gpio_map, sizeof( ambe_spi_gpio_map ) / sizeof( ambe_spi_gpio_map[0] ) );
 	
-	AVR32_ADC.mr = 0x0F031E20;     // SHTIM = 15,  STARTUP = 3, PRESCAL = 30, SLEEP Mode  
-	AVR32_ADC.cher = 1; // enable ADC0
-	AVR32_ADC.cr = 2; // start conversion
+	
 	
 	
 	
@@ -359,5 +371,17 @@ void board_init(void)
 	// AVR32_USBB.usbcon = 0x0300B000; // UIDE, USBE, VBUSPO, OTGPADE
 	// AVR32_USBB.usbcon = 0x03006000; // default + VBUSPO
 	// AVR32_USBB.udcon = 0;
+	
+	
+	// SD card interface 
+	
+	gpio_enable_module( sdcard_gpio_map, sizeof( sdcard_gpio_map ) / sizeof( sdcard_gpio_map[0] ) );
+	
+	gpio_enable_gpio( sdcard_pin_gpio_map, sizeof( sdcard_pin_gpio_map ) / sizeof( sdcard_pin_gpio_map[0] ) );
+	
+	for (i=0; i < (sizeof( sdcard_pin_gpio_map ) / sizeof( sdcard_pin_gpio_map[0] )); i++)
+	{
+		gpio_configure_pin( sdcard_pin_gpio_map[i].pin, sdcard_pin_gpio_map[i].function);
+	}
 	
 }
