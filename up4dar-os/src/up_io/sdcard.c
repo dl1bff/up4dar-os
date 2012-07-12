@@ -177,7 +177,7 @@ static void vSDCardTask( void *pvParameters )
 	uint32_t ocr = 0;
 	uint32_t cmd8data = 0;
 	uint32_t ptr = 0;
-	int blk_num = 20000;
+	int blk_num = 52700;
 	int i;
 	
 	for (;;)
@@ -312,11 +312,7 @@ static void vSDCardTask( void *pvParameters )
 						
 				}	
 				
-				for (; ptr < SD_BUF_LEN; ptr++)
-				{
-					if (sdRxBuf[ptr] == 0xFE) // data token
-					break;
-				}
+				
 				break;
 		}
 		
