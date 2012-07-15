@@ -925,7 +925,7 @@ int main (void)
 	
 	a_app_manager_init();
 	
-	sdcard_init(& audio_tx_q);
+	// sdcard_init(& audio_tx_q);
 	
 	if (eth_txmem_init() != 0)
 	{
