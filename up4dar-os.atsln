@@ -1,7 +1,8 @@
-
 Microsoft Visual Studio Solution File, Format Version 11.00
-# AvrStudio Solution File, Format Version 11.00
+# Atmel Studio Solution File, Format Version 11.00
 Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "up4dar-os", "up4dar-os\up4dar-os.cproj", "{7572EF25-E2AE-4003-B347-6EC9C7F7B672}"
+EndProject
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "up4dar-2nd-bootloader", "up4dar-2nd-bootloader\up4dar-2nd-bootloader.cproj", "{F47EE10F-B565-4D17-929D-3F22FB657C20}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,6 +14,10 @@ Global
 		{7572EF25-E2AE-4003-B347-6EC9C7F7B672}.Debug|AVR.Build.0 = Debug|AVR
 		{7572EF25-E2AE-4003-B347-6EC9C7F7B672}.Release|AVR.ActiveCfg = Release|AVR
 		{7572EF25-E2AE-4003-B347-6EC9C7F7B672}.Release|AVR.Build.0 = Release|AVR
+		{F47EE10F-B565-4D17-929D-3F22FB657C20}.Debug|AVR.ActiveCfg = Debug|AVR
+		{F47EE10F-B565-4D17-929D-3F22FB657C20}.Debug|AVR.Build.0 = Debug|AVR
+		{F47EE10F-B565-4D17-929D-3F22FB657C20}.Release|AVR.ActiveCfg = Release|AVR
+		{F47EE10F-B565-4D17-929D-3F22FB657C20}.Release|AVR.Build.0 = Release|AVR
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
