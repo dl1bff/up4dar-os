@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <asf.h>
 
+#include "disp.h"
 
 #define BOOTLOADER2_PIN  AVR32_PIN_PA18
 
@@ -34,6 +35,18 @@ static void delay_nop(void)
 	{
 		asm volatile ("nop");
 	}
+}
+
+
+static void idle_proc(void)
+{
+	int i = gpio_get_pin_value( BOOTLOADER2_PIN );
+	
+	char buf[4];
+	
+	disp_i2s(buf, 3, 10, 0, i);
+	disp_prints_xy(0, 20, 20, DISP_FONT_6x8, 1, buf);
+	
 }
 
 int main (void)
@@ -54,14 +67,11 @@ int main (void)
 	
 	
 	board_init();
+	
+	disp_init();
 
 	// Insert application code here, after the board has been initialized.
 	
-	while (1)
-	{
-		
-			
-		delay_nop();
 	
-	}	
+	disp_main_loop( idle_proc );
 }
