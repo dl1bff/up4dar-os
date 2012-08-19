@@ -42,10 +42,18 @@ static void idle_proc(void)
 {
 	int i = gpio_get_pin_value( BOOTLOADER2_PIN );
 	
+	/*
 	char buf[4];
 	
 	disp_i2s(buf, 3, 10, 0, i);
-	disp_prints_xy(0, 20, 20, DISP_FONT_6x8, 1, buf);
+	disp_prints_xy(0, 0, 8, DISP_FONT_6x8, 0, buf);
+	
+	*/
+	
+	for (i=0; i < 100; i++)
+	{
+		asm volatile ("nop");
+	}
 	
 }
 

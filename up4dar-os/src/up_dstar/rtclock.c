@@ -47,6 +47,10 @@ void vApplicationTickHook( void )
 	}
 }
 
+unsigned long rtclock_get_ticks( void )
+{
+	return (the_clock * configTICK_RATE_HZ) + rtclock_ticks;
+}
 
 void rtclock_disp_xy(int x, int y, int dots, int display_seconds)
 {

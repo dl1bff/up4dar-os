@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,27 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-
 /*
- * rtclock.h
+ * up_crypto.h
  *
- * Created: 11.06.2011 12:53:12
+ * Created: 19.08.2012 10:28:56
  *  Author: mdirska
  */ 
 
 
-#ifndef RTCLOCK_H_
-#define RTCLOCK_H_
+#ifndef UP_CRYPTO_H_
+#define UP_CRYPTO_H_
 
 
 
-#define RTCLOCK_INCR_TICK
+int crypto_get_random_bytes (unsigned char * dest, int num_bytes);
 
-
-void vApplicationTickHook( void );
-
-
-void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
-unsigned long rtclock_get_ticks( void );
-
-#endif /* RTCLOCK_H_ */
+#endif /* UP_CRYPTO_H_ */

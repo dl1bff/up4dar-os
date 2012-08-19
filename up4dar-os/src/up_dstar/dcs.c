@@ -47,6 +47,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dcs.h"
 #include "up_dstar/settings.h"
 
+#include "up_crypto/up_crypto.h"
+
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
@@ -64,7 +66,7 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
 
 #define UDP_MIN_PORT 11000
-#define UDP_MAX_PORT 11050
+#define UDP_PORT_RANGE_MASK  0x0FFF
 
 int dcs_udp_local_port;
 
@@ -180,9 +182,13 @@ void dcs_service (void)
 
 void dcs_on_off (void)
 {
+	unsigned short port_num;
+	
 	switch (dcs_state)
 	{
 		case DCS_CONNECTED:
+			
+			
 			dcs_link_to(' ');
 			
 			dcs_state = DCS_DISCONNECT_REQ_SENT;
@@ -192,12 +198,9 @@ void dcs_on_off (void)
 		
 		case DCS_DISCONNECTED:
 		
-			dcs_udp_local_port ++;
-			
-			if (dcs_udp_local_port > UDP_MAX_PORT)
-			{
-				dcs_udp_local_port = UDP_MIN_PORT;
-			}
+			crypto_get_random_bytes((unsigned char *) &port_num, sizeof port_num);
+			port_num &= UDP_PORT_RANGE_MASK;
+			dcs_udp_local_port = UDP_MIN_PORT + port_num;
 			
 			dcs_link_to(current_module);
 			

@@ -70,7 +70,7 @@ void ipneigh_init(void)
 	memset(&zero_address, 0, sizeof zero_address);	
 }
 
-#define REACHABLE_TIMER 20
+#define REACHABLE_TIMER 40
 
 #define PROBE_TIMER 3
 #define PROBE_RETRY 4

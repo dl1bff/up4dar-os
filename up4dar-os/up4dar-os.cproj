@@ -338,6 +338,27 @@
     <Compile Include="src\up_app\a_lib_internal.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_crypto\curve25519_donna.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_crypto\curve25519_donna.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_crypto\sha1.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_crypto\sha1.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_crypto\up_crypto.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_crypto\up_crypto.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_crypto\up_crypto_init.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\ambe.c">
       <SubType>compile</SubType>
     </Compile>
@@ -600,6 +621,7 @@
     <Folder Include="src\FreeRTOSV6.1.1\portable\GCC" />
     <Folder Include="src\FreeRTOSV6.1.1\portable\GCC\AVR32_UC3" />
     <Folder Include="src\FreeRTOSV6.1.1\portable\MemMang" />
+    <Folder Include="src\up_crypto" />
     <Folder Include="src\up_app" />
     <Folder Include="src\up_dstar" />
     <Folder Include="src\up_net" />

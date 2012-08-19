@@ -48,6 +48,9 @@ void disp_init(void)
 	pixelbuf[0] = buf_layer0;
 	
 	disp_prints_xy(0, 0, 0, DISP_FONT_6x8, 0, "Bootloader");
+	
+	disp_printc_xy(0, 122, 14, DISP_FONT_6x8, 0, 30);
+	disp_printc_xy(0, 122, 42, DISP_FONT_6x8, 0, 31);
 }
 
 void disp_get_pixel ( int layer, int x, int y, unsigned char blob[8])

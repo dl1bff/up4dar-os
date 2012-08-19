@@ -71,6 +71,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_app/a_lib_internal.h"
 #include "up_io/sdcard.h"
 
+#include "up_crypto/up_crypto_init.h"
+
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
@@ -932,7 +934,7 @@ int main (void)
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
 	
-	
+	crypto_init(& microphone);
 
 	vTaskStartScheduler();
   

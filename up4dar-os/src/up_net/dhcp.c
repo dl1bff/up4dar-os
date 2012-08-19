@@ -44,6 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dhcp.h"
 
 #include "up_dstar/vdisp.h"
+#include "up_crypto/up_crypto.h"
 
 static int dhcp_state;
 
@@ -66,7 +67,7 @@ static int dhcp_state;
 
 static int dhcp_timer;
 
-static int dhcp_xid;
+static unsigned int dhcp_xid = 0;
 
 
 
@@ -107,10 +108,6 @@ void dhcp_init(void)
 {
 	dhcp_state = DHCP_NO_LINK;
 	dhcp_timer = 0;
-	
-	dhcp_xid = (mac_addr[3] << 16) | (mac_addr[4] << 8) | mac_addr[5];
-	
-	
 }
 
 
@@ -280,13 +277,18 @@ static void dhcp_send_request(void)
 }
 
 
+static void dhcp_get_new_xid(void)
+{
+	crypto_get_random_bytes((unsigned char *)& dhcp_xid, sizeof dhcp_xid);
+}
+
 void dhcp_set_link_state (int link_up)
 {
 	if (link_up != 0)
 	{
 		if (dhcp_state == DHCP_NO_LINK)
 		{
-			dhcp_xid ++;
+			dhcp_get_new_xid();
 			
 			dhcp_state = DHCP_DISCOVER;
 			dhcp_timer = 1;
@@ -346,7 +348,7 @@ void dhcp_service(void)
 			if (dhcp_timer == 0)
 			{
 				// no ACK, start again
-				dhcp_xid ++;
+				dhcp_get_new_xid();
 				
 				dhcp_state = DHCP_DISCOVER;
 				dhcp_timer = 1;
@@ -355,7 +357,7 @@ void dhcp_service(void)
 		case DHCP_READY:
 			if (dhcp_timer == 0)
 			{
-				dhcp_xid ++;
+				dhcp_get_new_xid();
 			
 				dhcp_state = DHCP_DISCOVER;
 				dhcp_timer = 1;
