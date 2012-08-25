@@ -45,6 +45,7 @@
 
 #include <avr32/io.h>
 #include "trampoline_uc3.h"
+#include "software_version.h"
 
 //! @{
 //! \verbatim
@@ -66,6 +67,12 @@ _start:
 p_start:
   // Jump to the C runtime startup routine.
   lda.w   pc, _stext
+
+ 
+  .global software_version
+
+software_version:
+  .byte SWVER_BYTE0, SWVER_BYTE1, SWVER_BYTE2, SWVER_BYTE3 
 
 
   // _stext is placed outside the .reset section so that the program entry point

@@ -252,6 +252,8 @@
         </avr32gcc.preprocessingassembler.general.IncludePaths>
       </Avr32Gcc>
     </ToolchainSettings>
+    <PostBuildEvent>"$(ToolchainDir)\avr32-objcopy" -O binary -R .eeprom -R .fuse -R .lock -R .signature "$(OutputDirectory)\$(OutputFileName)$(OutputFileExtension)" "$(OutputDirectory)\$(OutputFileName).bin2"
+"$(ToolchainDir)\dd" if="$(OutputDirectory)\$(OutputFileName).bin2" of="$(OutputDirectory)\$(OutputFileName).bin" bs=512 skip=32 cbs=512 conv=sync</PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src\asf.h">
@@ -327,6 +329,9 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\gcc_builtin.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\software_version.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_app\a_lib.c">

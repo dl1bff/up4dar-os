@@ -74,6 +74,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto_init.h"
 
 
+
+extern unsigned char software_version[];
+
+
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
 
@@ -630,8 +634,13 @@ static void vServiceTask( void *pvParameters )
 			
 		dhcp_service();				
 			
-		/*
+		/*		
 			char buf[10];
+			
+			vdisp_i2s(buf, 4, 16, 1, software_version[0] );
+			vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
+			*/
+			/*
 			vdisp_i2s(buf, 4, 16, 1, AVR32_USBB.usbsta );
 			vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, buf );
 			  
