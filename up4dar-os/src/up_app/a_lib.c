@@ -211,7 +211,7 @@ void a_dispatch_key_event( int key_num, int key_event )
 		// dispatch to current app
 		switch (active_app)
 		{
-			case 0: // DSTAR
+			case 0: // DSTAR App
 				if (key_event == A_KEY_PRESSED)
 				{
 					switch(key_num)
@@ -273,6 +273,19 @@ void a_dispatch_key_event( int key_num, int key_event )
 						
 					}
 				}
+				break;
+				
+			default:
+				switch(key_num)
+				{
+					case A_KEY_BUTTON_2:
+						AVR32_WDT.ctrl = 0x55001001;
+						AVR32_WDT.ctrl = 0xAA001001;
+						
+						break;
+						
+				}				
+			
 				break;
 			
 		}
