@@ -230,6 +230,12 @@
     <Compile Include="src\asf\avr32\drivers\flashc\flashc.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\sha1.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\sha1.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\software_version.h">
       <SubType>compile</SubType>
     </Compile>

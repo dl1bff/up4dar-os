@@ -42,54 +42,13 @@ struct disp_font disp_fonts[1] =
 };
 
 
-extern unsigned char software_version[];
+
 
 void disp_init(void)
 {
 	pixelbuf[0] = buf_layer0;
 	
-	disp_prints_xy(0, 0, 0, DISP_FONT_6x8, 0, "V: ");
 	
-	char buf[20];
-	
-	char image = '?';
-	char maturity = 'N';
-	
-	switch(software_version[0] & 0x0F)
-	{
-		case 1: 
-			image = 'P'; // PHY image
-			break;
-		case 2:
-			image = 'U'; // Updater image
-			break;
-		case 3:
-			image = 'S'; // System image
-			break;
-	}
-	
-	switch(software_version[0] & 0xC0)
-	{
-		case 0x80:
-			maturity = 'B';
-			break;
-		case 0x40:
-			maturity = 'E';
-			break;
-	}
-	
-	buf[0] = image;
-	buf[1] = '-';
-	disp_i2s(buf + 2, 1, 10, 1, software_version[1]);
-	buf[3] = '.';
-	disp_i2s(buf + 4, 2, 10, 1, software_version[2]);
-	buf[6] = '.';
-	disp_i2s(buf + 7, 2, 10, 1, software_version[3]);
-	buf[9] = '-';	
-	buf[10] = maturity;
-	buf[11] = 0;
-	
-	disp_prints_xy(0, 18, 0, DISP_FONT_6x8, 0, buf);
 	
 	disp_printc_xy(0, 122, 14, DISP_FONT_6x8, 0, 30);
 	disp_printc_xy(0, 122, 42, DISP_FONT_6x8, 0, 31);
