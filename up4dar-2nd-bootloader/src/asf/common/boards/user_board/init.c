@@ -64,6 +64,12 @@ static const gpio_map_t switch_gpio_map =
 };
 
 
+static const gpio_map_t usart_gpio_map = {
+{ AVR32_USART0_RXD_0_0_PIN, AVR32_USART0_RXD_0_0_FUNCTION },
+{ AVR32_USART0_TXD_0_0_PIN, AVR32_USART0_TXD_0_0_FUNCTION },
+{ AVR32_USART1_RXD_0_0_PIN, AVR32_USART1_RXD_0_0_FUNCTION },
+{ AVR32_USART1_TXD_0_0_PIN, AVR32_USART1_TXD_0_0_FUNCTION }
+};
 
 
 
@@ -182,6 +188,12 @@ void board_init(void)
 	{
 		gpio_configure_pin( switch_gpio_map[i].pin, switch_gpio_map[i].function);
 	}
+	
+	
+	// USART
+	
+	gpio_enable_module( usart_gpio_map, sizeof( usart_gpio_map ) / sizeof( usart_gpio_map[0] ) );
+	
 	
 	
 }

@@ -26,19 +26,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "disp.h"
 #include "sha1.h"
 
+#include "serial.h"
 
+#include "flashc.h"
 
 extern int memcmp(const void *, const void *, size_t );
 
 
 static void start_system_software(void)
 {
-	
+		
 		asm volatile (
 		"movh r0, 0x8000  \n"
-		"orl  r0, 0x4000  \n"
+		"orl  r0, 0x5000  \n"
 		"mov  pc, r0"
-		);  // jump to 0x80004000
+		);  // jump to 0x80005000
 		
 }
 
@@ -96,11 +98,15 @@ static void version2string (char * buf, const unsigned char * version_info)
 }
 
 
+#define COMMAND_TIMEOUT 59
+
 static int do_system_update = 0;
 // static int system_update_counter;
 static int num_update_blocks = 0;
 static int idle_counter = 0;
-static int counter = 0;
+static int timeout_counter = COMMAND_TIMEOUT;
+
+static int link_to_phy_mode = 0;
 
 #define BOOTLOADER2_PIN  AVR32_PIN_PA18
 
@@ -110,22 +116,74 @@ static void idle_proc(void)
 	// int i = gpio_get_pin_value( BOOTLOADER2_PIN );
 	
 	
-	char buf[6];
+	char buf[7];
+	
+	
+	if (link_to_phy_mode == 1)
+	{
+		if (serial_getc(1, buf) == 1)
+		{
+			serial_putc(0, buf[0]);
+			timeout_counter = COMMAND_TIMEOUT;
+		}
+	}
+	
+	
+	if (serial_getc(0, buf) == 1)
+	{
+		timeout_counter = COMMAND_TIMEOUT;
+		
+		if (link_to_phy_mode == 1)
+		{
+			serial_putc(1, buf[0]);
+		}
+		else
+		{
+			if (buf[0] == 'A')
+			{
+				link_to_phy_mode = 1;
+				
+				serial_init(1, 115200);
+			}
+		}			
+	}
 	
 	
 	if (idle_counter == 0)
 	{
 		idle_counter = 7000;
 		
-		disp_i2s(buf, 5, 10, 0, counter);
-		disp_prints_xy(0, 0, 16, DISP_FONT_6x8, 0, buf);
+		disp_i2s(buf, 2, 10, 0, timeout_counter);
+		disp_prints_xy(0, 116, 0, DISP_FONT_6x8, 0, buf);
 		
-		counter++;
 		
-		if (counter > 30)
+		if (do_system_update == 0)
 		{
-			start_system_software();
+			disp_i2s(buf, 6, 10, 0, serialRXOK);
+			disp_prints_xy(0, 48, 48, DISP_FONT_6x8, 0, buf);
+			
+			disp_i2s(buf, 6, 10, 0, serialRXError);
+			disp_prints_xy(0, 48, 56, DISP_FONT_6x8, 0, buf);
+			
+			disp_prints_xy(0, 0, 24, DISP_FONT_6x8, 0, (link_to_phy_mode == 1) ? "RS232 -> PHY   " : "RS232 -> SYSTEM");
 		}
+		
+		if (timeout_counter < 0)
+		{
+			
+			serial_stop(0);
+			serial_stop(1);
+			
+			AVR32_WDT.ctrl = 0x55001001; // turn on watchdog
+			AVR32_WDT.ctrl = 0xAA001001;
+			
+			while(1)  // do nothing until watchdog does a reset
+			{
+			}				
+			
+		}
+		
+		timeout_counter --;
 	}
 	
 	
@@ -149,10 +207,10 @@ struct staging_area_info
 
 
 #define FLASH_BLOCK_SIZE	512
-#define SYSTEM_PROGRAM_START_ADDRESS		((unsigned char *) 0x80004000)
+#define SYSTEM_PROGRAM_START_ADDRESS		((unsigned char *) 0x80005000)
 #define UPDATE_PROGRAM_START_ADDRESS		((unsigned char *) 0x80002000)
-#define STAGING_AREA_ADDRESS				((unsigned char *) 0x80042000)
-#define STAGING_AREA_MAX_BLOCKS		495
+#define STAGING_AREA_ADDRESS				((unsigned char *) 0x80042800)
+#define STAGING_AREA_MAX_BLOCKS		487
 #define SOFTWARE_VERSION_IMAGE_OFFSET	4
 #define STAGING_AREA_INFO_ADDRESS		((struct staging_area_info *) (STAGING_AREA_ADDRESS + (STAGING_AREA_MAX_BLOCKS * FLASH_BLOCK_SIZE)))
 
@@ -168,7 +226,7 @@ static int check_pending_system_update(void)
 	
 	num_update_blocks = (info->num_blocks_hi << 8) | info->num_blocks_lo;
 	
-	if ((num_update_blocks < 1) || (num_update_blocks > 495)) // too small or too big
+	if ((num_update_blocks < 1) || (num_update_blocks > STAGING_AREA_MAX_BLOCKS)) // too small or too big
 	{
 		return 0;
 	}
@@ -209,7 +267,7 @@ int main (void)
 
 
 	idle_counter = 0;
-	counter = 0;	
+	//timeout_counter = 0;	
 	// delay_nop();
 	
 	do_system_update = check_pending_system_update();
@@ -225,6 +283,10 @@ int main (void)
 	board_init();
 	
 	disp_init();
+	
+	serial_init(0, 19200);
+	
+	// serial_init(1, 115200);
 
 	// Insert application code here, after the board has been initialized.
 	
@@ -240,7 +302,19 @@ int main (void)
 	
 	disp_prints_xy(0, 0, 8, DISP_FONT_6x8, 0, buf);
 	
-	
+	if (do_system_update != 0)
+	{
+		disp_prints_xy(0, 0, 48, DISP_FONT_6x8, 0, "New System Image:");
+		version2string(buf, SYSTEM_PROGRAM_START_ADDRESS + SOFTWARE_VERSION_IMAGE_OFFSET);
+		disp_prints_xy(0, 0, 56, DISP_FONT_6x8, 0, buf);
+		timeout_counter = 15;
+	}
+	else
+	{
+		disp_prints_xy(0, 0, 32, DISP_FONT_6x8, 0, "(19200 Baud 8N1)");
+		disp_prints_xy(0, 0, 48, DISP_FONT_6x8, 0, "RxOK:");
+		disp_prints_xy(0, 0, 56, DISP_FONT_6x8, 0, "RxError:");
+	}
 	
 	disp_main_loop( idle_proc );
 }

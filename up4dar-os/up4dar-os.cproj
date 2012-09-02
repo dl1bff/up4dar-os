@@ -252,8 +252,11 @@
         </avr32gcc.preprocessingassembler.general.IncludePaths>
       </Avr32Gcc>
     </ToolchainSettings>
-    <PostBuildEvent>"$(ToolchainDir)\avr32-objcopy" -O binary -R .eeprom -R .fuse -R .lock -R .signature "$(OutputDirectory)\$(OutputFileName)$(OutputFileExtension)" "$(OutputDirectory)\$(OutputFileName).bin2"
-"$(ToolchainDir)\dd" if="$(OutputDirectory)\$(OutputFileName).bin2" of="$(OutputDirectory)\$(OutputFileName).bin" bs=512 skip=32 cbs=512 conv=sync</PostBuildEvent>
+    <PostBuildEvent>"$(ToolchainDir)\avr32-objcopy" -O binary -R .eeprom -R .fuse -R .lock -R .signature "$(OutputDirectory)\$(OutputFileName)$(OutputFileExtension)" "$(OutputDirectory)\$(OutputFileName).bin1"
+"$(ToolchainDir)\dd" if="$(OutputDirectory)\$(OutputFileName).bin1" of="$(OutputDirectory)\$(OutputFileName).bin2" bs=512 skip=32 cbs=512 conv=sync
+"$(ToolchainDir)\sha1sum" "$(OutputDirectory)\$(OutputFileName).bin2" | "$(ToolchainDir)\dd" of="$(OutputDirectory)\$(OutputFileName).sha1sum" bs=512 cbs=512 conv=sync
+"$(ToolchainDir)\cat" "$(OutputDirectory)\$(OutputFileName).bin2" "$(OutputDirectory)\$(OutputFileName).sha1sum" &gt; "$(OutputDirectory)\$(OutputFileName).bin"
+</PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src\asf.h">
