@@ -327,33 +327,29 @@ xComPortHandle xSerialPortInitMinimal( int usartNum, unsigned portLONG ulWantedB
 			*       (with 16x oversampling)              (with 8x oversampling)
 			*/
 
-			if( ulWantedBaud < ( configPBA_CLOCK_HZ / 16 ) )
+			if( ulWantedBaud > 300 )
 			{
 				/* Use 8x oversampling */
 				usart->mr |= (1<<AVR32_USART_MR_OVER_OFFSET);
-				cd = configPBA_CLOCK_HZ / (8*ulWantedBaud);
+				cd = configPBA_CLOCK_HZ / (ulWantedBaud);
+					
+				int fp = cd & 0x07; // fractional baudrate
+					
+				cd = cd >> 3; // divide by 8
 
 				if( cd < 2 )
 				{
 					return -1;  // error
 				}
 
-				usart->brgr = (cd << AVR32_USART_BRGR_CD_OFFSET);
+				usart->brgr = (cd << AVR32_USART_BRGR_CD_OFFSET) | (fp << AVR32_USART_BRGR_FP_OFFSET);
 			}
 			else
 			{
-				/* Use 16x oversampling */
-				usart->mr &= ~(1<<AVR32_USART_MR_OVER_OFFSET);
-				cd = configPBA_CLOCK_HZ / (16*ulWantedBaud);
-
-				if( cd > 65535 )
-				{
-					/* Baudrate is too low */
-					return -1;  // error
-				}
+				return -1;
 			}
-
-			usart->brgr = (cd << AVR32_USART_BRGR_CD_OFFSET);
+				
+		
 
 			/* Set the USART Mode register: Mode=Normal(0), Clk selection=MCK(0),
 			CHRL=8BIT,  SYNC=0(asynchronous), PAR=None, NBSTOP=0 (1 Stop bit), CHMODE=0, MSBF=0,
