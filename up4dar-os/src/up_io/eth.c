@@ -221,19 +221,6 @@ static void free_buffer (int start_buf, int end_buf)
 }
 
 
-void eth_send_raw ( unsigned char * b, int len )
-{
-	// TODO:  wait if a transmission is currently active
-	
-	//AVR32_MACB.tbqp = (unsigned long) & tx_buffer_q;
-	
-	/*
-	tx_buffer_q[0] = (unsigned long) b;
-	tx_buffer_q[1] = ((unsigned long) len) | 0x40008000; // wrap bit, last buffer
-	AVR32_MACB.NCR.tstart = 1; // und los!
-	*/
-}	
-
 
 void eth_set_src_mac_and_type(uint8_t * data, uint16_t ethType)
 {

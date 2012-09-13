@@ -87,6 +87,9 @@ static ambe_q_t * mic_ambe_q;
 
 static SHA1Context random_ctx;
 
+static int random_seed = 0;
+static unsigned char crypto_init_ready = 0;
+
 int crypto_get_random_bytes (unsigned char * dest, int num_bytes)
 {
 	if ((num_bytes <= 0) || (num_bytes > 20))
@@ -102,6 +105,24 @@ int crypto_get_random_bytes (unsigned char * dest, int num_bytes)
 	
 	return 0;
 }
+
+
+int crypto_get_random_15bit(void)
+{
+	if (random_seed == 0) // at start of program seed is zero
+	{
+		while (crypto_init_ready == 0) // wait for task to get first real random number
+		{
+			vTaskDelay(200);
+		}
+		
+		crypto_get_random_bytes ((unsigned char *) &random_seed, sizeof random_seed);
+	}
+	
+	random_seed = random_seed * 0x343fd + 0x269EC3; // fast PRNG
+	return (random_seed >> 0x10) & 0x7FFF;
+}
+
 
 static portTASK_FUNCTION( cryptoTask, pvParameters )
 {
@@ -126,6 +147,8 @@ static portTASK_FUNCTION( cryptoTask, pvParameters )
 	crypto_get_random_bytes(ecc_secret_key+20, 12);
 	
 	curve25519_donna(ecc_public_key, ecc_secret_key, basepoint);
+	
+	crypto_init_ready = 1;
 	
 	for( ;; )
 	{

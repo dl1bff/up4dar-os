@@ -496,6 +496,12 @@
     <Compile Include="src\up_net\dhcp.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\dns.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\dns.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_net\ipneigh.c">
       <SubType>compile</SubType>
     </Compile>

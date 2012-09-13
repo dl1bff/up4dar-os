@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,30 +17,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+
 /*
- * eth.h
+ * dns.h
  *
- * Created: 28.05.2011 18:12:55
+ * Created: 13.09.2012 09:00:11
  *  Author: mdirska
  */ 
 
 
-#ifndef ETH_H_
-#define ETH_H_
+#ifndef DNS_H_
+#define DNS_H_
 
 
+extern int dns_udp_local_port;
 
-void eth_init(void);
+
+void dns_init(void);
+void dns_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);
 
 
-void eth_rx (void);
-
-void eth_set_src_mac_and_type(uint8_t * data, uint16_t ethType);
-
-extern U32 eth_counter;
-extern U32 eth_counter2;
-extern U32 eth_counter3;
-
-extern unsigned char mac_addr[6];
-
-#endif /* ETH_H_ */
+#endif /* DNS_H_ */

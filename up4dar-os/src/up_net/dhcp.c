@@ -220,7 +220,7 @@ static void dhcp_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 
 static const uint8_t dhcp_discover_packet[] =
 	{	53, 0x01, 0x01,   // DHCP Message Type DHCPDISCOVER
-		55, 0x02, 0x01, 0x03, // Request Parameter List: netmask, router
+		55, 0x03, 0x01, 0x03, 0x05, // Request Parameter List: netmask, router, DNS
 		0xFF  // END
 	};	
 	
@@ -254,7 +254,7 @@ static uint8_t dhcp_request_packet[] =
 		53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 		50, 0x04, 0,0,0,0,  // requested IP address
 		54, 0x04, 0,0,0,0,  // server identifier
-		55, 0x02, 0x01, 0x03, // Request Parameter List: netmask, router
+		55, 0x03, 0x01, 0x03, 0x05, // Request Parameter List: netmask, router, DNS
 		0xFF  // END
 	};
 
@@ -429,6 +429,24 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 					memcpy(ipv4_netmask, p+2, 4);
 				}
 				break;
+			case 5: // DNS
+				if (res == RECEIVED_ACK) // assumption: message type comes first!
+				{
+					if (option_len >= 4)
+					{
+						memcpy(ipv4_dns_pri, p+2, 4); // primary DNS
+						
+						if (option_len >= 8)
+						{
+							memcpy(ipv4_dns_sec, p+2+4, 4); // secondary DNS
+						}
+						else
+						{
+							memset(ipv4_dns_sec, 0, 4);
+						}						
+					}
+				}
+			break;
 			case 255:
 				return res;
 		}

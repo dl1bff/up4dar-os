@@ -96,6 +96,7 @@ const static struct dcs_servers
 	uint8_t ipv4_a[4];
  } servers[NUM_SERVERS] = {
   	 {  "DCS001",   { 87, 106, 3, 249 } },
+//  	 {  "DCS001",   { 192, 168, 1, 55 } },
 	 {  "DCS002",   { 87, 106, 48, 7 } },
      {  "DCS009",   { 212, 236, 224, 2 } }  	 
 };
@@ -182,7 +183,6 @@ void dcs_service (void)
 
 void dcs_on_off (void)
 {
-	unsigned short port_num;
 	
 	switch (dcs_state)
 	{
@@ -198,9 +198,8 @@ void dcs_on_off (void)
 		
 		case DCS_DISCONNECTED:
 		
-			crypto_get_random_bytes((unsigned char *) &port_num, sizeof port_num);
-			port_num &= UDP_PORT_RANGE_MASK;
-			dcs_udp_local_port = UDP_MIN_PORT + port_num;
+			dcs_udp_local_port = UDP_MIN_PORT +
+				(crypto_get_random_15bit() & UDP_PORT_RANGE_MASK);
 			
 			dcs_link_to(current_module);
 			
@@ -326,7 +325,7 @@ void dcs_select_reflector (int go_up)
 }
 
 
-
+/*
 
 static const uint8_t dcs_frame_header[] =
 	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -346,6 +345,7 @@ static const uint8_t dcs_frame_header[] =
 		0x00, 0x00,    //   UDP length (will be set later)
 		0x00, 0x00  // UDP chksum (0 = no checksum)	
 };
+*/
 
 #define DCS_UDP_PORT 30051
 
@@ -354,6 +354,9 @@ static const uint8_t dcs_frame_header[] =
 
 static eth_txmem_t * dcs_get_packet_mem (int udp_size)
 {
+	return udp4_get_packet_mem( udp_size, dcs_udp_local_port, DCS_UDP_PORT,
+		servers[current_server].ipv4_a );
+	/*
 	eth_txmem_t * packet = eth_txmem_get( UDP_PACKET_SIZE(udp_size) );
 	
 	if (packet == NULL)
@@ -378,10 +381,14 @@ static eth_txmem_t * dcs_get_packet_mem (int udp_size)
 	packet->data[37] = DCS_UDP_PORT & 0xFF;
 	
 	return packet;
+	*/
 }
 
 static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 {
+	udp4_calc_chksum_and_send(packet, servers[current_server].ipv4_a);
+	
+	/*
 	uint8_t * dcs_frame = packet->data;
 	
 	int udp_length = udp_size + 8;  // include UDP header
@@ -418,6 +425,8 @@ static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 	{
 		ipneigh_send_packet (&tmp_addr, packet);
 	}
+	
+	*/
 		
 }
 

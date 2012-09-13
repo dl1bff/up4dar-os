@@ -72,8 +72,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io/sdcard.h"
 
 #include "up_crypto/up_crypto_init.h"
+#include "up_net/dns.h"
 
 
+#include "software_version.h"
 
 extern unsigned char software_version[];
 
@@ -938,12 +940,16 @@ int main (void)
 	
 	// sdcard_init(& audio_tx_q);
 	
+	
+	crypto_init(& microphone);
+	
+	dns_init();
+	
 	if (eth_txmem_init() != 0)
 	{
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
 	
-	crypto_init(& microphone);
 
 	vTaskStartScheduler();
   

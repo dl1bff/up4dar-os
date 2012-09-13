@@ -98,12 +98,6 @@ void lldp_send (void)
 	eth_txmem_send(packet);
 	
 	// UDP ident
-	packet = eth_txmem_get( UDP_PACKET_SIZE(8) );
-	
-	if (packet == NULL) // nomem
-		return;
-	
-	memcpy(packet->data + UDP_PACKET_SIZE(0), settings.s.my_callsign, 8);
 	
 	uint8_t dest_ipv4_addr[4];
 	int i;
@@ -113,9 +107,14 @@ void lldp_send (void)
 		dest_ipv4_addr[i] = ipv4_addr[i] | (ipv4_netmask[i] ^ 0xFF);  // ipv4 subnet broadcast
 	}
 	
-	ipv4_udp_prepare_packet(packet, dest_ipv4_addr, 8, UP4DAR_UDP_IDENT_PORT, UP4DAR_UDP_IDENT_PORT);
+	packet = udp4_get_packet_mem(8, UP4DAR_UDP_IDENT_PORT, UP4DAR_UDP_IDENT_PORT, dest_ipv4_addr);
+	// packet = eth_txmem_get( UDP_PACKET_SIZE(8) );
 	
-	memset(packet->data, 0xFF, 6); // broadcast address
+	if (packet == NULL) // nomem
+		return;
 	
-	eth_txmem_send(packet);
+	memcpy(packet->data + UDP_PACKET_SIZE(0), settings.s.my_callsign, 8);
+	
+	udp4_calc_chksum_and_send(packet, NULL); // send broadcast
+	
 }

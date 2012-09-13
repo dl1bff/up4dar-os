@@ -47,6 +47,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "snmp.h"
 #include "up_dstar/dcs.h"
 #include "up_net/dhcp.h"
+#include "dns.h"
+
+#include "up_dstar/vdisp.h"
+#include "up_crypto/up_crypto.h"
 
 
 unsigned char ipv4_addr[4];
@@ -54,6 +58,9 @@ unsigned char ipv4_addr[4];
 unsigned char ipv4_netmask[4];
 
 unsigned char ipv4_gw[4];
+
+unsigned char ipv4_dns_pri[4];
+unsigned char ipv4_dns_sec[4];
 
 static const uint8_t zero_addr[4] = { 0, 0, 0, 0 };
 
@@ -68,7 +75,29 @@ static const uint8_t echo_reply_header[38] = {
 	0x00, 0x00, 0x00, 0x00,  // destination
 	0x00, 0x00, 0x00, 0x00   // Type 0 (echo reply) Code 0
 };	
+
+
+static int ipv4_header_checksum( const uint8_t * p, int header_len )
+{
+	int sum = 0;
+	int i;
 	
+	for (i=0; i < (header_len >> 1); i++)
+	{
+		if (i != 5)  // skip checksum field
+		{
+			sum += ((unsigned short *) p) [i];
+		}
+	}
+	
+	while ((sum >> 16) != 0)
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+	
+	return ( ~sum ) & 0xFFFF;
+}
+
 	
 static void icmpv4_send_echo_reply (const uint8_t * p, int len, const uint8_t * ipv4_header)
 {
@@ -90,24 +119,13 @@ static void icmpv4_send_echo_reply (const uint8_t * p, int len, const uint8_t * 
 	
 	((unsigned short *) (echo_reply_buf + 14)) [1] = total_length;
 	
-	int sum = 0;
-	int i;
 	
-	for (i=0; i < 10; i++) // 20 Byte Header
-	{
-		if (i != 5)  // das checksum-feld weglassen
-		{
-			sum += ((unsigned short *) (echo_reply_buf + 14)) [i];
-		}
-	}
-	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
-	
-	((unsigned short *) (echo_reply_buf + 14)) [5] = sum; // checksumme setzen
+	((unsigned short *) (echo_reply_buf + 14)) [5] = ipv4_header_checksum(echo_reply_buf + 14, 20);
 	
 	memcpy(echo_reply_buf + 38, p + 4, len - 4);  // ping daten kopieren ohne type und chksum
 	
-	sum = 0;
+	int i;
+	int sum = 0;
 	
 	for (i=0; i < (len >> 1); i++)
 	{
@@ -122,7 +140,12 @@ static void icmpv4_send_echo_reply (const uint8_t * p, int len, const uint8_t * 
 		sum += (echo_reply_buf + 34)[len -1] << 8;  // letztes byte mit 0 als padding
 	}
 	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	while ((sum >> 16) != 0)
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+	
+	sum = ( ~sum ) & 0xFFFF;
 	
 	((unsigned short *) (echo_reply_buf + 34)) [1] = sum;
 	
@@ -156,7 +179,12 @@ static void icmpv4_input (const uint8_t * p, int len, const uint8_t * ipv4_heade
 		sum += p[len -1] << 8;  // letztes byte mit 0 als padding
 	}
 	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
+	while ((sum >> 16) != 0)
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+	
+	sum = ( ~sum ) & 0xFFFF;
 		
 	if (sum != ((unsigned short *) p) [1])  // checksumme falsch
 		return;
@@ -172,32 +200,21 @@ static void icmpv4_input (const uint8_t * p, int len, const uint8_t * ipv4_heade
 
 }	
 
-/*
-
-static const unsigned char snmp_reply_header [] =
-{
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // dest
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // src
-	0x08, 0x00, // IP
-	0x45, 0x00, 0x00, 0x00,   // IPv4, 20 Bytes Header
-	0x00, 0x00, 0x40, 0x00,  // don't fragment
-	0x80, 0x11, 0x00, 0x00,  // UDP, TTL=128
-	0x00, 0x00, 0x00, 0x00,  // source
-	0x00, 0x00, 0x00, 0x00  // destination
-};
-
-*/
 
 void ipv4_udp_prepare_packet( eth_txmem_t * packet, const uint8_t * dest_ipv4_addr, int udp_data_length,
 	int udp_src_port, int udp_dest_port )
 {
 	uint8_t * p = packet->data;
 	
-	memset(p, 0, 14 + 20); // fill eth+ip header with zeros
+	memset(p + 14, 0, 20 ); // fill IP header with zeros
 	
 	eth_set_src_mac_and_type(p, 0x0800); // IP packet
 	
+	unsigned short r = crypto_get_random_15bit();
+	
 	p[14] = 0x45; // IPv4, 20 Bytes Header
+	p[18] = r & 0xFF;
+	p[19] = r >> 7;
 	p[20] = 0x40; // don't fragment
 	p[22] = 128;  // TTL=128
 	p[23] = 17;  // next header -> UDP
@@ -209,25 +226,13 @@ void ipv4_udp_prepare_packet( eth_txmem_t * packet, const uint8_t * dest_ipv4_ad
 	
 	((unsigned short *) (p + 14)) [1] = total_length;
 	
-	int sum = 0;
-	int i;
 	
-	for (i=0; i < 10; i++) // 20 Byte Header
-	{
-		if (i != 5)  // das checksum-feld weglassen
-		{
-			sum += ((unsigned short *) (p + 14)) [i];
-		}
-	}
+	((unsigned short *) (p + 14)) [5] = ipv4_header_checksum(p+14, 20);
 	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
-	
-	((unsigned short *) (p + 14)) [5] = sum; // checksumme setzen
-	
-	((unsigned short *) (p + 14)) [10] = udp_dest_port & 0xFFFF;
-	((unsigned short *) (p + 14)) [11] = udp_src_port & 0xFFFF;
+	((unsigned short *) (p + 14)) [10] = udp_src_port & 0xFFFF; 
+	((unsigned short *) (p + 14)) [11] = udp_dest_port & 0xFFFF;
 	((unsigned short *) (p + 14)) [12] = udp_data_length + 8;
-	((unsigned short *) (p + 14)) [13] = 0;  // chksum
+    //	((unsigned short *) (p + 14)) [13] = 0;  // chksum
 	
 }
 
@@ -247,59 +252,63 @@ static void snmp_send_reply (const uint8_t * p, int len, const uint8_t * ipv4_he
 		return; 
 	}		
 		
-	/*
-	uint8_t * snmp_reply_buf = packet->data;
 	
-	memcpy(snmp_reply_buf, snmp_reply_header, sizeof snmp_reply_header);
+	int src_port = (p[2] << 8) | p[3];
+	int dest_port = (p[0] << 8) | p[1];
 	
-	eth_set_src_mac_and_type(snmp_reply_buf, 0x0800); // IP packet
-	
-	memcpy(snmp_reply_buf + 26, ipv4_addr, sizeof ipv4_addr); // src IP
-	memcpy(snmp_reply_buf + 30, ipv4_header + 12, sizeof ipv4_addr); // dest IP
-	
-	
-	int total_length = data_length + 8 + 20;
-	
-	((unsigned short *) (snmp_reply_buf + 14)) [1] = total_length;
-	
-	int sum = 0;
-	int i;
-	
-	for (i=0; i < 10; i++) // 20 Byte Header
-	{
-		if (i != 5)  // das checksum-feld weglassen
-		{
-			sum += ((unsigned short *) (snmp_reply_buf + 14)) [i];
-		}
-	}
-	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
-	
-	((unsigned short *) (snmp_reply_buf + 14)) [5] = sum; // checksumme setzen
-	*/
-	// UDP
-	
-	int src_port = (p[0] << 8) | p[1];
-	int dest_port = (p[2] << 8) | p[3];
-	
-	/*
-	((unsigned short *) (snmp_reply_buf + 14)) [10] = dest_port & 0xFFFF;
-	((unsigned short *) (snmp_reply_buf + 14)) [11] = src_port & 0xFFFF;
-	((unsigned short *) (snmp_reply_buf + 14)) [12] = data_length + 8;
-	((unsigned short *) (snmp_reply_buf + 14)) [13] = 0;  // chksum
-	*/
 	
 	ipv4_udp_prepare_packet(packet, ipv4_header + 12, data_length, src_port, dest_port);
 	
+	udp4_calc_chksum_and_send(packet,  ipv4_header + 12);
 	
-	ip_addr_t  tmp_addr;
-	memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-	memcpy(&tmp_addr.ipv4.addr, ipv4_header + 12 , sizeof ipv4_addr);  // antwort an diese adresse
+}
+
+
+static int udp4_header_checksum( const uint8_t * p)
+{
+	int sum = 0;
+	int i;
+
+	for (i=6; i < 10; i++) // dest+src IP addr
+	{
+		sum += ((unsigned short *) (p)) [i];
+	}
+
+	sum += 17;
+
+	int udp_length = ((unsigned short *) (p)) [12];
+	sum += udp_length;
+
+
+
+	for (i=0; i < (udp_length >> 1); i++)
+	{
+		if (i != 3) // skip checksum field
+		{
+			sum += ((unsigned short *) (p + 20))[i];
+		}
+	}
+
+	if ((udp_length & 1) == 1) // odd number of bytes
+	{
+		sum += ((unsigned char * )( p + 20)) [udp_length-1] << 8;
+	}
+
+	while ((sum >> 16) != 0)
+	{
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	}
+
+	sum = ( ~sum ) & 0xFFFF;
+
+	if (sum == 0)
+	{
+		sum = 0xFFFF;
+	}
 	
-	ipneigh_send_packet (&tmp_addr, packet);
+	return sum;
+}
 	
-	// (snmp_reply_buf, total_length + 14);
-}	
 	
 static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 {
@@ -312,6 +321,14 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 	
 	if (udp_length < 8)  // UDP header has at least 8 bytes
 	   return;
+	   
+	int checksum = (p[6] << 8) | p[7];
+	
+	if (checksum != 0)
+	{
+		if (checksum != udp4_header_checksum(ipv4_header))
+			return;
+	}		
 	   
 	switch(dest_port)
 	{
@@ -327,6 +344,11 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 			dcs_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
 		}
 		
+		if (dest_port == dns_udp_local_port)
+		{
+			dns_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+		}
+		
 		if ((dhcp_is_ready() == 0) &&  // if DHCP is not completed yet
 			(dest_port == 68))
 		{
@@ -337,6 +359,7 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 }	
 	
 	
+
 
 void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header)
 {
@@ -361,20 +384,9 @@ void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header)
 	if ((total_len < header_len) || (total_len > len))  // Laenge passt nicht
 		return;
 		
-	int sum = 0;
-	int i;
 	
-	for (i=0; i < (header_len >> 1); i++)
-	{
-		if (i != 5)  // das checksum-feld weglassen
-		{
-			sum += ((unsigned short *) p) [i];
-		}
-	}
-	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
 		
-	if (sum != ((unsigned short *) p) [5])  // checksumme falsch
+	if (ipv4_header_checksum(p, header_len) != ((unsigned short *) p) [5])  // checksumme falsch
 		return;
 		
 	if (((p[6] & 0x3F) != 0) || (p[7] != 0)) // fragment bit & fragment offset != 0
@@ -457,6 +469,57 @@ void ipv4_init(void)
 	ipv4_netmask[3] = 0;
 	
 	memcpy(ipv4_gw, zero_addr, sizeof zero_addr); // no gateway
+	memcpy(ipv4_dns_pri, zero_addr, sizeof zero_addr); // no primary dns
+	memcpy(ipv4_dns_sec, zero_addr, sizeof zero_addr); // no secondary dns
 	
 	ipneigh_init(); // delete neighbor cache
+}
+
+
+
+eth_txmem_t * udp4_get_packet_mem (int udp_size, int src_port, int dest_port, const uint8_t * ipv4_dest_addr)
+{
+	eth_txmem_t * packet = eth_txmem_get( UDP_PACKET_SIZE(udp_size) );
+	
+	if (packet == NULL)
+	{
+		vdisp_prints_xy( 40, 56, VDISP_FONT_6x8, 0, "NOMEM" );
+		return NULL;
+	}
+	
+	ipv4_udp_prepare_packet( packet, ipv4_dest_addr, udp_size, src_port, dest_port);
+	
+	return packet;
+}
+
+
+void udp4_calc_chksum_and_send (eth_txmem_t * packet, const uint8_t * ipv4_dest_addr)
+{
+	
+	uint8_t * p = packet->data;
+
+	
+	((unsigned short *) (p + 14)) [13] = udp4_header_checksum(p + 14);
+	
+	
+	if (ipv4_dest_addr == NULL)
+	{
+		memset(packet->data, 0xFF, 6); // broadcast address
+		eth_txmem_send(packet);
+	}
+	else
+	{
+		ip_addr_t  tmp_addr;
+			
+		if (ipv4_get_neigh_addr(&tmp_addr, ipv4_dest_addr ) != 0)  // get addr of neighbor
+		{
+			// neighbor could not be set - no gateway!
+			eth_txmem_free(packet); // throw away packet
+		}
+		else
+		{
+			ipneigh_send_packet (&tmp_addr, packet);
+		}
+	}
+	
 }

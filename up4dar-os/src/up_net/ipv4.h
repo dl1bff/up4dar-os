@@ -35,6 +35,8 @@ extern unsigned char ipv4_netmask[4];
 
 extern unsigned char ipv4_gw[4];
 
+extern unsigned char ipv4_dns_pri[4];
+extern unsigned char ipv4_dns_sec[4];
 
 #define UDP_PACKET_SIZE(a) (14 + 20 + 8 + (a))
 
@@ -45,5 +47,11 @@ int ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest );
 int ipv4_addr_is_local ( const uint8_t * ipv4_a );
 void ipv4_init(void);
 void ipv4_udp_prepare_packet( eth_txmem_t * packet, const uint8_t * dest_ipv4_addr, int udp_data_length, int udp_src_port, int udp_dest_port );
+
+eth_txmem_t * udp4_get_packet_mem (int udp_size, int src_port, int dest_port, const uint8_t * ipv4_dest_addr);
+
+void udp4_calc_chksum_and_send (eth_txmem_t * packet, const uint8_t * ipv4_dest_addr);
+
+
 
 #endif /* IPV4_H_ */
