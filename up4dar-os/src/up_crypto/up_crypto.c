@@ -111,12 +111,15 @@ int crypto_get_random_15bit(void)
 {
 	if (random_seed == 0) // at start of program seed is zero
 	{
+		memcpy(&random_seed, (unsigned char *) 0x80800204, sizeof random_seed);
+		/*
 		while (crypto_init_ready == 0) // wait for task to get first real random number
 		{
 			vTaskDelay(200);
 		}
 		
 		crypto_get_random_bytes ((unsigned char *) &random_seed, sizeof random_seed);
+		*/
 	}
 	
 	random_seed = random_seed * 0x343fd + 0x269EC3; // fast PRNG
@@ -147,6 +150,8 @@ static portTASK_FUNCTION( cryptoTask, pvParameters )
 	crypto_get_random_bytes(ecc_secret_key+20, 12);
 	
 	curve25519_donna(ecc_public_key, ecc_secret_key, basepoint);
+	
+	crypto_get_random_bytes ((unsigned char *) &random_seed, sizeof random_seed);
 	
 	crypto_init_ready = 1;
 	
