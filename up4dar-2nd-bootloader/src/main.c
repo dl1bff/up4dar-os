@@ -101,6 +101,7 @@ static void version2string (char * buf, const unsigned char * version_info)
 
 
 #define COMMAND_TIMEOUT 59
+#define COMMAND_TIMEOUT_PHY 9
 
 static int do_system_update = 0;
 static int system_update_counter = -1;
@@ -412,7 +413,7 @@ static void idle_proc(void)
 			if (serial_getc(1, buf) == 1)
 			{
 				serial_putc(0, buf[0]);
-				timeout_counter = COMMAND_TIMEOUT;
+				timeout_counter = COMMAND_TIMEOUT_PHY;
 			}
 		}			
 	}
@@ -422,7 +423,7 @@ static void idle_proc(void)
 	{
 		if (serial_getc(0, buf) == 1)
 		{
-			timeout_counter = COMMAND_TIMEOUT;
+			timeout_counter = (link_to_phy_mode == 1) ? COMMAND_TIMEOUT_PHY : COMMAND_TIMEOUT;
 			
 			if (link_to_phy_mode == 1)
 			{
