@@ -90,15 +90,15 @@ static int chip_init(void)
  	
 	if (send_wm8510(  10, 0x048) != 0) goto error;  // DACMU, DACOSR128
 		
-	//if (send_wm8510(  1, 0x01B) != 0) goto error;  // Power Management 1:  MICBEN, BIASEN, VMIDSEL=5kohm
-	if (send_wm8510(  1, 0x00B) != 0) goto error;  // Power Management 1:  BIASEN, VMIDSEL=5kohm
+	if (send_wm8510(  1, 0x01B) != 0) goto error;  // Power Management 1:  MICBEN, BIASEN, VMIDSEL=5kohm
+	//if (send_wm8510(  1, 0x00B) != 0) goto error;  // Power Management 1:  BIASEN, VMIDSEL=5kohm
 	
 	if (send_wm8510(  4, 0x018) != 0) goto error;  // Audio Interface: DSP/PCM mode, 16 bit
 	
 	vTaskDelay(300);
 	
-	//if (send_wm8510(  1, 0x01F) != 0) goto error;  // Power Management 1:  MICBEN, BIASEN, BUFIOEN, VMIDSEL=5kohm
-	if (send_wm8510(  1, 0x00F) != 0) goto error;  // Power Management 1:   BIASEN, BUFIOEN, VMIDSEL=5kohm
+	if (send_wm8510(  1, 0x01F) != 0) goto error;  // Power Management 1:  MICBEN, BIASEN, BUFIOEN, VMIDSEL=5kohm
+	//if (send_wm8510(  1, 0x00F) != 0) goto error;  // Power Management 1:   BIASEN, BUFIOEN, VMIDSEL=5kohm
 	
 	vTaskDelay(300);
 	
