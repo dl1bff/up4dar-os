@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/audio_q.h"
 #include "up_dstar/ambe_q.h"
 #include "settings.h"
+#include "up_io/serial.h"
 
 
 
@@ -272,6 +273,15 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	
 	char buf_ready_rx = 1;
 	char buf_ready_tx = 1;
+	
+#define AUDIO_DEBUG 1
+
+#if defined(AUDIO_DEBUG)
+	int audio_debug_sample_counter = 0;
+	#define AUDIO_DEBUG_NUM_SAMPLES 2000
+	
+	int audio_debug_max_value = 0;
+#endif
 
 
 	for( ;; )
@@ -350,6 +360,31 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 			for (i=0; i < BUF_SIZE; i+=4)  // CODEC part of the buffer
 			{
 				short sample = encbuf[ (i >> 2) ];
+				
+#if defined(AUDIO_DEBUG)
+				int abs_value = (sample < 0) ? (- sample) : sample;
+				
+				if (abs_value > audio_debug_max_value)
+				{
+					audio_debug_max_value = abs_value;
+				}
+				
+				audio_debug_sample_counter++;
+				
+				if (audio_debug_sample_counter >= AUDIO_DEBUG_NUM_SAMPLES)
+				{
+					audio_debug_sample_counter = 0;
+					
+					char buf[6];
+					
+					vdisp_i2s(buf, 5, 10, 0, audio_debug_max_value);
+					serial_puts(0, buf);
+					serial_puts(0, "\n");
+					
+					audio_debug_max_value = 0;
+				}
+#endif
+
 				
 				if (sample > 3276)
 				{

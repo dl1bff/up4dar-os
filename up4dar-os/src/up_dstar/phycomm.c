@@ -287,11 +287,13 @@ void phyCommSendCmd (const char * cmd, int len)
 }
 
 
-void phyCommInit( xQueueHandle dq )
+void phyCommInit( xQueueHandle dq, int comPortHandle )
 {
 	dstarQueue = dq;
 	
-	xPort = xSerialPortInitMinimal( 1, 115200, 20 );
+	// xPort = xSerialPortInitMinimal( 1, 115200, 20 );
+	
+	xPort = comPortHandle;
 	
 	if (xPort < 0)
 	{

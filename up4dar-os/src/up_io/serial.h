@@ -83,6 +83,7 @@ void vSerialPutString( xComPortHandle pxPort, const char * pcString );
 signed portBASE_TYPE xSerialGetChar( xComPortHandle pxPort, signed char *pcRxedChar, portTickType xBlockTime );
 signed portBASE_TYPE xSerialPutChar( xComPortHandle pxPort, signed char cOutChar, portTickType xBlockTime );
 
+int serial_puts (int com_port, const char * s);
 
 extern U32 xSerialRXError;
 extern U32 xSerialRXOK;

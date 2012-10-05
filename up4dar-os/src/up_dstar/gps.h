@@ -31,7 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define GPS_H_
 
 
-void gps_init(void);
+// void gps_init(void);
+void gps_init(int comPortHandle);
 int gps_get_slow_data(uint8_t * slow_data);
 void gps_reset_slow_data(void);
 

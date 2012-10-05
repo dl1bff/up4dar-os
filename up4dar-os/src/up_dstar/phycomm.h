@@ -23,7 +23,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-void phyCommInit( xQueueHandle dq );
+// void phyCommInit( xQueueHandle dq );
+void phyCommInit( xQueueHandle dq, int comPortHandle );
 void phyCommSend (char * buf, int len);
 void phyCommSendCmd (const char * cmd, int len);
 

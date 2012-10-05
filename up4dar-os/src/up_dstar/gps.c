@@ -895,7 +895,7 @@ static void vGPSTask( void *pvParameters )
 }
 
 
-void gps_init(void)
+void gps_init(int comPortHandle)
 {
 	
 	gps_init_satlist();
@@ -903,7 +903,9 @@ void gps_init(void)
 	
 	vd_clear_rect (VDISP_GPS_LAYER, 0, 0, 128, 64);
 	
-	gpsSerialHandle = xSerialPortInitMinimal( 0, 4800, 10 );
+	// gpsSerialHandle = xSerialPortInitMinimal( 0, 4800, 10 );
+	
+	gpsSerialHandle = comPortHandle;
 	
 	if (gpsSerialHandle < 0)
 	{

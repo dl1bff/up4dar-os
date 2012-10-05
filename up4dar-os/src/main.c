@@ -894,7 +894,8 @@ int main (void)
 	
 	lcd_init();
 		
-	
+	xComPortHandle phyComPort = xSerialPortInitMinimal( 1, 115200, 20 );
+	xComPortHandle externalComPort = xSerialPortInitMinimal( 0, 4800, 20 );
 
 	
 	xTaskCreate( vServiceTask, (signed char *) "srv", configMINIMAL_STACK_SIZE, ( void * ) 0, 
@@ -916,7 +917,10 @@ int main (void)
 
 	dstarInit( dstarQueue );
 	
-	phyCommInit( dstarQueue );
+	
+	
+	
+	phyCommInit( dstarQueue, phyComPort );
 	
 	txtest_init();
 	
@@ -934,7 +938,7 @@ int main (void)
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 
 
-	gps_init();
+	gps_init( externalComPort );
 	
 	a_app_manager_init();
 	

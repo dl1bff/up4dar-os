@@ -435,3 +435,19 @@ volatile avr32_usart_t  *usart = usarts[pxPort].usart;
 }
 /*-----------------------------------------------------------*/
 
+
+int serial_puts (int com_port, const char * s)
+{
+	const char * p = s;
+	while (*p != 0)
+	{
+		int res = xSerialPutChar( com_port, *p, 0); // don't wait if queue is full
+		
+		if (res == pdFAIL) // queue is full
+		{
+			return -1;
+		}
+		p++;
+	}
+	return 0;
+}
