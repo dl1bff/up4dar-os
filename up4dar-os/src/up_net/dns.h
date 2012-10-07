@@ -30,11 +30,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DNS_H_
 
 
-extern int dns_udp_local_port;
-
-
 void dns_init(void);
 void dns_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);
-
+int dns_get_lock(void);
+void dns_release_lock(void);
+int dns_req_A (const char * name);
+int dns_result_available(void);
+int dns_get_A_addr ( uint8_t * v4addr);
 
 #endif /* DNS_H_ */

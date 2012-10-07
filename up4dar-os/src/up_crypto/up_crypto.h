@@ -32,6 +32,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int crypto_get_random_bytes (unsigned char * dest, int num_bytes);
 int crypto_get_random_15bit(void);
-
+int crypto_get_random_16bit(void);
 
 #endif /* UP_CRYPTO_H_ */

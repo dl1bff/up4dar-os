@@ -62,7 +62,7 @@ unsigned char ipv4_gw[4];
 unsigned char ipv4_dns_pri[4];
 unsigned char ipv4_dns_sec[4];
 
-static const uint8_t zero_addr[4] = { 0, 0, 0, 0 };
+const uint8_t ipv4_zero_addr[4] = { 0, 0, 0, 0 };
 
 static const uint8_t echo_reply_header[38] = {
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // dest
@@ -308,6 +308,39 @@ static int udp4_header_checksum( const uint8_t * p)
 	
 	return sum;
 }
+
+unsigned short udp_socket_ports[NUM_UDP_SOCKETS] = { 68, 161, 0, 0 };
+	
+
+int udp_get_new_srcport(void)
+{
+	int p;
+	
+	while (1)
+	{
+		p = crypto_get_random_16bit();
+		
+		if (p < 1024)
+		{
+			p += 11000;
+		}
+	
+		int already_in_use = 0;
+		int i;
+		for (i=0; i < NUM_UDP_SOCKETS; i++)
+		{
+			if (p == udp_socket_ports[i])
+			{
+				already_in_use = 1;
+			}
+		}
+		
+		if (already_in_use == 0)
+			break;
+	}
+	
+	return p;
+}	
 	
 	
 static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
@@ -328,34 +361,45 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 	{
 		if (checksum != udp4_header_checksum(ipv4_header))
 			return;
+	}	
+	
+	if (dest_port == 0)  // 0 is a special value (socket not connected)
+		return ;	
+	
+	int i;
+	
+	for (i=0; i < NUM_UDP_SOCKETS; i++)
+	{
+		if (dest_port == udp_socket_ports[i])
+		{
+			switch (i)
+			{
+			case UDP_SOCKET_SNMP:
+				snmp_send_reply ( p, udp_length - 8, ipv4_header );
+				break;
+				
+			case UDP_SOCKET_DHCP:
+				if (dhcp_is_ready() == 0)  // if DHCP is not completed yet
+				{
+					dhcp_input_packet( p + 8, udp_length - 8 );
+				}
+				break;
+				
+			case UDP_SOCKET_DCS:
+				dcs_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+				break;
+				
+			case UDP_SOCKET_DNS:
+				dns_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+				break;
+			
+			}
+			
+			return;
+		}		 
 	}		
 	   
-	switch(dest_port)
-	{
-		
-	case 161: // SNMP
-		snmp_send_reply ( p, udp_length - 8, ipv4_header );
-		break;
-		
-	default:
 	
-		if (dest_port == dcs_udp_local_port)
-		{
-			dcs_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
-		}
-		
-		if (dest_port == dns_udp_local_port)
-		{
-			dns_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
-		}
-		
-		if ((dhcp_is_ready() == 0) &&  // if DHCP is not completed yet
-			(dest_port == 68))
-		{
-			dhcp_input_packet( p + 8, udp_length - 8 );
-		}
-		break;
-	}
 }	
 	
 	
@@ -444,7 +488,7 @@ int ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest )
 	else
 	{
 		// destination is not on local subnet -> next hop is gateway
-		if (memcmp(ipv4_gw, zero_addr, sizeof zero_addr) == 0) // no gateway addr
+		if (memcmp(ipv4_gw, ipv4_zero_addr, sizeof ipv4_zero_addr) == 0) // no gateway addr
 		{
 			return -1; // error: no gateway, no neighbour
 		}
@@ -468,9 +512,9 @@ void ipv4_init(void)
 	ipv4_netmask[2] = 0;
 	ipv4_netmask[3] = 0;
 	
-	memcpy(ipv4_gw, zero_addr, sizeof zero_addr); // no gateway
-	memcpy(ipv4_dns_pri, zero_addr, sizeof zero_addr); // no primary dns
-	memcpy(ipv4_dns_sec, zero_addr, sizeof zero_addr); // no secondary dns
+	memcpy(ipv4_gw, ipv4_zero_addr, sizeof ipv4_zero_addr); // no gateway
+	memcpy(ipv4_dns_pri, ipv4_zero_addr, sizeof ipv4_zero_addr); // no primary dns
+	memcpy(ipv4_dns_sec, ipv4_zero_addr, sizeof ipv4_zero_addr); // no secondary dns
 	
 	ipneigh_init(); // delete neighbor cache
 }

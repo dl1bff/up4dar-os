@@ -48,6 +48,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/settings.h"
 
 #include "up_crypto/up_crypto.h"
+#include "up_net/dns.h"
 
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
@@ -65,16 +66,17 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
 
 
-#define UDP_MIN_PORT 11000
-#define UDP_PORT_RANGE_MASK  0x0FFF
-
-int dcs_udp_local_port;
+static int dcs_udp_local_port;
 
 static int dcs_state;
 
 #define DCS_KEEPALIVE_TIMEOUT  60
 #define DCS_CONNECT_REQ_TIMEOUT  6
+#define DCS_CONNECT_RETRIES		  3
 #define DCS_DISCONNECT_REQ_TIMEOUT  6
+#define DCS_DISCONNECT_RETRIES	  3
+#define DCS_DNS_TIMEOUT			 2
+#define DCS_DNS_RETRIES		  3
 
 static int dcs_timeout_timer;
 static int dcs_retry_counter;
@@ -83,41 +85,50 @@ static int dcs_retry_counter;
 #define DCS_CONNECT_REQ_SENT	2
 #define DCS_CONNECTED			3
 #define DCS_DISCONNECT_REQ_SENT	4
+#define DCS_DNS_REQ_SENT		5
+#define DCS_DNS_REQ				6
+
 
 
 static int current_module;
 static int current_server;
 
-#define NUM_SERVERS 3
 
-const static struct dcs_servers
- {
-	char name[7];
-	uint8_t ipv4_a[4];
- } servers[NUM_SERVERS] = {
-  	 {  "DCS001",   { 87, 106, 3, 249 } },
-//  	 {  "DCS001",   { 192, 168, 1, 55 } },
-	 {  "DCS002",   { 87, 106, 48, 7 } },
-     {  "DCS009",   { 212, 236, 224, 2 } }  	 
-};
+
+#define NUM_SERVERS 30
+
 
 void dcs_init(void)
 {
-	dcs_udp_local_port = UDP_MIN_PORT;
 
 	dcs_state = DCS_DISCONNECTED;	
 	
 	current_module = 'C';
-	current_server = 0;
+	current_server = 1;  // DCS001
+}
+
+void dcs_get_current_reflector_name (char * s)
+{
+	memcpy(s, "DCS", 3);
+	vdisp_i2s(s + 3, 3, 10, 1, current_server);
+	s[6] = ' ';
+	s[7] = current_module;
 }
 
 
 
+static uint8_t dcs_server_ipaddr[4];
 
 static void dcs_link_to (int module);
 
+static char dcs_server_dns_name[25]; // dns name of reflector e.g. "dcs001.xreflector.net"
 
-
+static void dcs_set_dns_name(void)
+{
+	memcpy(dcs_server_dns_name, "dcs", 3);
+	vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
+	memcpy(dcs_server_dns_name+6, ".xreflector.net", 16);
+}
 
 
 void dcs_service (void)
@@ -133,6 +144,7 @@ void dcs_service (void)
 			if (dcs_timeout_timer == 0)
 			{
 				dcs_state = DCS_DISCONNECTED;
+				udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 			}
 			break;
 		
@@ -147,6 +159,7 @@ void dcs_service (void)
 				if (dcs_retry_counter == 0)
 				{
 					dcs_state = DCS_DISCONNECTED;
+					udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 				}
 				else
 				{
@@ -167,12 +180,67 @@ void dcs_service (void)
 				if (dcs_retry_counter == 0)
 				{
 					dcs_state = DCS_DISCONNECTED;
+					udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 				}
 				else
 				{
 					dcs_link_to(' ');
 					dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
 				}
+			}
+			break;
+			
+		case DCS_DNS_REQ:
+			if (dns_get_lock()) // resolver not busy
+			{
+				if (dns_req_A(dcs_server_dns_name) == 0) // OK
+				{
+					dcs_state = DCS_DNS_REQ_SENT;
+				}
+				else
+				{
+					dcs_state = DCS_DISCONNECTED; // problem within resolver
+				}
+			}			
+			else if (dcs_timeout_timer == 0)
+			{
+				if (dcs_retry_counter > 0)
+				{
+					dcs_retry_counter --;
+				}
+				
+				if (dcs_retry_counter == 0)
+				{
+					dcs_state = DCS_DISCONNECTED;
+				}
+				else
+				{
+					dcs_timeout_timer = DCS_DNS_TIMEOUT;
+				}
+			}
+			break;
+			
+		case DCS_DNS_REQ_SENT:
+			if (dns_result_available()) // resolver is ready
+			{
+				if (dns_get_A_addr(dcs_server_ipaddr) < 0) // DNS didn't work
+				{
+					dcs_state = DCS_DISCONNECTED;
+				}
+				else
+				{
+					dcs_udp_local_port = udp_get_new_srcport();
+					
+					udp_socket_ports[UDP_SOCKET_DCS] = dcs_udp_local_port;
+					
+					dcs_link_to(current_module);
+					
+					dcs_state = DCS_CONNECT_REQ_SENT;
+					dcs_retry_counter = DCS_CONNECT_RETRIES;
+					dcs_timeout_timer =  DCS_CONNECT_REQ_TIMEOUT;
+				}
+				
+				dns_release_lock();
 			}
 			break;
 	}
@@ -192,20 +260,17 @@ void dcs_on_off (void)
 			dcs_link_to(' ');
 			
 			dcs_state = DCS_DISCONNECT_REQ_SENT;
-			dcs_retry_counter = 3;
+			dcs_retry_counter = DCS_DISCONNECT_RETRIES;
 			dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
 			break;
 		
 		case DCS_DISCONNECTED:
-		
-			dcs_udp_local_port = UDP_MIN_PORT +
-				(crypto_get_random_15bit() & UDP_PORT_RANGE_MASK);
+			dcs_set_dns_name();
 			
-			dcs_link_to(current_module);
+			dcs_state = DCS_DNS_REQ;
+			dcs_retry_counter = DCS_DNS_RETRIES;
+			dcs_timeout_timer = DCS_DNS_TIMEOUT;
 			
-			dcs_state = DCS_CONNECT_REQ_SENT;
-			dcs_retry_counter = 3;
-			dcs_timeout_timer = DCS_CONNECT_REQ_TIMEOUT;
 			break;
 	}
 }
@@ -215,7 +280,7 @@ static void dcs_keepalive_response (void);
 
 void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr)
 {
-	if (memcmp(ipv4_src_addr, servers[current_server].ipv4_a, sizeof ipv4_addr) != 0)
+	if (memcmp(ipv4_src_addr, dcs_server_ipaddr, sizeof ipv4_addr) != 0)
 	{
 		// packet is not from the currently selected server
 		return;
@@ -267,12 +332,7 @@ int dcs_is_connected (void)
 	return 0;
 }
 
-void dcs_get_current_reflector_name (char * s)
-{
-	memcpy(s, servers[current_server].name, 6);
-	s[6] = ' ';
-	s[7] = current_module;
-}
+
 
 
 
@@ -304,7 +364,7 @@ void dcs_select_reflector (int go_up)
 			
 			if (current_server >= NUM_SERVERS)
 			{
-				current_server = 0;
+				current_server = 1;
 			}
 		}
 	}
@@ -316,7 +376,7 @@ void dcs_select_reflector (int go_up)
 			current_module = 'Z';
 			current_server --;
 			
-			if (current_server < 0)
+			if (current_server < 1)
 			{
 				current_server = NUM_SERVERS - 1;
 			}
@@ -325,27 +385,6 @@ void dcs_select_reflector (int go_up)
 }
 
 
-/*
-
-static const uint8_t dcs_frame_header[] =
-	{	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xDE, 0x1B, 0xFF, 0x00, 0x00, 0x01,
-		0x08, 0x00,  // IPv4
-		0x45, 0x00, // v4, DSCP
-		0x00, 0x00, // ip length (will be set later)
-		0x01, 0x01, // ID
-		0x40, 0x00,  // DF don't fragment, offset = 0
-		0x40, // TTL
-		0x11, // UDP = 17
-		0x00, 0x00,  // header chksum (will be calculated later)
-		192, 168, 1, 33,  // source
-		192, 168, 1, 255,  // destination
-		0xb0, 0xb0,  // source port
-		0x40, 0x01,  // destination port 16385
-		0x00, 0x00,    //   UDP length (will be set later)
-		0x00, 0x00  // UDP chksum (0 = no checksum)	
-};
-*/
 
 #define DCS_UDP_PORT 30051
 
@@ -355,78 +394,14 @@ static const uint8_t dcs_frame_header[] =
 static eth_txmem_t * dcs_get_packet_mem (int udp_size)
 {
 	return udp4_get_packet_mem( udp_size, dcs_udp_local_port, DCS_UDP_PORT,
-		servers[current_server].ipv4_a );
-	/*
-	eth_txmem_t * packet = eth_txmem_get( UDP_PACKET_SIZE(udp_size) );
+		dcs_server_ipaddr );
 	
-	if (packet == NULL)
-	{
-		vdisp_prints_xy( 40, 56, VDISP_FONT_6x8, 0, "NOMEM" );
-		return NULL;
-	}
-	
-	memset ( packet->data + (8 + 20 + 14), 0, udp_size);
-	
-	memcpy (packet->data, dcs_frame_header, sizeof dcs_frame_header);
-		
-	eth_set_src_mac_and_type( packet->data, 0x0800 );
-	
-	memcpy(packet->data + 26, ipv4_addr, sizeof ipv4_addr); // src IP
-	memcpy(packet->data + 30, servers[current_server].ipv4_a, sizeof ipv4_addr); // dest IP
-	
-	packet->data[34] = dcs_udp_local_port >> 8;   // UDP source port
-	packet->data[35] = dcs_udp_local_port & 0xFF;
-	
-	packet->data[36] = DCS_UDP_PORT >> 8;
-	packet->data[37] = DCS_UDP_PORT & 0xFF;
-	
-	return packet;
-	*/
 }
 
 static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 {
-	udp4_calc_chksum_and_send(packet, servers[current_server].ipv4_a);
+	udp4_calc_chksum_and_send(packet, dcs_server_ipaddr);
 	
-	/*
-	uint8_t * dcs_frame = packet->data;
-	
-	int udp_length = udp_size + 8;  // include UDP header
-	
-	((unsigned short *) (dcs_frame + 14)) [1] = udp_length + 20; // IP len
-	
-	((unsigned short *) (dcs_frame + 14)) [12] = udp_length; // UDP len
-	
-	int sum = 0;
-	int i;
-	
-	for (i=0; i < 10; i++) // 20 Byte Header
-	{
-		if (i != 5)  // das checksum-feld weglassen
-		{
-			sum += ((unsigned short *) (dcs_frame + 14)) [i];
-		}
-	}
-	
-	sum = (~ ((sum & 0xFFFF)+(sum >> 16))) & 0xFFFF;
-	
-	((unsigned short *) (dcs_frame + 14)) [5] = sum; // checksumme setzen
-	
-	
-	ip_addr_t  tmp_addr;
-	
-	
-	if (ipv4_get_neigh_addr(&tmp_addr, servers[current_server].ipv4_a ) != 0)  // get addr of neighbor
-	{
-		// neighbor could not be set
-		eth_txmem_free(packet); // throw away packet
-	}
-	else
-	{
-		ipneigh_send_packet (&tmp_addr, packet);
-	}
-	
-	*/
 		
 }
 

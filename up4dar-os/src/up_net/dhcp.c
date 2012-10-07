@@ -254,7 +254,7 @@ static uint8_t dhcp_request_packet[] =
 		53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 		50, 0x04, 0,0,0,0,  // requested IP address
 		54, 0x04, 0,0,0,0,  // server identifier
-		55, 0x03, 0x01, 0x03, 0x05, // Request Parameter List: netmask, router, DNS
+		55, 0x03, 0x01, 0x03, 0x06, // Request Parameter List: netmask, router, DNS
 		0xFF  // END
 	};
 
@@ -429,7 +429,7 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 					memcpy(ipv4_netmask, p+2, 4);
 				}
 				break;
-			case 5: // DNS
+			case 6: // DNS
 				if (res == RECEIVED_ACK) // assumption: message type comes first!
 				{
 					if (option_len >= 4)

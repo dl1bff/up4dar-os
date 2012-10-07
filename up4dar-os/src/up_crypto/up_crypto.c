@@ -109,6 +109,11 @@ int crypto_get_random_bytes (unsigned char * dest, int num_bytes)
 
 int crypto_get_random_15bit(void)
 {
+	return crypto_get_random_16bit() & 0x7FFF;
+}	
+
+int crypto_get_random_16bit(void)
+{
 	if (random_seed == 0) // at start of program seed is zero
 	{
 		memcpy(&random_seed, (unsigned char *) 0x80800204, sizeof random_seed);
@@ -123,7 +128,7 @@ int crypto_get_random_15bit(void)
 	}
 	
 	random_seed = random_seed * 0x343fd + 0x269EC3; // fast PRNG
-	return (random_seed >> 0x10) & 0x7FFF;
+	return (random_seed >> 0x10) & 0xFFFF;
 }
 
 

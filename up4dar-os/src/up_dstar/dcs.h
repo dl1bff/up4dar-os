@@ -31,8 +31,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-extern int dcs_udp_local_port;
-
 extern uint8_t dcs_ambe_data[9];
 
 void dcs_init(void);

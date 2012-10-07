@@ -38,7 +38,19 @@ extern unsigned char ipv4_gw[4];
 extern unsigned char ipv4_dns_pri[4];
 extern unsigned char ipv4_dns_sec[4];
 
+extern const uint8_t ipv4_zero_addr[4];
+
 #define UDP_PACKET_SIZE(a) (14 + 20 + 8 + (a))
+
+#define NUM_UDP_SOCKETS   4
+
+extern unsigned short udp_socket_ports[NUM_UDP_SOCKETS];
+
+#define UDP_SOCKET_DHCP		0
+#define UDP_SOCKET_SNMP		1
+#define UDP_SOCKET_DNS		2
+#define UDP_SOCKET_DCS		3
+
 
 
 void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header);
@@ -51,7 +63,7 @@ void ipv4_udp_prepare_packet( eth_txmem_t * packet, const uint8_t * dest_ipv4_ad
 eth_txmem_t * udp4_get_packet_mem (int udp_size, int src_port, int dest_port, const uint8_t * ipv4_dest_addr);
 
 void udp4_calc_chksum_and_send (eth_txmem_t * packet, const uint8_t * ipv4_dest_addr);
-
+int udp_get_new_srcport(void);
 
 
 #endif /* IPV4_H_ */

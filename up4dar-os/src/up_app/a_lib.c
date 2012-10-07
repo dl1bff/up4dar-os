@@ -116,7 +116,7 @@ static const app_context_t dstar_app_context = {
 static const app_context_t gps_app_context = {
 	"GPS",
 	{
-		"TEST", "", "", "", ""
+		"", "REBOOT", "", "", ""
 	},
 	NULL,
 	NULL
