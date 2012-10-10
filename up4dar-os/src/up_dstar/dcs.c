@@ -290,7 +290,10 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 	{
 		if (memcmp(data, "0001", 4) == 0)  // first four bytes "0001"
 		{
-			dstarProcessDCSPacket( data );
+			if (data[14] == current_module) // filter out the right channel
+			{
+				dstarProcessDCSPacket( data );
+			}
 		}
 	}
 	else if (data_len == 14) // connect response packet
@@ -406,6 +409,8 @@ static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 }
 
 
+#define DCS_REGISTER_MODULE  'D'
+
 #define DCS_CONNECT_FRAME_SIZE  19
 
 static void dcs_link_to (int module)
@@ -422,7 +427,7 @@ static void dcs_link_to (int module)
 	memcpy (d, settings.s.my_callsign, 7);
 	
 	d[7] = ' ';
-	d[8] = 'B'; // my repeater module B
+	d[8] = DCS_REGISTER_MODULE; // my repeater module
 	d[9] = module; // module to link to
 	d[10] = 0;
 	
@@ -508,7 +513,9 @@ void send_dcs (int session_id, int last_frame)
 	dcs_get_current_reflector_name( buf );
 	
 	memcpy (d + 7, buf, 8);
-	memcpy (d + 15, buf, 8);
+	//memcpy (d + 15, buf, 8);
+	memcpy (d + 15, settings.s.my_callsign, 7);
+	d[22] = DCS_REGISTER_MODULE;
 	memcpy(d + 23, "CQCQCQ  ", 8); 
 	memcpy (d + 31, settings.s.my_callsign, 8);
 	memcpy (d + 39, settings.s.my_ext, 4);
