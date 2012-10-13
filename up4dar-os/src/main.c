@@ -759,7 +759,8 @@ static void vTXTask( void *pvParameters )
 		switch(tx_state)
 		{
 		case 0:  // PTT off
-			if (gpio_get_pin_value(AVR32_PIN_PA28) == 0)  // PTT pressed
+			if ((gpio_get_pin_value(AVR32_PIN_PA28) == 0)  // PTT pressed
+			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
 				tx_state = 1;
 				ambe_start_encode();

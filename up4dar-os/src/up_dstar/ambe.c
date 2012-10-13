@@ -274,7 +274,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	char buf_ready_rx = 1;
 	char buf_ready_tx = 1;
 	
-#define AUDIO_DEBUG 1
+// #define AUDIO_DEBUG 1
 
 #if defined(AUDIO_DEBUG)
 	int audio_debug_sample_counter = 0;

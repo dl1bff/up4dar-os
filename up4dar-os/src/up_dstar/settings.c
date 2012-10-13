@@ -113,6 +113,8 @@ void settings_init(void)
 	{
 		int i;
 		
+		memset (&settings, 0, 504); // fill user page with 0
+		
 		for (i=0; i < NUM_LONG_VALUES; i++)
 		{
 			settings.s.long_values[i] = long_values_limits[i].init_value;
@@ -131,6 +133,9 @@ void settings_init(void)
 		memset(settings.s.rpt1, ' ', CALLSIGN_LENGTH * NUM_RPT_SETTINGS);
 		memset(settings.s.rpt2, ' ', CALLSIGN_LENGTH * NUM_RPT_SETTINGS);
 		memset(settings.s.urcall, ' ', CALLSIGN_LENGTH * NUM_URCALL_SETTINGS);
+		
+		memset(settings.s.dprs_msg, ' ', DPRS_MSG_LENGTH);
+		memset(settings.s.txmsg, ' ', TXMSG_LENGTH);
 		
 		memcpy(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH);
 		memcpy(settings.s.my_ext, "    ", CALLSIGN_EXT_LENGTH);

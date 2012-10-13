@@ -331,8 +331,9 @@ void board_init(void)
 	AVR32_SSC.tfmr = 0x0020008F;		// frame sync = Positive Pulse, frame sync length = 1,
 	                                        // 1 data word per frame, MSB first, 16 bits per data word
 	
-	AVR32_SSC.rcmr = 0x0F010101;           // 32 bits per frame, STTDLY=1,
-					  // start = TX start ,  clock = TX Clock
+	AVR32_SSC.rcmr = 0x0F010121;           // 32 bits per frame, STTDLY=1,
+					  // start = TX start ,  clock = TX Clock, 
+					  // CKI -> sample bit on rising edge of clock
 					  
 	AVR32_SSC.rfmr = 0x0000008F;		// frame sync = Positive Pulse, frame sync length = 1,
 	                                        // 1 data word per frame, MSB first, 16 bits per data word
