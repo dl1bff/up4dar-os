@@ -433,6 +433,12 @@
     <Compile Include="src\up_dstar\settings.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\sw_update.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\sw_update.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\txtest.c">
       <SubType>compile</SubType>
     </Compile>

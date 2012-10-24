@@ -17,32 +17,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+
 /*
- * software_version.h
+ * sw_update.h
  *
- * Created: 25.08.2012 18:50:52
+ * Created: 24.10.2012 18:13:11
  *  Author: mdirska
  */ 
 
 
-#ifndef SOFTWARE_VERSION_H_
-#define SOFTWARE_VERSION_H_
+#ifndef SW_UPDATE_H_
+#define SW_UPDATE_H_
 
-#define SOFTWARE_IMAGE_PHY			1
-#define SOFTWARE_IMAGE_UPDATER		2
-#define SOFTWARE_IMAGE_SYSTEM		3
-
-#define SOFTWARE_MATURITY_NORMAL		0x00
-#define SOFTWARE_MATURITY_BETA			0x80
-#define SOFTWARE_MATURITY_EXPERIMENTAL	0x40
+int sw_update_pending(void);
+void sw_update_init(xQueueHandle dq );
 
 
-// #define SWVER_BYTE0		(SOFTWARE_IMAGE_SYSTEM | SOFTWARE_MATURITY_EXPERIMENTAL)
-#define SWVER_BYTE0		(SOFTWARE_IMAGE_SYSTEM | SOFTWARE_MATURITY_NORMAL)
-#define SWVER_BYTE1		1
-#define SWVER_BYTE2		1
-#define SWVER_BYTE3		10
-
-
-
-#endif /* SOFTWARE_VERSION_H_ */
+#endif /* SW_UPDATE_H_ */

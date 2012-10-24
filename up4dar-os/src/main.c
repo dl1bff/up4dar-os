@@ -76,6 +76,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #include "software_version.h"
+#include "up_dstar/sw_update.h"
 
 extern unsigned char software_version[];
 
@@ -863,8 +864,6 @@ int main (void)
 	
 	settings_init();
 	
-	eth_init();
-	
 	vdisp_init();
 	
 	int main_screen = vd_new_screen();
@@ -890,24 +889,12 @@ int main (void)
 	
 	vdisp_clear_rect(0,0, 128, 64);
 	
-	ipv4_init(); // includes ipneigh_init()
-	dhcp_init();
+	
 	
 	lcd_init();
 		
 	xComPortHandle phyComPort = xSerialPortInitMinimal( 1, 115200, 20 );
 	xComPortHandle externalComPort = xSerialPortInitMinimal( 0, 4800, 20 );
-
-	
-	xTaskCreate( vServiceTask, (signed char *) "srv", configMINIMAL_STACK_SIZE, ( void * ) 0, 
-			standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
-			
-	xTaskCreate( vButtonTask, (signed char *) "button", configMINIMAL_STACK_SIZE, ( void * ) 0, 
-			standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
-	
-	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0,
-			standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
-	
 	
 	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");
 	vdisp_prints_xy(0, 18, VDISP_FONT_8x12, 0, " Platform");
@@ -916,14 +903,35 @@ int main (void)
 	
 	dstarQueue = xQueueCreate( 10, sizeof (struct dstarPacket) );
 
+	phyCommInit( dstarQueue, phyComPort );
+	
+	if (sw_update_pending() != 0)
+	{
+		sw_update_init( dstarQueue);
+		vTaskStartScheduler();
+		return 0;
+	}
+	
+	
+	eth_init();
+	
+	ipv4_init(); // includes ipneigh_init()
+	dhcp_init();
+	
+	
+	xTaskCreate( vServiceTask, (signed char *) "srv", configMINIMAL_STACK_SIZE, ( void * ) 0,
+		standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	
+	xTaskCreate( vButtonTask, (signed char *) "button", configMINIMAL_STACK_SIZE, ( void * ) 0,
+		standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	
+	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0,
+		standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
+	
 	dstarInit( dstarQueue );
 	
 	
-	
-	
-	phyCommInit( dstarQueue, phyComPort );
-	
-	txtest_init();
+	// txtest_init();
 	
 	dcs_init();
 	
