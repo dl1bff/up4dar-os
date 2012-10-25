@@ -293,6 +293,8 @@ static const struct snmp_table_struct {
 	{ "14142",	BER_INTEGER,		snmp_return_integer,		0		, 200},
 	{ "14143",	BER_INTEGER,		snmp_return_integer,		0		, 439462500},
 		
+	{ "150",  BER_OCTETSTRING, snmp_get_sw_update, snmp_set_sw_update, 0 },
+		
 	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
 	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
 	/*

@@ -58,4 +58,7 @@ SNMP_SET_FUNC ( snmp_set_setting_short )
 SNMP_GET_FUNC ( snmp_get_setting_char )
 SNMP_SET_FUNC ( snmp_set_setting_char )
 
+SNMP_GET_FUNC ( snmp_get_sw_update )
+SNMP_SET_FUNC ( snmp_set_sw_update )
+
 #endif /* SNMP_DATA_H_ */
