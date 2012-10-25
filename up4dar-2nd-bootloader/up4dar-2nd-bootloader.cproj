@@ -224,8 +224,8 @@
     <GenerateListFile>True</GenerateListFile>
     <GenerateEepFile>True</GenerateEepFile>
     <PostBuildEvent>"$(ToolchainDir)\avr32-objcopy" -O binary -R .eeprom -R .fuse -R .lock -R .signature "$(OutputDirectory)\$(OutputFileName)$(OutputFileExtension)" "$(OutputDirectory)\$(OutputFileName).bin1"
-"$(ToolchainDir)\dd" if="$(OutputDirectory)\$(OutputFileName).bin1" of="$(OutputDirectory)\$(OutputFileName).bin2" bs=512 skip=16 cbs=512 conv=sync
-"$(ToolchainDir)\sha1sum" "$(OutputDirectory)\$(OutputFileName).bin2" | "$(ToolchainDir)\dd" of="$(OutputDirectory)\$(OutputFileName).sha1sum" bs=512 cbs=512 conv=sync
+"$(ToolchainDir)\dd" status=noxfer if="$(OutputDirectory)\$(OutputFileName).bin1" of="$(OutputDirectory)\$(OutputFileName).bin2" bs=512 skip=16 cbs=512 conv=sync
+"$(ToolchainDir)\sha1sum" "$(OutputDirectory)\$(OutputFileName).bin2" | "$(ToolchainDir)\dd" status=noxfer of="$(OutputDirectory)\$(OutputFileName).sha1sum" bs=512 cbs=512 conv=sync
 "$(ToolchainDir)\cat" "$(OutputDirectory)\$(OutputFileName).bin2" "$(OutputDirectory)\$(OutputFileName).sha1sum" &gt; "$(OutputDirectory)\$(OutputFileName).bin"
 </PostBuildEvent>
   </PropertyGroup>
