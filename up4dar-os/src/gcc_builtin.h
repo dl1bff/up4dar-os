@@ -16,4 +16,7 @@ extern void * memset(void *, int, size_t );
 
 extern void * strncpy(char *, const char *, size_t );
 
+extern int strlen ( const char * );
+extern const char * strstr (const char *, const char * );
+
 #endif /* GCC_BUILTIN_H_ */

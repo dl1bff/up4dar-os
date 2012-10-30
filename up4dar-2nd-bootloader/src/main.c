@@ -576,7 +576,7 @@ int main (void)
 	
 	if (do_system_update != 0)
 	{	
-		disp_prints_xy(0, 0, 48, DISP_FONT_6x8, 0, "New System Image:");
+		// disp_prints_xy(0, 0, 48, DISP_FONT_6x8, 0, "New System Image:");
 	
 		SHA1Reset(&ctx1);
 		SHA1Input(&ctx1, STAGING_AREA_ADDRESS, num_update_blocks * FLASH_BLOCK_SIZE);

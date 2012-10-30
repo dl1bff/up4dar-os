@@ -925,7 +925,7 @@ int main (void)
 	xTaskCreate( vButtonTask, (signed char *) "button", configMINIMAL_STACK_SIZE, ( void * ) 0,
 		standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
-	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 300, ( void * ) 0,
+	xTaskCreate( vRXTXEthTask, (signed char *) "rxtxeth", 600, ( void * ) 0,
 		standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 	
 	dstarInit( dstarQueue );
