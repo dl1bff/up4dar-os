@@ -50,6 +50,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto.h"
 #include "up_net/dns.h"
 
+#include "up_app/a_lib_internal.h"
+
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
@@ -138,6 +140,14 @@ void dcs_service (void)
 		dcs_timeout_timer --;	
 	}
 	
+	if (dcs_mode != 0)
+	{
+		char buf[2];
+		vdisp_i2s(buf, 1, 10, 0, dcs_state);
+		vdisp_prints_xy( 122, 34, VDISP_FONT_6x8, 0, buf);
+	}
+	
+	
 	switch (dcs_state)
 	{
 		case DCS_CONNECTED:
@@ -200,6 +210,7 @@ void dcs_service (void)
 				else
 				{
 					dcs_state = DCS_DISCONNECTED; // problem within resolver
+					dns_release_lock();
 				}
 			}			
 			else if (dcs_timeout_timer == 0)
@@ -212,6 +223,7 @@ void dcs_service (void)
 				if (dcs_retry_counter == 0)
 				{
 					dcs_state = DCS_DISCONNECTED;
+					dns_release_lock();
 				}
 				else
 				{
@@ -306,6 +318,10 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 				dcs_state = DCS_CONNECTED;
 				dcs_timeout_timer = DCS_KEEPALIVE_TIMEOUT;
 			}
+			/* else
+			{
+				vdisp_prints_xy( 110, 33, VDISP_FONT_4x6, 0, "X");
+			} */
 		}
 		else if (dcs_state == DCS_DISCONNECT_REQ_SENT)
 		{
