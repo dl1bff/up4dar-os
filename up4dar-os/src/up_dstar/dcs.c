@@ -140,13 +140,14 @@ void dcs_service (void)
 		dcs_timeout_timer --;	
 	}
 	
+	/*
 	if (dcs_mode != 0)
 	{
 		char buf[2];
 		vdisp_i2s(buf, 1, 10, 0, dcs_state);
 		vdisp_prints_xy( 122, 34, VDISP_FONT_6x8, 0, buf);
 	}
-	
+	*/
 	
 	switch (dcs_state)
 	{
