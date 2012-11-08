@@ -222,7 +222,7 @@ static int dns_send_req(int req_type)
 	d[1] = dns_req_id & 0xFF;
 	
 	d[2] = 0x01;  // request, recursion desired
-	d[3] = 0x10;  // non-auth data acceptable
+	d[3] = 0x00;  // Z = 0
 	
 	d[4] = 0; d[5] = 1; // one question
 	d[6] = 0; d[7] = 0; // no answer RR
