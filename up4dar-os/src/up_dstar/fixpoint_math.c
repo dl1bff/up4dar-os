@@ -1,6 +1,7 @@
 /*
 
 Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2012   Denis Bederov, DL3OCK (denis.bederov@gmx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -94,6 +95,8 @@ int fixpoint_cos (int degree)
 }
 
 
+/*  Code von DL1BFF:
+
 static const uint8_t cB_tab[100] = {
 
    0,   0,  30,  47,  60,  69,  77,  84,  90,  95,
@@ -121,6 +124,95 @@ int fixpoint_centiBel (uint32_t value)
     }
 
     return centiBel + cB_tab[v];
+}
+
+*/
+
+
+// Code von DL3OCK:
+
+static const int log_Tabelle[9] = {50504453, 6944540, 725006, 72826, 7286, 729, 73, 7, 1};
+
+
+	
+int fixpoint_milliBel (int x)
+{
+	// Das ist die maximal moegliche Quadratsumme eines
+	// 160 Abtaswerte langen Blocks
+	// int Quadratsumme = (((1<<15)*(1<<15))>>7)*160;
+	// printf("Quadratsumme=%d\r\n", Quadratsumme);
+	
+	// Eingangswert der Berechnung
+	// int x = Quadratsumme>>3;		//<<== Hier kann man ein wenig mit dem Algorithmus spielen.
+	
+	int x0 = 1;
+	// =======================================================================================
+	// 1st Iteration order
+	unsigned short log_Tabelle_0 = 0;
+	int            x0_next       = x0*2;
+	while (x0_next<=x && x0_next>x0){
+		x0             = x0_next;
+		x0_next        = x0*2;
+		log_Tabelle_0 += 1;
+	}
+	// Debug-Ausgabe des Zwischenergebnisses
+	//printf("log_Tabelle_0=%d\r\n", log_Tabelle_0);
+	
+	// =======================================================================================
+	// 2nd Iteration order
+	unsigned short log_Tabelle_1 = 0;
+	if (x0>(1<<16))	x0_next = (x0>>14)*18022; else x0_next = (x0*18022)>>14;
+	while (x0_next<=x && x0_next>x0){
+		x0 = x0_next;
+		if (x0>(1<<16))	x0_next = (x0>>14)*18022; else x0_next = (x0*18022)>>14;
+		log_Tabelle_1 += 1;
+		//printf("%d  ", x0_next);
+	}
+	// Debug-Ausgabe des Zwischenergebnisses
+	//printf("log_Tabelle_1=%d\r\n", log_Tabelle_1);
+	
+	// =======================================================================================
+	// 3rd Iteration order
+	unsigned short log_Tabelle_2 = 0;
+	if (x0>(1<<16))	x0_next = (x0>>14)*16548; else x0_next = (x0*16548)>>14;
+	while (x0_next<=x && x0_next>x0){
+		x0 = x0_next;
+		if (x0>(1<<16))	x0_next = (x0>>14)*16548; else x0_next = (x0*16548)>>14;
+		log_Tabelle_2 += 1;
+	}
+	// Debug-Ausgabe des Zwischenergebnisses
+	//printf("log_Tabelle_2=%d\r\n", log_Tabelle_2);
+	
+	// =======================================================================================
+	// 4th Iteration order
+	unsigned short log_Tabelle_3 = 0;
+	
+	if (x0>(1<<16))	x0_next = (x0>>14)*16400; else x0_next = (x0*16400)>>14;
+	while (x0_next<=x && x0_next>x0){
+		x0 = x0_next;
+		if (x0>(1<<16))	x0_next = (x0>>14)*16400; else x0_next = (x0*16400)>>14;
+		log_Tabelle_3 += 1;
+	}
+	// Debug-Ausgabe des Zwischenergebnisses
+	//printf("log_Tabelle_3=%d\r\n", log_Tabelle_3);
+	
+	// =======================================================================================
+
+	int Pegel_mB = -1531392380 +
+					log_Tabelle_0*log_Tabelle[0] +
+					log_Tabelle_1*log_Tabelle[1] +
+					log_Tabelle_2*log_Tabelle[2] +
+					log_Tabelle_3*log_Tabelle[3];
+	
+	Pegel_mB >>= 17;
+	Pegel_mB  *= 100;
+	Pegel_mB >>= 7;
+
+	//printf("\r\nPegel_dB    =%.2f\r\n", 1.0*Pegel_mB/100);
+	//printf("Pegel exakt =%.2f\r\n", 10*log10(1.0*x/(160*8388608)));
+	
+	
+	return Pegel_mB;
 }
 
 

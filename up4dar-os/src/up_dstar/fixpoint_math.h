@@ -28,6 +28,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 int fixpoint_sin (int degree);
 int fixpoint_cos (int degree);
-int fixpoint_centiBel (uint32_t value);
+// int fixpoint_centiBel (uint32_t value);
+
+int fixpoint_milliBel (int x);
+
 
 #endif /* FIXPOINT_MATH_H_ */

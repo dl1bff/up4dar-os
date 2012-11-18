@@ -133,8 +133,8 @@ static int chip_init(void)
 	
 	if (send_wm8510(  32, 0x138) != 0) goto error;  // enable ALC
 	
-	spkr_volume = SETTING_CHAR(C_SPKR_VOLUME)
-	if (send_wm8510(  54, (spkr_volume + 57) & 0x3F ) != 0 ) goto error; // speaker volume
+	wm8510_set_spkr_volume (SETTING_CHAR(C_SPKR_VOLUME));
+	// if (send_wm8510(  54, (spkr_volume + 57) & 0x3F ) != 0 ) goto error; // speaker volume
 	
 	return 0;
 	

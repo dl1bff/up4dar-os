@@ -33,4 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void wm8510Init( audio_q_t * tx, audio_q_t * rx );
 void wm8510_beep(int duration_ms, int frequency_hz, int volume_percent);
+int wm8510_get_spkr_volume (void);
+void wm8510_set_spkr_volume (int vol);
+
 #endif /* WM8510_H_ */
