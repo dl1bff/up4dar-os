@@ -108,7 +108,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DPRS_SYMBOL				9
 #define C_DISP_CONTRAST				10
 #define C_DISP_BACKLIGHT			11
-
+#define C_SPKR_VOLUME				12
 
 #define SETTING_LONG(a) (settings.s.long_values[a])
 #define SETTING_SHORT(a) (settings.s.short_values[a])

@@ -86,8 +86,9 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DISP_CONTRAST				10
 	{  0,		 100,			50  },
 	// #define C_DISP_BACKLIGHT				11
-	{  0,		 100,			50  }
-
+	{  0,		 100,			50  },
+	// #define C_SPKR_VOLUME				12
+	{  -57,		 6,			0  }
 };
 
 

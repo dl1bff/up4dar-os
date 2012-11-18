@@ -38,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/audio_q.h"
 
 #include "up_dstar/fixpoint_math.h"
+#include "up_dstar/settings.h"
 
 
 
@@ -59,6 +60,22 @@ static int send_wm8510 (int reg, int value)
 	return 0;
 }
 
+
+static char spkr_volume = 0;
+
+int wm8510_get_spkr_volume (void)
+{
+	return spkr_volume;
+}
+
+void wm8510_set_spkr_volume (int vol)
+{
+	if ((vol >= -57) && (vol <= 6))
+	{
+		spkr_volume = vol;
+		send_wm8510(  54, (spkr_volume + 57) & 0x3F );
+	}
+}
 
 static int beep_counter = 0;
 static int beep_phase = 0;
@@ -116,6 +133,8 @@ static int chip_init(void)
 	
 	if (send_wm8510(  32, 0x138) != 0) goto error;  // enable ALC
 	
+	spkr_volume = SETTING_CHAR(C_SPKR_VOLUME)
+	if (send_wm8510(  54, (spkr_volume + 57) & 0x3F ) != 0 ) goto error; // speaker volume
 	
 	return 0;
 	
