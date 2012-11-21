@@ -283,9 +283,12 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	
 	int audio_debug_square_sum = 0;
 	
-	int audio_debug_max_value = 0;
+	char audio_debug_max_value = 0;
+	char audio_debug_hold_timer = 0;
 #endif
 
+	char audio_clip = 0;
+	
 
 	for( ;; )
 	{
@@ -365,6 +368,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 				short sample = encbuf[ (i >> 2) ];
 				
 #if defined(AUDIO_DEBUG)
+			/*
 				int abs_value = (sample < 0) ? (- sample) : sample;
 				
 				if (abs_value > audio_debug_max_value)
@@ -372,6 +376,8 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 					audio_debug_max_value = abs_value;
 				}
 				
+				*/
+			
 				audio_debug_square_sum += (sample*sample) >> 7;
 				
 				audio_debug_sample_counter++;
@@ -380,7 +386,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 				{
 					audio_debug_sample_counter = 0;
 					
-					char buf[5];
+					//char buf[5];
 					
 					unsigned int v = (unsigned int) (-1 * fixpoint_milliBel( audio_debug_square_sum));
 					
@@ -391,27 +397,72 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 					
 					v /= 100;
 					
-					for (i=0; i < 100; i++)
+					if (v < audio_debug_max_value)
 					{
-						vdisp_set_pixel(100-i, 34, 0, (i > v) ? 1 : 0, 1);
+						
+						audio_debug_max_value = v;
+						audio_debug_hold_timer = 50;
 					}
 					
-					audio_debug_max_value = 0;
+					char buf[4];
+					vdisp_i2s(buf+1, 2, 10, 1, audio_debug_max_value);
+					buf[0] = '-';
+					vdisp_prints_xy(64, 27, VDISP_FONT_4x6, audio_clip, buf);
+					
+					for (i=0; i < 100; i++)
+					{
+						int pixel = (i > v) ? 1 : 0;
+						
+						if (i == audio_debug_max_value)
+						{
+							pixel = 1;
+						}
+						
+						vdisp_set_pixel(100-i, 34, 0, pixel, 1);
+					}
+					
+					if (audio_debug_hold_timer > 0)
+					{
+						audio_debug_hold_timer --;
+					}
+					
+					if (audio_debug_hold_timer == 0)
+					{
+						audio_debug_max_value = 99;
+						audio_clip = 0;
+					}
+					
 					audio_debug_square_sum = 0;
 				}
 #endif
 
-				
+				/*
 				if (sample > 3276)
 				{
 					sample = 3276;
+					audio_clip = 1;
 				}
 				else if (sample < -3276)
 				{
 					sample = -3276;
+					audio_clip = 1;
 				}
 				
 				b[i] = AMBE_CS_CODEC | ((unsigned short ) (sample * 10)); // x10 = 20dB Gain
+				*/
+				
+				if (sample > 8191)
+				{
+					sample = 8191;
+					audio_clip = 1;
+				}
+				else if (sample < -8191)
+				{
+					sample = -8191;
+					audio_clip = 1;
+				}
+				
+				b[i] = AMBE_CS_CODEC | ((unsigned short ) (sample * 4)); // x4 = 12dB Gain
 			}				
 			
 			switch (chan_tx_state)
