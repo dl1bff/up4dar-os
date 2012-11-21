@@ -93,6 +93,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define S_PHY_MATFST				5
 #define S_PHY_LENGTHOFVW			6
 #define S_PHY_RXDEVFACTOR			7
+#define S_RPTR_BEEP_FREQUENCY		8
+#define S_RPTR_BEEP_DURATION		9
 
 
 // CHAR values
@@ -109,6 +111,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DISP_CONTRAST				10
 #define C_DISP_BACKLIGHT			11
 #define C_SPKR_VOLUME				12
+#define C_RPTR_BEEP_VOLUME			13
+
 
 #define SETTING_LONG(a) (settings.s.long_values[a])
 #define SETTING_SHORT(a) (settings.s.short_values[a])

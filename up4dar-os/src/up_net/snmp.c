@@ -326,6 +326,12 @@ static const struct snmp_table_struct {
 	{ "650",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_PTT_BEEP_FREQUENCY},
 	{ "660",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_PTT_BEEP_VOLUME},
 	
+	{ "670",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_RPTR_BEEP_DURATION},
+	{ "680",BER_INTEGER,snmp_get_setting_short,snmp_set_setting_short, S_RPTR_BEEP_FREQUENCY},
+	{ "690",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_RPTR_BEEP_VOLUME},
+		
+	{ "6A0",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_SPKR_VOLUME},
+		
 	// dv
 	
 	{ "710",BER_INTEGER,snmp_get_setting_char, snmp_set_setting_char,  C_DV_USE_RPTR_SETTING},

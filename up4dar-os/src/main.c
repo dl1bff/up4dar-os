@@ -704,6 +704,10 @@ static void vServiceTask( void *pvParameters )
 		}
 		
 		
+		if (wm8510_get_spkr_volume() != SETTING_CHAR(C_SPKR_VOLUME))
+		{
+			wm8510_set_spkr_volume (SETTING_CHAR(C_SPKR_VOLUME));
+		}
 		
 		if (last_backlight != SETTING_CHAR(C_DISP_BACKLIGHT))
 		{

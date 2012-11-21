@@ -37,6 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar\vdisp.h"
 #include "up_io\lcd.h"
 #include "up_dstar\dcs.h"
+#include "up_io\wm8510.h"
 
 #define MAX_APP_NAME_LENGTH  8
 #define MAX_BUTTON_TEXT_LENGTH 8
@@ -107,7 +108,7 @@ static int help_layer = 0;
 static const app_context_t dstar_app_context = {
 	"DSTAR",
 	{
-		 "", "CONNECT", "MODE", "DCS +", "DCS -"
+		 "", "CONNECT", "MODE", "+", "-"
 	},
 	NULL,
 	NULL
@@ -154,7 +155,7 @@ static void set_help_text (void)
 	vd_clear_rect(help_layer, 91, 14, 32, 6); // button UP
 	vd_prints_xy(help_layer, 91, 14, VDISP_FONT_4x6, 0, a->button_text[3]);
 	
-	vd_clear_rect(help_layer, 91, 38, 32, 6); // button UP
+	vd_clear_rect(help_layer, 91, 38, 32, 6); // button DOWN
 	vd_prints_xy(help_layer, 91, 38, VDISP_FONT_4x6, 0, a->button_text[4]);
 }
 
@@ -202,6 +203,17 @@ void a_app_manager_service(void)
 	}
 }
 
+
+static void set_speaker_volume (int up)
+{
+	int new_volume = SETTING_CHAR(C_SPKR_VOLUME) + ( up ? 1 : -1 );
+	
+	if ((new_volume <= 6) && (new_volume >= -57))
+	{
+		SETTING_CHAR(C_SPKR_VOLUME) = new_volume;
+	}
+}
+
 int dcs_mode = 0;
 
 void a_dispatch_key_event( int key_num, int key_event )
@@ -240,14 +252,28 @@ void a_dispatch_key_event( int key_num, int key_event )
 						case A_KEY_BUTTON_UP: // DCS +
 							if (dcs_mode != 0)
 							{
-								dcs_select_reflector(1);
+								if (dcs_is_connected())
+								{
+									set_speaker_volume(1);
+								}
+								else
+								{
+									dcs_select_reflector(1);
+								}									
 							}								
 							break;
 							
 						case A_KEY_BUTTON_DOWN: // DCS -
 							if (dcs_mode != 0)
 							{
-								dcs_select_reflector(0);
+								if (dcs_is_connected())
+								{
+									set_speaker_volume(0);
+								}
+								else
+								{
+									dcs_select_reflector(0);
+								}
 							}								
 							break;	
 							
@@ -260,15 +286,37 @@ void a_dispatch_key_event( int key_num, int key_event )
 						case A_KEY_BUTTON_UP: // DCS +
 						if (dcs_mode != 0)
 						{
-							dcs_select_reflector(1);
+							if (dcs_is_connected())
+							{
+								set_speaker_volume(1);
+							}
+							else
+							{
+								dcs_select_reflector(1);
+							}
+						}
+						else
+						{
+							set_speaker_volume(1);
 						}							
 						break;
 						
 						case A_KEY_BUTTON_DOWN: // DCS -
 						if (dcs_mode != 0)
 						{
-							dcs_select_reflector(0);
-						}							
+							if (dcs_is_connected())
+							{
+								set_speaker_volume(0);
+							}
+							else
+							{
+								dcs_select_reflector(0);
+							}
+						}
+						else
+						{
+							set_speaker_volume(0);
+						}						
 						break;
 						
 					}

@@ -59,7 +59,11 @@ const limits_t short_values_limits[NUM_SHORT_VALUES] = {
 	// #define S_PHY_LENGTHOFVW				6
 	{  0,		255,		1  },
 	// #define S_PHY_RXDEVFACTOR			7
-	{  0,		2000,		45  }
+	{  0,		2000,		45  },
+	// #define S_RPTR_BEEP_FREQUENCY		8
+	{  200,		3000,		400  },
+	// #define S_RPTR_BEEP_DURATION			9
+	{  20,		500,		100  }
 };
 
 const limits_t char_values_limits[NUM_CHAR_VALUES] = {
@@ -88,7 +92,9 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DISP_BACKLIGHT				11
 	{  0,		 100,			50  },
 	// #define C_SPKR_VOLUME				12
-	{  -57,		 6,			0  }
+	{  -57,		 6,			0  },
+	// #define C_STANDBY_BEEP_VOLUME		13
+	{  0,		100,		10  }
 };
 
 
