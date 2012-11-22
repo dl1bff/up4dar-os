@@ -423,17 +423,17 @@ static void idle_proc(void)
 	{
 		if (serial_getc(0, buf) == 1)
 		{
-			timeout_counter = (link_to_phy_mode == 1) ? COMMAND_TIMEOUT_PHY : COMMAND_TIMEOUT;
-			
 			if (link_to_phy_mode == 1)
 			{
 				serial_putc(1, buf[0]);
+				timeout_counter = COMMAND_TIMEOUT_PHY;
 			}
 			else
 			{
 				if (do_system_update == 0)
 				{
 					input_rx_byte(buf[0]);
+					timeout_counter = COMMAND_TIMEOUT;
 				}
 			}
 		}

@@ -41,7 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // #define SWVER_BYTE0		(SOFTWARE_IMAGE_UPDATER | SOFTWARE_MATURITY_EXPERIMENTAL)
 #define SWVER_BYTE1		1
 #define SWVER_BYTE2		0
-#define SWVER_BYTE3		6
+#define SWVER_BYTE3		7
 
 
 #endif /* SOFTWARE_VERSION_H_ */
