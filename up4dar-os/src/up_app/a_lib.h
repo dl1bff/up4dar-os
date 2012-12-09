@@ -42,10 +42,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 void a_set_app_name ( void * app_context, const char * app_name);
-void a_set_key_event_handler ( void * app_context, void (*key_event_handler) (void * a, int key_num, int key_event));
+void a_set_key_event_handler ( void * app_context, int (*key_event_handler) (void * a, int key_num, int key_event));
 void a_set_private_data ( void * app_context, void * priv );
 void * a_get_private_data ( void * app_context );
 void * a_malloc ( void * app_context, int num_bytes );
-
+void a_set_button_text ( void * app_context, const char * button1, const char * button2, const char * button3);
+extern char software_ptt;
 
 #endif /* A_LIB_H_ */

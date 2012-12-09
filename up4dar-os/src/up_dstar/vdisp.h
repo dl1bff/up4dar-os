@@ -65,4 +65,10 @@ extern struct vdisp_font vdisp_fonts[];
 #define VDISP_FONT_6x8		(vdisp_fonts + 2)
 #define VDISP_FONT_8x12		(vdisp_fonts + 3)
 
+#define VDISP_MAIN_LAYER 0
+#define VDISP_GPS_LAYER 1
+#define VDISP_REF_LAYER 2
+#define VDISP_DEBUG_LAYER 3
+#define VDISP_SAVE_LAYER 4
+
 #endif /* VDISP_H_ */

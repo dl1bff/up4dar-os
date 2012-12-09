@@ -310,7 +310,7 @@ static void dstarStateChange(unsigned char n)
 			sdHeaderPos = 0;
 			
 			// vdisp_save_buf();
-			vd_copy_screen(2, 0, 36, 64);
+			vd_copy_screen(VDISP_SAVE_LAYER, VDISP_MAIN_LAYER, 36, 64);
 			
 			vdisp_clear_rect (0, 0, 128, 64);
 			vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 1, "  0s" );
@@ -349,7 +349,7 @@ static void dstarStateChange(unsigned char n)
 			{
 				// vdisp_load_buf();
 				
-				vd_copy_screen(0, 2, 36, 64);
+				vd_copy_screen(VDISP_MAIN_LAYER, VDISP_SAVE_LAYER, 36, 64);
 			}
 
 			

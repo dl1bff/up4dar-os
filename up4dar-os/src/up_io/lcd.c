@@ -126,7 +126,7 @@ void lcd_show_layer (int layer)
 	}
 }
 
-static const uint8_t help_lines[4] = { 1, 2, 4, 5 };
+// static const uint8_t help_lines[2] = { 1, 2 };
 
 void lcd_show_help_layer(int help_layer)
 {
@@ -137,7 +137,7 @@ void lcd_show_help_layer(int help_layer)
 	}
 	
 	int i;
-	int j;
+	/* int j;
 	
 	for (j=0; j < ((sizeof help_lines) / (sizeof help_lines[0])); j++)
 	{		
@@ -145,14 +145,14 @@ void lcd_show_help_layer(int help_layer)
 		{
 			display_layer[i] = help_layer;
 		}
-	}
+	} */
 	
 	for (i=0; i < 6; i++)
 	{
 		display_layer[i] = help_layer;
 	}	
 	
-	for (i=7*16; i < 126; i++)
+	for (i=7*16; i < 128; i++)
 	{
 		display_layer[i] = help_layer;
 	}

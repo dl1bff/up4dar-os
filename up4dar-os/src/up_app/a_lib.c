@@ -39,15 +39,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar\dcs.h"
 #include "up_io\wm8510.h"
 
+
+char software_ptt = 0;
+
 #define MAX_APP_NAME_LENGTH  8
 #define MAX_BUTTON_TEXT_LENGTH 8
 
 typedef struct a_app_context {
 	char name[MAX_APP_NAME_LENGTH + 1]; // app name
 	
-	char button_text[5][MAX_BUTTON_TEXT_LENGTH + 1];
+	char button_text[3][MAX_BUTTON_TEXT_LENGTH + 1];
 	
-	void (*key_event_handler) (void * a, int key_num, int key_event);  // function to be called on key events
+	int (*key_event_handler) (void * a, int key_num, int key_event);  // function to be called on key events
 	
 	void * private_data; // the app can use this to store internal private data
 	
@@ -65,9 +68,22 @@ void a_set_app_name ( void * app_context, const char * app_name)
 	a->name[MAX_APP_NAME_LENGTH] = 0;
 }
 
+void a_set_button_text ( void * app_context, const char * button1,
+    const char * button2, const char * button3)
+{
+	app_context_t * a = (app_context_t *) app_context;
+	
+	strncpy(a->button_text[0], button1, MAX_BUTTON_TEXT_LENGTH);
+	strncpy(a->button_text[1], button2, MAX_BUTTON_TEXT_LENGTH);
+	strncpy(a->button_text[2], button3, MAX_BUTTON_TEXT_LENGTH);
+	
+	a->button_text[0][MAX_BUTTON_TEXT_LENGTH] = 0;
+	a->button_text[1][MAX_BUTTON_TEXT_LENGTH] = 0;
+	a->button_text[2][MAX_BUTTON_TEXT_LENGTH] = 0;
+}
 
 void a_set_key_event_handler ( void * app_context, 
-	void (*key_event_handler) (void * a, int key_num, int key_event))
+	int (*key_event_handler) (void * a, int key_num, int key_event))
 {
 	app_context_t * a = (app_context_t *) app_context;
 	
@@ -98,9 +114,9 @@ void * a_malloc ( void * app_context, int num_bytes )
 
 
 static int active_app = 0;
-static int num_apps = 2;
+static int num_apps = 4;
 static int help_layer_timer = 0;
-static int help_layer = 0;
+static int help_layer;
 
 // static int app_manager_key_state = 0;
 
@@ -108,7 +124,7 @@ static int help_layer = 0;
 static const app_context_t dstar_app_context = {
 	"DSTAR",
 	{
-		 "", "CONNECT", "MODE", "+", "-"
+		 "PTT", "CONNECT", "MODE"
 	},
 	NULL,
 	NULL
@@ -117,24 +133,49 @@ static const app_context_t dstar_app_context = {
 static const app_context_t gps_app_context = {
 	"GPS",
 	{
-		"", "REBOOT", "", "", ""
+		"", "", ""
 	},
 	NULL,
 	NULL
 };
 
+static const app_context_t ref_app_context = {
+	"INTERNET",
+	{
+		"CONNECT", "DISC", "SELECT"
+	},
+	NULL,
+	NULL
+};
+
+static const app_context_t debug_app_context = {
+	"DEBUG",
+	{
+		"", "REBOOT", ""
+	},
+	NULL,
+	NULL
+};
 
 static void set_help_text (void)
 {
 	const app_context_t * a = NULL;
 	
-	if (active_app == 0)
+	if (active_app == VDISP_MAIN_LAYER)
 	{
 		a = &dstar_app_context;
 	}
-	else if (active_app == 1)
+	else if (active_app == VDISP_GPS_LAYER)
 	{
 		a = &gps_app_context;
+	}
+	else if (active_app == VDISP_REF_LAYER)
+	{
+		a = &ref_app_context;
+	}
+	else if (active_app == VDISP_DEBUG_LAYER)
+	{
+		a = &debug_app_context;
 	}
 	
 	if (!a)
@@ -152,11 +193,13 @@ static void set_help_text (void)
 	vd_clear_rect(help_layer, 76, 58, 32, 6); // button 3
 	vd_prints_xy(help_layer, 76, 58, VDISP_FONT_4x6, 0, a->button_text[2]);
 	
+	/*
 	vd_clear_rect(help_layer, 91, 14, 32, 6); // button UP
 	vd_prints_xy(help_layer, 91, 14, VDISP_FONT_4x6, 0, a->button_text[3]);
 	
 	vd_clear_rect(help_layer, 91, 38, 32, 6); // button DOWN
 	vd_prints_xy(help_layer, 91, 38, VDISP_FONT_4x6, 0, a->button_text[4]);
+	*/
 }
 
 
@@ -171,6 +214,7 @@ static void app_manager_select_next(void)
 	
 	set_help_text();
 	
+	/*
 	switch (active_app)
 	{
 		case 0:  // DSTAR
@@ -184,6 +228,10 @@ static void app_manager_select_next(void)
 			break;
 			
 	}
+	*/
+	
+	lcd_show_layer(active_app);
+	
 	
 }
 
@@ -201,6 +249,8 @@ void a_app_manager_service(void)
 			lcd_show_help_layer(0); // turn off help
 		}
 	}
+	
+	
 }
 
 
@@ -211,6 +261,24 @@ static void set_speaker_volume (int up)
 	if ((new_volume <= 6) && (new_volume >= -57))
 	{
 		SETTING_CHAR(C_SPKR_VOLUME) = new_volume;
+		
+		char buf[4];
+		
+		if (new_volume < 0)
+		{
+			new_volume = -new_volume;
+			buf[0] = '-';
+		}
+		else
+		{
+			buf[0] = '+';
+		}
+		
+		vdisp_i2s(buf + 1, 2, 10, 1, new_volume);
+		vd_prints_xy(help_layer, 115, 58, VDISP_FONT_4x6, 0, buf);
+		
+		lcd_show_help_layer(help_layer);
+		help_layer_timer = 3; // approx 2 seconds
 	}
 }
 
@@ -223,7 +291,7 @@ void a_dispatch_key_event( int key_num, int key_event )
 		// dispatch to current app
 		switch (active_app)
 		{
-			case 0: // DSTAR App
+			case VDISP_MAIN_LAYER: // DSTAR App
 				if (key_event == A_KEY_PRESSED)
 				{
 					switch(key_num)
@@ -249,6 +317,10 @@ void a_dispatch_key_event( int key_num, int key_event )
 							}				
 							break;
 							
+						case A_KEY_BUTTON_1: // PTT
+							software_ptt = 1;
+							break;
+							
 						case A_KEY_BUTTON_UP: // DCS +
 							if (dcs_mode != 0)
 							{
@@ -260,7 +332,11 @@ void a_dispatch_key_event( int key_num, int key_event )
 								{
 									dcs_select_reflector(1);
 								}									
-							}								
+							}
+							else
+							{
+								set_speaker_volume(1);
+							}							
 							break;
 							
 						case A_KEY_BUTTON_DOWN: // DCS -
@@ -274,7 +350,11 @@ void a_dispatch_key_event( int key_num, int key_event )
 								{
 									dcs_select_reflector(0);
 								}
-							}								
+							}
+							else
+							{
+								set_speaker_volume(0);
+							}							
 							break;	
 							
 					}
@@ -321,9 +401,18 @@ void a_dispatch_key_event( int key_num, int key_event )
 						
 					}
 				}
+				else if (key_event == A_KEY_RELEASED)
+				{
+					switch(key_num)
+					{
+						case A_KEY_BUTTON_1: // PTT
+							software_ptt = 0;
+							break;
+					}
+				}											
 				break;
 				
-			default:
+			case VDISP_DEBUG_LAYER:
 				switch(key_num)
 				{
 					case A_KEY_BUTTON_2:
@@ -344,7 +433,7 @@ void a_dispatch_key_event( int key_num, int key_event )
 	{
 		case A_KEY_PRESSED:
 			
-			if (help_layer_timer > 0)
+	/*		if (help_layer_timer > 0)
 			{
 				lcd_show_help_layer(0); // switch off help
 				help_layer_timer = 0;
@@ -359,12 +448,14 @@ void a_dispatch_key_event( int key_num, int key_event )
 		
 		
 			
-		case A_KEY_HOLD_500MS:
+		case A_KEY_HOLD_500MS: */
+			
+			software_ptt = 0; // prevent TXing forever...
 			
 			app_manager_select_next();
-			set_help_text();
+			// set_help_text();
 			lcd_show_help_layer(help_layer);
-			help_layer_timer = 7; // approx 3 seconds
+			help_layer_timer = 3; // approx 2 seconds
 			
 			
 			break;
@@ -374,13 +465,15 @@ void a_dispatch_key_event( int key_num, int key_event )
 }
 
 
+
+
 void a_app_manager_init(void)
 {
 	help_layer = vd_new_screen();
 	
 	// TODO error handling
 	
-	vd_clear_rect(help_layer, 0, 0, 128, 64);
+	// vd_clear_rect(help_layer, 0, 0, 128, 64);
 	
 	int i;
 	
@@ -391,7 +484,7 @@ void a_app_manager_init(void)
 	
 	
 #define SIDEBOX_WIDTH 38
-#define SIDEBOX_HEIGHT 12
+// #define SIDEBOX_HEIGHT 12
 #define BOX1_YPOS 10
 #define BOX2_YPOS 34
 	
@@ -406,21 +499,25 @@ void a_app_manager_init(void)
 
 	for (i=0; i < SIDEBOX_WIDTH; i++)
 	{
-		vd_set_pixel(help_layer, 127-i, BOX1_YPOS, 0, 1, 1);
+		/* vd_set_pixel(help_layer, 127-i, BOX1_YPOS, 0, 1, 1);
 		vd_set_pixel(help_layer, 127-i, BOX1_YPOS+SIDEBOX_HEIGHT, 0, 1, 1);
 		
 		vd_set_pixel(help_layer, 127-i, BOX2_YPOS, 0, 1, 1);
 		vd_set_pixel(help_layer, 127-i, BOX2_YPOS+SIDEBOX_HEIGHT, 0, 1, 1);
-		
+		*/
 		vd_set_pixel(help_layer, i, 7, 0, 1, 1);
 	}
 	
+	/*
 	for (i=0; i <= SIDEBOX_HEIGHT; i++)
 	{
 		vd_set_pixel(help_layer, 127-SIDEBOX_WIDTH, BOX1_YPOS+i, 0, 1, 1);
 		vd_set_pixel(help_layer, 127-SIDEBOX_WIDTH, BOX2_YPOS+i, 0, 1, 1);
 	}
+	*/
 
 	// vd_prints_xy(help_layer, 4, 58, VDISP_FONT_4x6, 0,"TEST");
+	
+	
 }
 

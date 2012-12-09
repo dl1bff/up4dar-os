@@ -44,7 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "settings.h"
 
 
-#define VDISP_GPS_LAYER 1
+
 
 static xComPortHandle gpsSerialHandle;
 

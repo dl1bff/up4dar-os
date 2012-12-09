@@ -744,6 +744,7 @@ static void vRXTXEthTask( void *pvParameters )
 
 
 
+
 static void vTXTask( void *pvParameters )
 {
 	int tx_state = 0;
@@ -758,13 +759,15 @@ static void vTXTask( void *pvParameters )
 	dstarChangeMode(2);
 	
 	vdisp_clear_rect(0,0,128,64);
+	
+#define PTT_CONDITION  ((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1))
 
 	for(;;)
 	{
 		switch(tx_state)
 		{
 		case 0:  // PTT off
-			if ((gpio_get_pin_value(AVR32_PIN_PA28) == 0)  // PTT pressed
+			if (PTT_CONDITION  // PTT pressed
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
 				tx_state = 1;
@@ -785,7 +788,7 @@ static void vTXTask( void *pvParameters )
 			break;
 			
 		case 1:  // PTT on
-			if (gpio_get_pin_value(AVR32_PIN_PA28) != 0)  // PTT released
+			if (!PTT_CONDITION)  // PTT released
 			{
 				tx_state = 2;
 				ambe_stop_encode();
@@ -824,7 +827,7 @@ static void vTXTask( void *pvParameters )
 			break;
 		
 		case 3: // PTT on, wait for release
-			if (gpio_get_pin_value(AVR32_PIN_PA28) != 0)  // PTT released
+			if (!PTT_CONDITION)  // PTT released
 			{
 				tx_state = 0;
 				wm8510_beep(
@@ -870,34 +873,39 @@ int main (void)
 	
 	vdisp_init();
 	
-	int main_screen = vd_new_screen();
 	
-	if (main_screen != 0)
+	if (vd_new_screen() != VDISP_MAIN_LAYER)
 	{
 		// error handling..
 	}
 	
-	int gps_screen = vd_new_screen();
-	
-	if (gps_screen != 1)
+	if (vd_new_screen() != VDISP_GPS_LAYER)
 	{
 		// error handling..
 	}
 	
-	int save_screen = vd_new_screen();
 	
-	if (save_screen != 2)
+	if (vd_new_screen() != VDISP_REF_LAYER)
 	{
 		// error handling..
 	}
 	
-	vdisp_clear_rect(0,0, 128, 64);
+	if (vd_new_screen() != VDISP_DEBUG_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_SAVE_LAYER)
+	{
+		// error handling..
+	}
+	
 	
 	
 	
 	lcd_init();
 		
-	xComPortHandle phyComPort = xSerialPortInitMinimal( 1, 115200, 20 );
+	xComPortHandle phyComPort = xSerialPortInitMinimal( 1, 115200, 100 );
 	xComPortHandle externalComPort = xSerialPortInitMinimal( 0, 4800, 20 );
 	
 	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");

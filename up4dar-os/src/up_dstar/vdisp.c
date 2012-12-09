@@ -63,6 +63,8 @@ int vd_new_screen (void)
 	
 	pixelbuf[num_screen] = b;
 	
+	vd_clear_rect(num_screen, 0,0, 128, 64);
+	
 	num_screen ++;
 	
 	return (num_screen - 1);
@@ -82,7 +84,7 @@ struct vdisp_font vdisp_fonts[4] =
 
 void vdisp_get_pixel ( int x, int y, unsigned char blob[8])
 {
-	vd_get_pixel(0, x, y, blob);
+	vd_get_pixel(VDISP_MAIN_LAYER, x, y, blob);
 }
 
 void vd_get_pixel ( int layer, int x, int y, unsigned char blob[8])
@@ -105,7 +107,7 @@ void vd_get_pixel ( int layer, int x, int y, unsigned char blob[8])
 
 void vdisp_set_pixel ( int x, int y, int disp_inverse, unsigned char data, int numbits )
 {
-	vd_set_pixel(0, x, y, disp_inverse, data, numbits);
+	vd_set_pixel(VDISP_MAIN_LAYER, x, y, disp_inverse, data, numbits);
 }
 
 void vd_set_pixel ( int layer, int x, int y, int disp_inverse, unsigned char data, int numbits )
@@ -193,7 +195,7 @@ void vd_prints_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_
 
 void vdisp_clear_rect(int x, int y, int width, int height)
 {
-	vd_clear_rect(0, x, y, width, height);
+	vd_clear_rect(VDISP_MAIN_LAYER, x, y, width, height);
 }
 
 void vd_clear_rect(int layer, int x, int y, int width, int height)
