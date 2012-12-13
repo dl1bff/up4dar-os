@@ -46,6 +46,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/vdisp.h"
 #include "up_crypto/up_crypto.h"
 
+#include "up_dstar/vdisp.h"
+
 static int dhcp_state;
 
 
@@ -54,13 +56,19 @@ static int dhcp_state;
 #define DHCP_LINK_LOST	3
 #define DHCP_REQUEST_SENT	4
 #define DHCP_REQUEST_RESENT	5
+#define DHCP_REBIND_REQ_SENT	6
 
 #define DHCP_READY		10
 
 
 
 
-#define DHCP_TIMEOUT_TIMER	1000
+#define DHCP_TIMEOUT_TIMER_MAX		86400 
+    // 1 day
+	
+#define DHCP_TIMEOUT_TIMER_MIN		10
+    // 10 seconds
+	
 #define DHCP_REQ_TIMEOUT_TIMER 8
 
 
@@ -69,7 +77,7 @@ static int dhcp_timer;
 
 static unsigned int dhcp_xid = 0;
 
-
+static int dhcp_T1;
 
 
 
@@ -108,6 +116,7 @@ void dhcp_init(void)
 {
 	dhcp_state = DHCP_NO_LINK;
 	dhcp_timer = 0;
+	dhcp_T1 = 900; // 15 minutes if not overwritten by DHCPOFFER
 }
 
 
@@ -257,10 +266,20 @@ static uint8_t dhcp_request_packet[] =
 		55, 0x03, 0x01, 0x03, 0x06, // Request Parameter List: netmask, router, DNS
 		0xFF  // END
 	};
-
-static void dhcp_send_request(void)
+	
+static uint8_t dhcp_rebind_packet[] =
 {
-	int pkt_size = (sizeof (bootp_header_t)) + (sizeof dhcp_request_packet);
+	53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
+	54, 0x04, 0,0,0,0,  // server identifier
+	55, 0x03, 0x01, 0x03, 0x06, // Request Parameter List: netmask, router, DNS
+	0xFF  // END
+};
+
+static void dhcp_send_request(int rebind)
+{
+	int pkt_size = (sizeof (bootp_header_t)) + 
+	   ( (rebind == 0) ?  (sizeof dhcp_request_packet) : (sizeof dhcp_rebind_packet)  );
+	
 	
 	
 	eth_txmem_t * packet = dhcp_get_packet_mem( pkt_size );
@@ -269,9 +288,28 @@ static void dhcp_send_request(void)
 	if (packet == NULL)
 		return; // nomem
 		
-	uint8_t * d = packet->data + ( 14 + 20 + 8 + (sizeof (bootp_header_t)));
+	uint8_t * d = packet->data + ( 14 + 20 + 8  );
 	
-	memcpy (d, dhcp_request_packet, sizeof dhcp_request_packet);
+	if (rebind == 0)
+	{
+		memcpy (d + (sizeof (bootp_header_t)), dhcp_request_packet, sizeof dhcp_request_packet);
+	
+	}
+	else
+	{	
+		bootp_header_t * m = (bootp_header_t *) d;
+		
+		memcpy (dhcp_rebind_packet + 5, dhcp_request_packet + 11, 4); // server ID
+		
+		memcpy (d + (sizeof (bootp_header_t)), dhcp_rebind_packet, sizeof dhcp_rebind_packet );
+		
+		memcpy(m->ciaddr, ipv4_addr, sizeof ipv4_addr); // current src IP
+		
+		memcpy(packet->data + 26, ipv4_addr, sizeof ipv4_addr); // current src IP
+	}
+	
+	
+	
 
 	dhcp_calc_chksum_and_send(packet, pkt_size );
 }
@@ -319,6 +357,11 @@ void dhcp_service(void)
 	
 	// vdisp_prints_xy(0, 56, VDISP_FONT_6x8, 0, "DHC1");
 	
+	char buf[7];
+	
+	vdisp_i2s(buf, 6, 10, 0, dhcp_timer);
+	vd_prints_xy(VDISP_DEBUG_LAYER, 0, 8, VDISP_FONT_6x8, 0, buf);
+	
 	switch (dhcp_state)
 	{
 		case DHCP_DISCOVER:
@@ -339,7 +382,7 @@ void dhcp_service(void)
 		case DHCP_REQUEST_SENT:
 			if (dhcp_timer == 0)
 			{
-				dhcp_send_request(); // send request one more time
+				dhcp_send_request(0); // send request one more time
 				dhcp_state = DHCP_REQUEST_RESENT;
 				dhcp_timer = DHCP_REQ_TIMEOUT_TIMER;
 			}
@@ -355,12 +398,23 @@ void dhcp_service(void)
 			}
 			break;
 		case DHCP_READY:
-			if (dhcp_timer == 0)
+			if (dhcp_timer == 0)  // now rebind old address
 			{
 				dhcp_get_new_xid();
+				
+				dhcp_send_request(1);
 			
-				dhcp_state = DHCP_DISCOVER;
-				dhcp_timer = 1;
+				dhcp_state = DHCP_REBIND_REQ_SENT;
+				dhcp_timer = DHCP_REQ_TIMEOUT_TIMER;
+			}
+			break;
+			
+		case DHCP_REBIND_REQ_SENT:
+			if (dhcp_timer == 0)
+			{
+				dhcp_send_request(1); // send request one more time
+				dhcp_state = DHCP_REQUEST_RESENT;
+				dhcp_timer = DHCP_REQ_TIMEOUT_TIMER;
 			}
 			break;
 	}
@@ -446,7 +500,63 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 						}						
 					}
 				}
+				break;
+				
+			/*	
+			case 51: // lease time
+				if (option_len == 4)
+				{
+					char buf[5];
+					
+					int 
+					vdisp_i2s(buf, 3, 10, 0, p[2]);
+					vd_prints_xy(VDISP_DEBUG_LAYER, 0, 8, VDISP_FONT_6x8, 0, buf);
+					
+					vdisp_i2s(buf, 3, 10, 0, p[3]);
+					vd_prints_xy(VDISP_DEBUG_LAYER, 24, 8, VDISP_FONT_6x8, 0, buf);
+					
+					vdisp_i2s(buf, 3, 10, 0, p[4]);
+					vd_prints_xy(VDISP_DEBUG_LAYER, 48, 8, VDISP_FONT_6x8, 0, buf);
+					
+					vdisp_i2s(buf, 3, 10, 0, p[5]);
+					vd_prints_xy(VDISP_DEBUG_LAYER, 72, 8, VDISP_FONT_6x8, 0, buf);
+				} 
+				break;
+				*/
+			
+			case 58: // timer T1
+				if (option_len == 4)
+				{
+					dhcp_T1 = (p[2] << 24) | (p[3] << 16) | (p[4] << 8) | p[5];
+					
+					/* char buf[12];
+										
+					vdisp_i2s(buf, 11, 10, 0, dhcp_T1);
+					vd_prints_xy(VDISP_DEBUG_LAYER, 0, 8, VDISP_FONT_6x8, 0, buf); */
+					
+				}
+				break;
+			
+			/*
+			case 59: // Timer T2
+			if (option_len == 4)
+			{
+				char buf[5];
+				
+				vdisp_i2s(buf, 3, 10, 0, p[2]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 0, 24, VDISP_FONT_6x8, 0, buf);
+				
+				vdisp_i2s(buf, 3, 10, 0, p[3]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 24, 24, VDISP_FONT_6x8, 0, buf);
+				
+				vdisp_i2s(buf, 3, 10, 0, p[4]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 48, 24, VDISP_FONT_6x8, 0, buf);
+				
+				vdisp_i2s(buf, 3, 10, 0, p[5]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 72, 24, VDISP_FONT_6x8, 0, buf);
+			}
 			break;
+			*/
 			case 255:
 				return res;
 		}
@@ -481,20 +591,38 @@ void dhcp_input_packet (const uint8_t * data, int data_len)
 		return;
 		
  //  vdisp_prints_xy(0, 56, VDISP_FONT_6x8, 0, "DHCP!");
-		
-	switch (parse_dhcp_options(data + (sizeof (bootp_header_t)), data_len - (sizeof (bootp_header_t)), m))
+	
+	if (dhcp_state != DHCP_READY) // only change settings when DHCP is not ready yet
 	{
-		case RECEIVED_OFFER:
-			dhcp_send_request();
-			dhcp_state = DHCP_REQUEST_SENT;
-			dhcp_timer = DHCP_REQ_TIMEOUT_TIMER;
-			break;
+		switch (parse_dhcp_options(data + (sizeof (bootp_header_t)), data_len - (sizeof (bootp_header_t)), m))
+		{
+			case RECEIVED_OFFER:
+				if (dhcp_state == DHCP_DISCOVER)
+				{
+					dhcp_send_request(0);  // send request to the server which sent the first reply
+				}
+				dhcp_state = DHCP_REQUEST_SENT;
+				dhcp_timer = DHCP_REQ_TIMEOUT_TIMER;
+				break;
 			
-		case RECEIVED_ACK:
-			dhcp_state = DHCP_READY;
-			dhcp_timer = DHCP_TIMEOUT_TIMER;
-			break;
+			case RECEIVED_ACK:
+				dhcp_state = DHCP_READY;
+				
+				if (dhcp_T1 < DHCP_TIMEOUT_TIMER_MIN)
+				{
+					dhcp_timer = 2 * DHCP_TIMEOUT_TIMER_MIN;
+				}
+				else if (dhcp_T1 > DHCP_TIMEOUT_TIMER_MAX)
+				{
+					dhcp_timer = 2 * DHCP_TIMEOUT_TIMER_MAX;
+				}
+				else
+				{
+					dhcp_timer = 2 * dhcp_T1;
+				}
+				break;
 			
-	}
+		}
+	}	
 	
 }
