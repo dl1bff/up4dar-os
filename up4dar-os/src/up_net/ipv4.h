@@ -35,6 +35,8 @@ extern unsigned char ipv4_netmask[4];
 
 extern unsigned char ipv4_gw[4];
 
+extern unsigned char ipv4_ntp[4];
+
 extern unsigned char ipv4_dns_pri[4];
 extern unsigned char ipv4_dns_sec[4];
 
@@ -65,5 +67,6 @@ eth_txmem_t * udp4_get_packet_mem (int udp_size, int src_port, int dest_port, co
 void udp4_calc_chksum_and_send (eth_txmem_t * packet, const uint8_t * ipv4_dest_addr);
 int udp_get_new_srcport(void);
 
+void ipv4_print_ip_addr(int y, const char * desc, const uint8_t * ip);
 
 #endif /* IPV4_H_ */

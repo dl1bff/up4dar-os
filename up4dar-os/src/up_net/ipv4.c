@@ -59,6 +59,8 @@ unsigned char ipv4_netmask[4];
 
 unsigned char ipv4_gw[4];
 
+unsigned char ipv4_ntp[4];
+
 unsigned char ipv4_dns_pri[4];
 unsigned char ipv4_dns_sec[4];
 
@@ -500,6 +502,25 @@ int ipv4_get_neigh_addr( ip_addr_t * addr, const uint8_t * ipv4_dest )
 }
 
 
+void ipv4_print_ip_addr(int y, const char * desc, const uint8_t * ip)
+{
+	char buf[4];
+	
+	vd_prints_xy(VDISP_DEBUG_LAYER, 0, y, VDISP_FONT_4x6, 0, desc);
+	vd_prints_xy(VDISP_DEBUG_LAYER, 20, y, VDISP_FONT_4x6, 0, "___.___.___.___");
+	
+	int i;
+	
+	for (i=0; i < 4; i++)
+	{
+		vdisp_i2s(buf, 3, 10, 1, ip[i]);
+		vd_prints_xy(VDISP_DEBUG_LAYER, 20 + (i*4*4), y, VDISP_FONT_4x6, 0, buf);
+	}
+	
+}
+
+
+
 void ipv4_init(void)
 {
 	ipv4_addr[0] = 169;
@@ -515,6 +536,7 @@ void ipv4_init(void)
 	memcpy(ipv4_gw, ipv4_zero_addr, sizeof ipv4_zero_addr); // no gateway
 	memcpy(ipv4_dns_pri, ipv4_zero_addr, sizeof ipv4_zero_addr); // no primary dns
 	memcpy(ipv4_dns_sec, ipv4_zero_addr, sizeof ipv4_zero_addr); // no secondary dns
+	memcpy(ipv4_ntp, ipv4_zero_addr, sizeof ipv4_zero_addr); // no NTP server
 	
 	ipneigh_init(); // delete neighbor cache
 }

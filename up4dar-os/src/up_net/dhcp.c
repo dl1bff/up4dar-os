@@ -263,7 +263,7 @@ static uint8_t dhcp_request_packet[] =
 		53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 		50, 0x04, 0,0,0,0,  // requested IP address
 		54, 0x04, 0,0,0,0,  // server identifier
-		55, 0x03, 0x01, 0x03, 0x06, // Request Parameter List: netmask, router, DNS
+		55, 0x04, 0x01, 0x03, 0x06, 42, // Request Parameter List: netmask, router, DNS, NTP
 		0xFF  // END
 	};
 	
@@ -271,7 +271,7 @@ static uint8_t dhcp_rebind_packet[] =
 {
 	53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 	54, 0x04, 0,0,0,0,  // server identifier
-	55, 0x03, 0x01, 0x03, 0x06, // Request Parameter List: netmask, router, DNS
+	55, 0x04, 0x01, 0x03, 0x06, 42, // Request Parameter List: netmask, router, DNS, NTP
 	0xFF  // END
 };
 
@@ -344,6 +344,10 @@ void dhcp_set_link_state (int link_up)
 }
 
 
+static void clear_dhcp_debug(void)
+{
+	vd_clear_rect(VDISP_DEBUG_LAYER, 0, 6, 80, 42);
+}
 
 
 void dhcp_service(void)
@@ -360,13 +364,15 @@ void dhcp_service(void)
 	char buf[7];
 	
 	vdisp_i2s(buf, 6, 10, 0, dhcp_timer);
-	vd_prints_xy(VDISP_DEBUG_LAYER, 0, 8, VDISP_FONT_6x8, 0, buf);
+	vd_prints_xy(VDISP_DEBUG_LAYER, 0, 0, VDISP_FONT_4x6, 0, "DHCP Timer");
+	vd_prints_xy(VDISP_DEBUG_LAYER, 44, 0, VDISP_FONT_4x6, 0, buf);
 	
 	switch (dhcp_state)
 	{
 		case DHCP_DISCOVER:
 			if (dhcp_timer == 0)
 			{
+				clear_dhcp_debug();
 				dhcp_send_discover();
 				dhcp_timer = DHCP_REQ_TIMEOUT_TIMER;
 			}
@@ -375,6 +381,7 @@ void dhcp_service(void)
 		case DHCP_LINK_LOST:
 			if (dhcp_timer == 0)
 			{
+				clear_dhcp_debug();
 				ipv4_init(); // reset ipv4 address
 				dhcp_state = DHCP_NO_LINK;
 			}
@@ -427,6 +434,10 @@ int dhcp_is_ready(void)
 	return dhcp_state == DHCP_READY;
 }
 
+
+
+
+
 #define RECEIVED_OFFER  1
 #define RECEIVED_ACK	2
 
@@ -436,6 +447,7 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 	int bytes_remaining = data_len;
 	const uint8_t * p = data;
 	int res = 0;
+	
 	
 	while (bytes_remaining > 0)
 	{
@@ -455,32 +467,52 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 				if (p[2] == 2) // DHCPOFFER
 				{
 					memcpy(dhcp_request_packet + 5, m->yiaddr, 4); // offered address
-					res = RECEIVED_OFFER;
+					res = RECEIVED_OFFER;						
 				}
 				else if (p[2] == 5) // ACK
 				{
 					res = RECEIVED_ACK;
-					memcpy(ipv4_addr, m->yiaddr, 4); // set offered address
+					memcpy(ipv4_addr, m->yiaddr, 4); // set offered address	
+					ipv4_print_ip_addr(36, "MYIP", ipv4_addr);			
 				}
 				break;
 			case 54: // server id
 				if (option_len == 4)
 				{
 					memcpy(dhcp_request_packet + 11, p+2, 4); // server id
+					ipv4_print_ip_addr(6, "SRV", p+2);
 				}
 				break;
 			case 3: // router option
 				if (res == RECEIVED_ACK) // assumption: message type comes first!
 				{
-					// use only first entry
-					memcpy(ipv4_gw, p+2, 4);
+					if (option_len >= 4)
+					{
+						// use only first entry
+						memcpy(ipv4_gw, p+2, 4);
+						ipv4_print_ip_addr(12, "GW", p+2);
+					}						
 				}
 				break;
 			case 1: // netmask
 				if (res == RECEIVED_ACK) // assumption: message type comes first!
 				{
-					// use only first entry
-					memcpy(ipv4_netmask, p+2, 4);
+					if (option_len == 4)
+					{
+						memcpy(ipv4_netmask, p+2, 4);
+						ipv4_print_ip_addr(18, "MASK", p+2);
+					}					
+				}
+				break;
+			case 42: // NTP server
+				if (res == RECEIVED_ACK) // assumption: message type comes first!
+				{
+					if (option_len >= 4)
+					{
+						// use only first entry
+						memcpy(ipv4_ntp, p+2, 4);
+						ipv4_print_ip_addr(42, "NTP", p+2);
+					}
 				}
 				break;
 			case 6: // DNS
@@ -497,7 +529,10 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 						else
 						{
 							memset(ipv4_dns_sec, 0, 4);
-						}						
+						}					
+						
+						ipv4_print_ip_addr(24, "DNS1", ipv4_dns_pri);	
+						ipv4_print_ip_addr(30, "DNS2", ipv4_dns_sec);	
 					}
 				}
 				break;

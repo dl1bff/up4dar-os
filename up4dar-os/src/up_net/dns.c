@@ -146,6 +146,9 @@ int dns_req_A (const char * name)
 		dns_timeout = 0;
 		dns_current_server = 0;
 		dns_state = DNS_STATE_REQ_A;
+		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 48, VDISP_FONT_4x6, 0, "AREQ");
+		vd_prints_xy(VDISP_DEBUG_LAYER, 20, 48, VDISP_FONT_4x6, 0, name);
+		vd_clear_rect(VDISP_DEBUG_LAYER, 0, 54, 80, 6);
 		return 0; // OK
 	}
 	
@@ -178,6 +181,7 @@ int dns_get_A_addr ( uint8_t * v4addr)
 	}
 	
 	memcpy (v4addr, dns_result_ipv4_addr, sizeof ipv4_addr);
+	ipv4_print_ip_addr(54, "RESP", v4addr);
 	return 0;
 }
 
