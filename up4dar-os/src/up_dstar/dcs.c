@@ -156,6 +156,7 @@ void dcs_service (void)
 			{
 				dcs_state = DCS_DISCONNECTED;
 				udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "NOWD");
 			}
 			break;
 		
@@ -171,6 +172,7 @@ void dcs_service (void)
 				{
 					dcs_state = DCS_DISCONNECTED;
 					udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+					vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "RQTO");
 				}
 				else
 				{
@@ -318,17 +320,19 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			{
 				dcs_state = DCS_CONNECTED;
 				dcs_timeout_timer = DCS_KEEPALIVE_TIMEOUT;
+				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "ACK ");
 			}
-			/* else
+			else
 			{
-				vdisp_prints_xy( 110, 33, VDISP_FONT_4x6, 0, "X");
-			} */
+				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "NACK");
+			} 
 		}
 		else if (dcs_state == DCS_DISCONNECT_REQ_SENT)
 		{
 			if (data[9] == ' ')
 			{
 				dcs_state = DCS_DISCONNECTED;
+				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "DISC");
 			}
 		}
 	}
@@ -443,12 +447,18 @@ static void dcs_link_to (int module)
 	
 	memcpy (d, settings.s.my_callsign, 7);
 	
+	char buf[8];
+	
+	memcpy (buf, settings.s.my_callsign, 7);
+	buf[7] = 0;
+	vd_prints_xy(VDISP_DEBUG_LAYER, 86, 0, VDISP_FONT_6x8, 1, buf);
+	vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "    ");
+	
 	d[7] = ' ';
 	d[8] = DCS_REGISTER_MODULE; // my repeater module
 	d[9] = module; // module to link to
 	d[10] = 0;
 	
-	char buf[8];
 	dcs_get_current_reflector_name(buf);
 	
 	memcpy(d + 11, buf, 7);
