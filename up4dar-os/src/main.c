@@ -354,69 +354,6 @@ static void send_phy ( const unsigned char * d )
 
 
 
-// #define FWUPLOAD_BUTTON 1
-
-#if defined(FWUPLOAD_BUTTON)
-
-
-#include "phy_firmware.h"
-
-static unsigned char fw_data[3];
-
-
-
-static void fw_upload(void)
-{
-	fw_data[0] = 0xe1;
-	send_cmd((char *) fw_data, 1);
-			
-	vTaskDelay (120); // 120ms
-			
-	long fw_counter;
-			
-	for (fw_counter = 0; fw_counter < (sizeof fw_bytes); fw_counter += 512)
-	{
-		int i;
-				
-		fw_data[0] = DLE;
-		fw_data[1] = STX;
-		fw_data[2] = 0xe2;
-		phyCommSend((char *) fw_data, 3);
-	
-		for (i=0; i < 512; i++)
-		{
-			
-			fw_data[0] = fw_bytes[fw_counter + i];
-					
-			if (fw_data[0] == DLE)
-			{
-				fw_data[1] = DLE;
-				phyCommSend((char *) fw_data, 2);						
-			}
-			else
-			{
-				phyCommSend((char *) fw_data, 1);						
-			}
-						
-		}	
-				
-		fw_data[0] = DLE;
-		fw_data[1] = ETX;
-		phyCommSend((char *) fw_data, 2);
-			
-		vTaskDelay (2000); // 2s
-	}
-			
-	fw_data[0] = 0xe3;
-	send_cmd((char *) fw_data, 1);
-}
-
-
-#endif
-
-
-
-
 #define NUMBER_OF_KEYS  6
 
 static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0 };

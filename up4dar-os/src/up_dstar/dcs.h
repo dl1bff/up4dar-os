@@ -36,11 +36,12 @@ extern uint8_t dcs_ambe_data[9];
 void dcs_init(void);
 void dcs_service (void);
 void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);
-void dcs_on_off (void);
+void dcs_off (void);
 void send_dcs (int session_id, int last_frame);
 void dcs_get_current_reflector_name (char * s);
 int dcs_is_connected (void);
 void dcs_reset_tx_counters(void);
-void dcs_select_reflector (int go_up);
 
+void dcs_select_reflector (int server_num, char module);
+void dcs_on(void);
 #endif /* DCS_H_ */

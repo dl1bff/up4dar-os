@@ -63,7 +63,9 @@ const limits_t short_values_limits[NUM_SHORT_VALUES] = {
 	// #define S_RPTR_BEEP_FREQUENCY		8
 	{  200,		3000,		400  },
 	// #define S_RPTR_BEEP_DURATION			9
-	{  20,		500,		100  }
+	{  20,		500,		100  },
+	// #define S_REF_SERVER_NUM				10
+	{  1,		999,		1  }
 };
 
 const limits_t char_values_limits[NUM_CHAR_VALUES] = {
@@ -94,7 +96,9 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_SPKR_VOLUME				12
 	{  -57,		 6,			0  },
 	// #define C_STANDBY_BEEP_VOLUME		13
-	{  0,		100,		10  }
+	{  0,		100,		10  },
+	// #define C_REF_MODULE_CHAR			14
+	{  65,		90,		67  }
 };
 
 

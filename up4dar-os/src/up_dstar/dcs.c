@@ -91,6 +91,16 @@ static int dcs_retry_counter;
 #define DCS_DNS_REQ				6
 
 
+static const char * const dcs_state_text[7] =
+{
+	"            ",
+	"disconnected",
+	"conn request",
+	"connected   ",
+	"disc request",
+	"DNS request ",
+	"DNS request "
+};	
 
 static int current_module;
 static int current_server;
@@ -140,14 +150,9 @@ void dcs_service (void)
 		dcs_timeout_timer --;	
 	}
 	
-	/*
-	if (dcs_mode != 0)
-	{
-		char buf[2];
-		vdisp_i2s(buf, 1, 10, 0, dcs_state);
-		vdisp_prints_xy( 122, 34, VDISP_FONT_6x8, 0, buf);
-	}
-	*/
+	
+	vd_prints_xy( VDISP_REF_LAYER, 20, 36, VDISP_FONT_6x8, 0, 
+		  dcs_state_text[  (dcs_mode != 0) ? dcs_state : 0 ]);
 	
 	switch (dcs_state)
 	{
@@ -264,20 +269,11 @@ void dcs_service (void)
 
 
 
-void dcs_on_off (void)
+void dcs_on(void)
 {
 	
 	switch (dcs_state)
 	{
-		case DCS_CONNECTED:
-			
-			
-			dcs_link_to(' ');
-			
-			dcs_state = DCS_DISCONNECT_REQ_SENT;
-			dcs_retry_counter = DCS_DISCONNECT_RETRIES;
-			dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
-			break;
 		
 		case DCS_DISCONNECTED:
 			dcs_set_dns_name();
@@ -287,6 +283,26 @@ void dcs_on_off (void)
 			dcs_timeout_timer = DCS_DNS_TIMEOUT;
 			
 			break;
+	}
+}
+
+
+void dcs_off(void)
+{
+	
+	switch (dcs_state)
+	{
+		case DCS_CONNECTED:
+		
+		
+		dcs_link_to(' ');
+		
+		dcs_state = DCS_DISCONNECT_REQ_SENT;
+		dcs_retry_counter = DCS_DISCONNECT_RETRIES;
+		dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
+		break;
+		
+		
 	}
 }
 
@@ -373,39 +389,14 @@ void dcs_reset_tx_counters(void)
 	dcs_tx_counter = 0;
 }
 
-void dcs_select_reflector (int go_up)
+void dcs_select_reflector (int server_num, char module)
 {
 	if (dcs_state != DCS_DISCONNECTED)  // only when disconnected
 		return;
 		
-	if (go_up != 0)
-	{
-		current_module++;
-		if (current_module > 'Z')
-		{
-			current_module = 'A';
-			current_server ++;
-			
-			if (current_server >= NUM_SERVERS)
-			{
-				current_server = 1;
-			}
-		}
-	}
-	else
-	{
-		current_module --;
-		if (current_module < 'A')
-		{
-			current_module = 'Z';
-			current_server --;
-			
-			if (current_server < 1)
-			{
-				current_server = NUM_SERVERS - 1;
-			}
-		}
-	}
+	current_server = server_num;
+	current_module = module;
+	
 }
 
 

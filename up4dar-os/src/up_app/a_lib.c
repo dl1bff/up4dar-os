@@ -42,10 +42,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 char software_ptt = 0;
 
-#define MAX_APP_NAME_LENGTH  8
+#define MAX_APP_NAME_LENGTH  9
 #define MAX_BUTTON_TEXT_LENGTH 8
 
 typedef struct a_app_context {
+	
+	struct a_app_context * next;
+	
+	char screen_num;
+	
 	char name[MAX_APP_NAME_LENGTH + 1]; // app name
 	
 	char button_text[3][MAX_BUTTON_TEXT_LENGTH + 1];
@@ -59,13 +64,42 @@ typedef struct a_app_context {
 	} app_context_t;
 
 
-void a_set_app_name ( void * app_context, const char * app_name)
+static app_context_t * current_app = NULL;
+static app_context_t * app_list_head = NULL;
+
+void * a_new_app ( const char * app_name, char screen_num)
 {
-	app_context_t * a = (app_context_t *) app_context;
+	app_context_t * a = (app_context_t *) pvPortMalloc(sizeof (app_context_t));
+	
+	if (a == NULL)
+		return NULL;
+		
+	memset(a, 0, sizeof (app_context_t));
+	
+	a->screen_num = screen_num;
 	
 	strncpy(a->name, app_name, MAX_APP_NAME_LENGTH);
 	
 	a->name[MAX_APP_NAME_LENGTH] = 0;
+	
+	if (app_list_head == NULL)
+	{
+		app_list_head = a;
+		current_app = a;
+	}		
+	else
+	{
+		app_context_t * tmp_a = app_list_head;
+		
+		while (tmp_a->next != NULL ) // go to end of the list
+		{
+			tmp_a = tmp_a->next;
+		}
+		
+		tmp_a->next = a; // set new app at end of the list
+	}		
+	
+	return a;
 }
 
 void a_set_button_text ( void * app_context, const char * button1,
@@ -113,18 +147,21 @@ void * a_malloc ( void * app_context, int num_bytes )
 
 
 
+/*
 static int active_app = 0;
 static int num_apps = 4;
+*/
 static int help_layer_timer = 0;
 static int help_layer;
 
 // static int app_manager_key_state = 0;
 
+/*
 
 static const app_context_t dstar_app_context = {
 	"DSTAR",
 	{
-		 "PTT", "CONNECT", "MODE"
+		 "PTT", "", ""
 	},
 	NULL,
 	NULL
@@ -138,15 +175,20 @@ static const app_context_t gps_app_context = {
 	NULL,
 	NULL
 };
-
+*/
+/*
 static const app_context_t ref_app_context = {
-	"INTERNET",
+	"MODE",
 	{
 		"CONNECT", "DISC", "SELECT"
 	},
 	NULL,
 	NULL
 };
+
+*/
+/*
+static app_context_t * ref_app_context;
 
 static const app_context_t debug_app_context = {
 	"DEBUG",
@@ -157,31 +199,14 @@ static const app_context_t debug_app_context = {
 	NULL
 };
 
+
+*/
+
 static void set_help_text (void)
 {
-	const app_context_t * a = NULL;
+	const app_context_t * a = current_app;
 	
-	if (active_app == VDISP_MAIN_LAYER)
-	{
-		a = &dstar_app_context;
-	}
-	else if (active_app == VDISP_GPS_LAYER)
-	{
-		a = &gps_app_context;
-	}
-	else if (active_app == VDISP_REF_LAYER)
-	{
-		a = &ref_app_context;
-	}
-	else if (active_app == VDISP_DEBUG_LAYER)
-	{
-		a = &debug_app_context;
-	}
-	
-	if (!a)
-		return;
-	
-	vd_clear_rect(help_layer, 0, 0, 32, 6); // name
+	vd_clear_rect(help_layer, 0, 0, 40, 6); // name
 	vd_prints_xy(help_layer, 0, 0, VDISP_FONT_4x6, 0, a->name);
 	
 	vd_clear_rect(help_layer, 0, 58, 32, 6); // button 1
@@ -205,11 +230,18 @@ static void set_help_text (void)
 
 static void app_manager_select_next(void)
 {
-	active_app ++;
+	app_context_t * a = current_app;
 	
-	if (active_app >= num_apps)
+	if (!a)
+		return;
+	
+	if (a->next != NULL)
 	{
-		active_app = 0;
+		current_app = a->next;
+	}
+	else
+	{
+		current_app = app_list_head;
 	}
 	
 	set_help_text();
@@ -230,7 +262,7 @@ static void app_manager_select_next(void)
 	}
 	*/
 	
-	lcd_show_layer(active_app);
+	lcd_show_layer(current_app->screen_num);
 	
 	
 }
@@ -286,8 +318,55 @@ int dcs_mode = 0;
 
 void a_dispatch_key_event( int key_num, int key_event )
 {
-	if (key_num != A_KEY_BUTTON_APP_MANAGER)
+	if (key_num == A_KEY_BUTTON_APP_MANAGER)
 	{
+		if (key_event == A_KEY_PRESSED)
+		{
+			software_ptt = 0; // prevent TXing forever...
+			
+			app_manager_select_next();
+			lcd_show_help_layer(help_layer);
+			
+			if (current_app->screen_num == VDISP_REF_LAYER)
+			{
+				help_layer_timer = 0; // show help forever..
+			}
+			else
+			{
+				help_layer_timer = 5; // approx 2 seconds
+			}
+			
+		}
+		
+	}
+	else
+	{
+		int res = 0;
+		
+		if (current_app->key_event_handler != NULL)
+		{
+			res = current_app->key_event_handler(current_app, key_num, key_event);
+		}
+		
+		if (res == 0) // handler didn't use this event
+		{
+			if ((key_event == A_KEY_PRESSED) || (key_event == A_KEY_REPEAT))
+			{
+				switch (key_num)
+				{
+					case A_KEY_BUTTON_UP:
+						set_speaker_volume(1);
+						break;
+						
+					case A_KEY_BUTTON_DOWN:
+						set_speaker_volume(0);
+						break;
+				}
+			}				
+		}
+	}			
+		
+	/*	
 		// dispatch to current app
 		switch (active_app)
 		{
@@ -424,16 +503,22 @@ void a_dispatch_key_event( int key_num, int key_event )
 				}				
 			
 				break;
-			
+				
+			default:
+				
+				if (active_app == VDISP_REF_LAYER)
+				{
+					ref_app_context->key_event_handler(ref_app_context, key_num, key_event);
+					
+				}
+				break;
 		}
 		return;
-	}
+	} // if (key_num != A_KEY_BUTTON_APP_MANAGER)
 	
-	switch (key_event)
-	{
-		case A_KEY_PRESSED:
+	
 			
-	/*		if (help_layer_timer > 0)
+			if (help_layer_timer > 0)
 			{
 				lcd_show_help_layer(0); // switch off help
 				help_layer_timer = 0;
@@ -448,28 +533,218 @@ void a_dispatch_key_event( int key_num, int key_event )
 		
 		
 			
-		case A_KEY_HOLD_500MS: */
-			
-			software_ptt = 0; // prevent TXing forever...
-			
-			app_manager_select_next();
-			// set_help_text();
-			lcd_show_help_layer(help_layer);
-			help_layer_timer = 3; // approx 2 seconds
-			
-			
-			break;
+		case A_KEY_HOLD_500MS: 
+		
+		*/
 			
 		
-	}
+}
+
+#define REF_NUM_ITEMS 6
+#define REF_SELECTION_SPECIAL 6
+static char ref_selected_item = 0;
+static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 0, 9, 9, 9, 25 };
+static const char * const ref_modes[2] = { "DSTAR Modem      ",
+										   "DCS over Internet"};
+static const char * const ref_types[2] = { "DCS", "URF" };
+
+
+static void ref_print_status (void)
+{
+	
+	vd_prints_xy(VDISP_REF_LAYER, 0, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
+		ref_modes[(int) ref_items[0]]);
+	
+#define XPOS 10
+	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
+		ref_types[(int) ref_items[1]]);
+	
+	
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
+		ref_items[2] + 0x30);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
+		ref_items[3] + 0x30);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
+		ref_items[4] + 0x30);
+	
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+		0x20);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+		ref_items[5] + 0x41);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+		0x20);
+	
+	#undef XPOS
 }
 
 
+static int ref_app_key_event_handler (void * app_context, int key_num, int key_event)
+{
+	// app_context_t * a = (app_context_t *) app_context;
+	char v;
+	
+	if ((key_event == A_KEY_PRESSED) || (key_event == A_KEY_REPEAT))
+	{
+		switch (key_num)
+		{
+			case A_KEY_BUTTON_1:  // connect button
+				
+				ref_selected_item = REF_SELECTION_SPECIAL;
+				
+				if (dcs_mode != 0)
+				{
+					dcs_on();
+				}
+				break;
+			
+			case A_KEY_BUTTON_2:  // disconnect button
+			
+				ref_selected_item = 0;
+			
+				if (dcs_mode != 0)
+				{
+					dcs_off();
+				}
+				break;
+			
+			case A_KEY_BUTTON_3:  // select button
+				if (!dcs_is_connected())
+				{
+					ref_selected_item ++;
+					if (ref_selected_item >= REF_NUM_ITEMS)
+					{
+						ref_selected_item = 0;
+					}
+				}
+				break;
+				
+			case A_KEY_BUTTON_UP:
+				if (ref_selected_item != REF_SELECTION_SPECIAL)
+				{
+					v = ref_items[(int) ref_selected_item];
+					v++;
+					if (v > ref_item_max_val[(int) ref_selected_item])
+					{
+						v = 0;
+					}
+					ref_items[(int) ref_selected_item] = v;
+				}				
+				break;
+				
+			case A_KEY_BUTTON_DOWN:
+				if (ref_selected_item != REF_SELECTION_SPECIAL)
+				{
+					v = ref_items[(int) ref_selected_item];
+				
+					if (v == 0)
+					{
+						v = ref_item_max_val[(int) ref_selected_item];
+					}
+					else
+					{
+						v--;
+					}
+					ref_items[(int) ref_selected_item] = v;
+				}					
+				break;
+				
+		}
+		
+		dcs_mode = (ref_items[0] == 1);
+		
+		int n = ref_items[2] * 100 +
+				ref_items[3] * 10 +
+				ref_items[4];
+				
+		dcs_select_reflector( n, ref_items[5] + 0x41);
+		
+		SETTING_SHORT(S_REF_SERVER_NUM) = n;
+		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[5] + 0x41;
+		
+		ref_print_status();
+		
+		
+
+	}
+	
+	
+	return 1;	
+}
+
+static int debug_app_key_event_handler (void * app_context, int key_num, int event_type)
+{
+	// app_context_t * a = (app_context_t *) app_context;
+	
+	if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
+	{
+		AVR32_WDT.ctrl = 0x55001001; // enable watchdog -> reboot
+		AVR32_WDT.ctrl = 0xAA001001;
+	}
+	
+	return 0;
+}
+
+static int main_app_key_event_handler (void * app_context, int key_num, int event_type)
+{
+	// app_context_t * a = (app_context_t *) app_context;
+	
+	if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_PRESSED))
+	{
+		software_ptt = 1;
+		return 1;
+	}
+	
+	if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_RELEASED))
+	{
+		software_ptt = 0;
+		return 1;
+	}
+	
+	return 0;
+}
 
 
 void a_app_manager_init(void)
 {
+	
+	app_context_t * a;
+	
+	a = a_new_app( "DSTAR", VDISP_MAIN_LAYER);
+	a_set_button_text(a, "PTT", "", "");
+	a_set_key_event_handler(a, main_app_key_event_handler);
+	
+	a = a_new_app( "GPS", VDISP_GPS_LAYER);
+	
+	a = a_new_app( "REFLECTOR", VDISP_REF_LAYER);
+	a_set_button_text(a, "CONNECT", "DISC", "SELECT");
+	a_set_key_event_handler(a, ref_app_key_event_handler);
+	
+	a = a_new_app( "DEBUG", VDISP_DEBUG_LAYER);
+	a_set_button_text(a, "", "REBOOT", "");
+	a_set_key_event_handler(a, debug_app_key_event_handler);
+	
 	help_layer = vd_new_screen();
+	
+	if ((SETTING_SHORT(S_REF_SERVER_NUM) > 0) &&
+	     (SETTING_SHORT(S_REF_SERVER_NUM) < 1000))
+	{
+		int n = SETTING_SHORT(S_REF_SERVER_NUM);
+		
+		ref_items[4] = n % 10;
+		n /= 10;
+		ref_items[3] = n % 10;
+		n /= 10;
+		ref_items[2] = n % 10;
+	}
+	
+	if ((SETTING_CHAR(C_REF_MODULE_CHAR) >= 'A') &&
+		(SETTING_CHAR(C_REF_MODULE_CHAR) <= 'Z'))
+	{
+		ref_items[5] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
+	}
+	
+	ref_print_status();
 	
 	// TODO error handling
 	
@@ -483,7 +758,8 @@ void a_app_manager_init(void)
 	}
 	
 	
-#define SIDEBOX_WIDTH 38
+	
+#define SIDEBOX_WIDTH 41
 // #define SIDEBOX_HEIGHT 12
 #define BOX1_YPOS 10
 #define BOX2_YPOS 34
@@ -499,12 +775,6 @@ void a_app_manager_init(void)
 
 	for (i=0; i < SIDEBOX_WIDTH; i++)
 	{
-		/* vd_set_pixel(help_layer, 127-i, BOX1_YPOS, 0, 1, 1);
-		vd_set_pixel(help_layer, 127-i, BOX1_YPOS+SIDEBOX_HEIGHT, 0, 1, 1);
-		
-		vd_set_pixel(help_layer, 127-i, BOX2_YPOS, 0, 1, 1);
-		vd_set_pixel(help_layer, 127-i, BOX2_YPOS+SIDEBOX_HEIGHT, 0, 1, 1);
-		*/
 		vd_set_pixel(help_layer, i, 7, 0, 1, 1);
 	}
 	
@@ -518,6 +788,6 @@ void a_app_manager_init(void)
 
 	// vd_prints_xy(help_layer, 4, 58, VDISP_FONT_4x6, 0,"TEST");
 	
-	
+	set_help_text();
 }
 
