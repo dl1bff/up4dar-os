@@ -38,6 +38,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io\lcd.h"
 #include "up_dstar\dcs.h"
 #include "up_io\wm8510.h"
+#include "up_dstar\ambe.h"
 
 
 char software_ptt = 0;
@@ -701,6 +702,20 @@ static int main_app_key_event_handler (void * app_context, int key_num, int even
 		return 1;
 	}
 	
+	if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
+	{
+		if (ambe_get_automute() != 0) // automute is currently on
+		{
+			ambe_set_automute(0);
+		}
+		else
+		{
+			ambe_set_automute(1);
+		}
+		
+		return 1;
+	}
+	
 	return 0;
 }
 
@@ -711,7 +726,7 @@ void a_app_manager_init(void)
 	app_context_t * a;
 	
 	a = a_new_app( "DSTAR", VDISP_MAIN_LAYER);
-	a_set_button_text(a, "PTT", "", "");
+	a_set_button_text(a, "PTT", "MUTE", "");
 	a_set_key_event_handler(a, main_app_key_event_handler);
 	
 	a = a_new_app( "GPS", VDISP_GPS_LAYER);

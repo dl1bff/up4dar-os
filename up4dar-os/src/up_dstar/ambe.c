@@ -172,7 +172,34 @@ static int ambe_encoder_counter = 0;
 static int silence_counter = 0;
 
 
+#define AUTOMUTE_VALUE	120
 
+static int automute = 0;
+
+void ambe_set_automute (int enable)
+{
+	if (enable != 0)
+	{
+		automute = AUTOMUTE_VALUE;
+	}
+	else
+	{
+		automute = 0;
+	}
+}
+
+int ambe_get_automute(void)
+{
+	return automute;
+}
+
+void ambe_service(void)
+{
+	if (automute > 0)
+	{
+		automute --;
+	}
+}
 
 static void put_sound_data( unsigned short d )
 {
@@ -544,15 +571,23 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 						if (silence_counter > 0)
 						{
 							silence_counter --;
-							audio_q_put( audio_output_q, abuf );
 							
-							if (silence_counter == 0)
+							if (automute == 0)
 							{
-								wm8510_beep(
-									SETTING_SHORT(S_STANDBY_BEEP_DURATION),
-									SETTING_SHORT(S_STANDBY_BEEP_FREQUENCY),
-									SETTING_CHAR(C_STANDBY_BEEP_VOLUME)
-									  );
+								audio_q_put( audio_output_q, abuf );
+								
+								if (silence_counter == 0)
+								{
+									wm8510_beep(
+										SETTING_SHORT(S_STANDBY_BEEP_DURATION),
+										SETTING_SHORT(S_STANDBY_BEEP_FREQUENCY),
+										SETTING_CHAR(C_STANDBY_BEEP_VOLUME)
+									);
+								}
+							}
+							else
+							{  // automute running, extend mute if silence_counter > 0
+								automute = AUTOMUTE_VALUE;
 							}
 						}													
 					}
@@ -628,6 +663,8 @@ void ambe_stop_encode(void)
 		// vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 0, "    " );
 	}
 }
+
+
 
 
 void ambe_input_data( const uint8_t * d)

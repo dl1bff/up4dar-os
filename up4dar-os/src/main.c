@@ -373,7 +373,7 @@ static void show_dcs_state(void)
 	char buf[10];
 	dcs_get_current_reflector_name(buf);
 	buf[8] = 0;
-	vdisp_prints_xy( 95, 27, VDISP_FONT_4x6, 
+	vdisp_prints_xy( 96, 27, VDISP_FONT_4x6, 
 		dcs_is_connected(), buf );
 }		
 
@@ -571,7 +571,20 @@ static void vServiceTask( void *pvParameters )
 		}
 			
 			
-			
+		ambe_service();
+		
+		const char * mute_status = "      ";
+		
+		int i = ambe_get_automute();
+		
+		if (i != 0)
+		{
+			mute_status = " MUTE ";
+		}
+		
+		vdisp_prints_xy( 70, 27, VDISP_FONT_4x6,
+			i % 2, mute_status );
+		
 		dhcp_service();				
 			
 		/*		
@@ -707,6 +720,7 @@ static void vTXTask( void *pvParameters )
 			if (PTT_CONDITION  // PTT pressed
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
+				ambe_set_automute(0); // switch off automute
 				tx_state = 1;
 				ambe_start_encode();
 				phy_start_tx();

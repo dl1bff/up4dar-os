@@ -42,7 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SWVER_BYTE0		(SOFTWARE_IMAGE_SYSTEM | SOFTWARE_MATURITY_BETA)
 #define SWVER_BYTE1		1
 #define SWVER_BYTE2		1
-#define SWVER_BYTE3		20
+#define SWVER_BYTE3		21
 
 
 
