@@ -39,6 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gcc_builtin.h"
 
 #include "up_dstar/settings.h"
+#include "up_crypto/up_crypto.h"
 
 
 #define BER_INTEGER			0x02
@@ -56,7 +57,43 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-// char my_callsign[8] = "DL1BFF  ";
+void snmp_cmnty_init(void)
+{
+	// initialize community string if not set already
+	
+	char first_char = settings.s.snmp_cmnty[0];
+	
+	if ((first_char <= 0x20) || (first_char >= 0x7E)) // nothing printable
+	{
+		crypto_get_random_bytes( (unsigned char *) settings.s.snmp_cmnty, SNMP_CMNTY_LENGTH );
+		int i;
+		for (i=0; i < SNMP_CMNTY_LENGTH; i++)
+		{
+			int v = settings.s.snmp_cmnty[i] & 0x3F;
+			char r = '/';
+			
+			if (v < 26)
+			{
+				r = 'A' + v;
+			}
+			else if (v < 52)
+			{
+				r = 'a' + v - 26;
+			}
+			else if (v < 62)
+			{
+				r = '0' + v - 52;
+			}
+			else if (v == 62)
+			{
+				r = '+';
+			}  // otherwise r = '/'
+			
+			settings.s.snmp_cmnty[i] = r;
+		}
+	}
+}
+
 
 
 int snmp_encode_int ( int32_t value, uint8_t * res, int * res_len, int maxlen )
@@ -695,7 +732,17 @@ eth_txmem_t * snmp_process_request( const uint8_t * req, int req_len, int * resu
 	
 	if (get_octetstring(BER_OCTETSTRING, community_string,
 	      &community_string_len, sizeof community_string) != 0)  return 0; // snmp community
+		
+#define CHECK_SNMP_COMMUNITY_STRING 1
+
+#if defined(CHECK_SNMP_COMMUNITY_STRING)  
+	if (community_string_len != SNMP_CMNTY_LENGTH)  return 0;  // length of string not correct
 	
+	if (memcmp(community_string, settings.s.snmp_cmnty, SNMP_CMNTY_LENGTH) != 0)
+		return 0;  // string not correct
+	
+#endif
+
 	ber_skip();
 	
 	req_type_pos = (parse_ptr - req); // position of the byte where the request type is

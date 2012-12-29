@@ -247,22 +247,6 @@ static void app_manager_select_next(void)
 	
 	set_help_text();
 	
-	/*
-	switch (active_app)
-	{
-		case 0:  // DSTAR
-			
-			lcd_show_layer(0);
-			break;
-			
-		case 1: // GPS
-		
-			lcd_show_layer(1);
-			break;
-			
-	}
-	*/
-	
 	lcd_show_layer(current_app->screen_num);
 	
 	
@@ -317,12 +301,16 @@ static void set_speaker_volume (int up)
 
 int dcs_mode = 0;
 
+static char snmp_reset_cmnty = 0;
+
 void a_dispatch_key_event( int key_num, int key_event )
 {
 	if (key_num == A_KEY_BUTTON_APP_MANAGER)
 	{
 		if (key_event == A_KEY_PRESSED)
 		{
+			snmp_reset_cmnty = 0;
+			
 			software_ptt = 0; // prevent TXing forever...
 			
 			app_manager_select_next();
@@ -335,13 +323,47 @@ void a_dispatch_key_event( int key_num, int key_event )
 			else
 			{
 				help_layer_timer = 5; // approx 2 seconds
-			}
-			
+			}			
 		}
+		
+		if (key_event == A_KEY_HOLD_5S)
+		{
+			if (SETTING_CHAR(C_DISABLE_UDP_BEACON) != 0)  // toggle UDP beacon
+			{
+				SETTING_CHAR(C_DISABLE_UDP_BEACON) = 0; // beacon is now on
+				wm8510_beep(50, 1200, 100);
+				
+				snmp_reset_cmnty = 1;
+			}
+			else
+			{
+				SETTING_CHAR(C_DISABLE_UDP_BEACON) = 1; // // beacon is now off
+				wm8510_beep(800, 300, 100);
+			}
+		}
+		
+		if (key_event == A_KEY_HOLD_10S)
+		{
+			if ((snmp_reset_cmnty == 2) && (SETTING_CHAR(C_DISABLE_UDP_BEACON) == 0))
+			{
+				settings.s.snmp_cmnty[0] = 0; // erase first byte, new string will then
+				   // be generated automatically
+				wm8510_beep(500, 1200, 100);
+				snmp_reset_cmnty = 0;
+			}
+		}			
 		
 	}
 	else
 	{
+		if (snmp_reset_cmnty == 1)
+		{
+			if ((key_num == A_KEY_BUTTON_UP) && (key_event == A_KEY_HOLD_2S))
+			{
+				snmp_reset_cmnty = 2;
+			}
+		}
+		
 		int res = 0;
 		
 		if (current_app->key_event_handler != NULL)
@@ -367,178 +389,6 @@ void a_dispatch_key_event( int key_num, int key_event )
 		}
 	}			
 		
-	/*	
-		// dispatch to current app
-		switch (active_app)
-		{
-			case VDISP_MAIN_LAYER: // DSTAR App
-				if (key_event == A_KEY_PRESSED)
-				{
-					switch(key_num)
-					{
-						case A_KEY_BUTTON_3: // Mode
-							if (dcs_mode != 0)
-							{
-								if (!dcs_is_connected())
-								{
-									dcs_mode = 0;
-								}
-							}
-							else
-							{
-								dcs_mode = 1;
-							}
-							break;
-						
-						case A_KEY_BUTTON_2: // CONNECT
-							if (dcs_mode != 0)
-							{
-								dcs_on_off();
-							}				
-							break;
-							
-						case A_KEY_BUTTON_1: // PTT
-							software_ptt = 1;
-							break;
-							
-						case A_KEY_BUTTON_UP: // DCS +
-							if (dcs_mode != 0)
-							{
-								if (dcs_is_connected())
-								{
-									set_speaker_volume(1);
-								}
-								else
-								{
-									dcs_select_reflector(1);
-								}									
-							}
-							else
-							{
-								set_speaker_volume(1);
-							}							
-							break;
-							
-						case A_KEY_BUTTON_DOWN: // DCS -
-							if (dcs_mode != 0)
-							{
-								if (dcs_is_connected())
-								{
-									set_speaker_volume(0);
-								}
-								else
-								{
-									dcs_select_reflector(0);
-								}
-							}
-							else
-							{
-								set_speaker_volume(0);
-							}							
-							break;	
-							
-					}
-				}
-				else if (key_event == A_KEY_REPEAT)
-				{
-					switch(key_num)
-					{
-						case A_KEY_BUTTON_UP: // DCS +
-						if (dcs_mode != 0)
-						{
-							if (dcs_is_connected())
-							{
-								set_speaker_volume(1);
-							}
-							else
-							{
-								dcs_select_reflector(1);
-							}
-						}
-						else
-						{
-							set_speaker_volume(1);
-						}							
-						break;
-						
-						case A_KEY_BUTTON_DOWN: // DCS -
-						if (dcs_mode != 0)
-						{
-							if (dcs_is_connected())
-							{
-								set_speaker_volume(0);
-							}
-							else
-							{
-								dcs_select_reflector(0);
-							}
-						}
-						else
-						{
-							set_speaker_volume(0);
-						}						
-						break;
-						
-					}
-				}
-				else if (key_event == A_KEY_RELEASED)
-				{
-					switch(key_num)
-					{
-						case A_KEY_BUTTON_1: // PTT
-							software_ptt = 0;
-							break;
-					}
-				}											
-				break;
-				
-			case VDISP_DEBUG_LAYER:
-				switch(key_num)
-				{
-					case A_KEY_BUTTON_2:
-						AVR32_WDT.ctrl = 0x55001001;
-						AVR32_WDT.ctrl = 0xAA001001;
-						
-						break;
-						
-				}				
-			
-				break;
-				
-			default:
-				
-				if (active_app == VDISP_REF_LAYER)
-				{
-					ref_app_context->key_event_handler(ref_app_context, key_num, key_event);
-					
-				}
-				break;
-		}
-		return;
-	} // if (key_num != A_KEY_BUTTON_APP_MANAGER)
-	
-	
-			
-			if (help_layer_timer > 0)
-			{
-				lcd_show_help_layer(0); // switch off help
-				help_layer_timer = 0;
-			}
-			else
-			{
-				set_help_text();
-				lcd_show_help_layer(help_layer);
-				help_layer_timer = 7; // approx 3 seconds
-			}			
-			break;
-		
-		
-			
-		case A_KEY_HOLD_500MS: 
-		
-		*/
-			
-		
 }
 
 #define REF_NUM_ITEMS 6
@@ -546,18 +396,18 @@ void a_dispatch_key_event( int key_num, int key_event )
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
 static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 0, 9, 9, 9, 25 };
-static const char * const ref_modes[2] = { "DSTAR Modem      ",
-										   "DCS over Internet"};
+static const char * const ref_modes[2] = { "DSTAR Modem ",
+										   "DCS Internet"};
 static const char * const ref_types[2] = { "DCS", "URF" };
 
 
 static void ref_print_status (void)
 {
 	
-	vd_prints_xy(VDISP_REF_LAYER, 0, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
+	vd_prints_xy(VDISP_REF_LAYER, 36, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
 		ref_modes[(int) ref_items[0]]);
 	
-#define XPOS 10
+	#define XPOS 10
 	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
 		ref_types[(int) ref_items[1]]);
 	
@@ -735,9 +585,14 @@ void a_app_manager_init(void)
 	a_set_button_text(a, "CONNECT", "DISC", "SELECT");
 	a_set_key_event_handler(a, ref_app_key_event_handler);
 	
+	a = a_new_app( "AUDIO", VDISP_AUDIO_LAYER);
+	// a_set_button_text(a, "", "", "");
+	// a_set_key_event_handler(a, debug_app_key_event_handler);
+	
 	a = a_new_app( "DEBUG", VDISP_DEBUG_LAYER);
 	a_set_button_text(a, "", "REBOOT", "");
 	a_set_key_event_handler(a, debug_app_key_event_handler);
+	
 	
 	help_layer = vd_new_screen();
 	
@@ -802,6 +657,11 @@ void a_app_manager_init(void)
 	*/
 
 	// vd_prints_xy(help_layer, 4, 58, VDISP_FONT_4x6, 0,"TEST");
+	
+	vd_prints_xy(VDISP_REF_LAYER, 0, 12, VDISP_FONT_6x8, 0, "Mode:");
+	
+	vd_printc_xy(VDISP_REF_LAYER, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
+	vd_printc_xy(VDISP_REF_LAYER, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up
 	
 	set_help_text();
 }

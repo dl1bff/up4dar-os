@@ -44,6 +44,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define NUM_RPT_SETTINGS	5
 #define NUM_URCALL_SETTINGS		10
 
+#define SNMP_CMNTY_LENGTH  12
+
 
 typedef union settings_union
 {
@@ -60,6 +62,7 @@ typedef union settings_union
 		char my_ext[CALLSIGN_EXT_LENGTH];
 		char txmsg[TXMSG_LENGTH];
 		char dprs_msg[DPRS_MSG_LENGTH];
+		char snmp_cmnty[SNMP_CMNTY_LENGTH];
 	} s;
 	
 } settings_t;
@@ -114,6 +117,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_SPKR_VOLUME				12
 #define C_RPTR_BEEP_VOLUME			13
 #define C_REF_MODULE_CHAR			14
+#define C_DISABLE_UDP_BEACON		15
 
 
 #define SETTING_LONG(a) (settings.s.long_values[a])

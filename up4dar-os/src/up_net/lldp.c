@@ -99,22 +99,27 @@ void lldp_send (void)
 	
 	// UDP ident
 	
-	uint8_t dest_ipv4_addr[4];
-	int i;
-	
-	for (i=0; i < 4; i++)
+	if (SETTING_CHAR(C_DISABLE_UDP_BEACON) != 1)
 	{
-		dest_ipv4_addr[i] = ipv4_addr[i] | (ipv4_netmask[i] ^ 0xFF);  // ipv4 subnet broadcast
-	}
+		uint8_t dest_ipv4_addr[4];
+		int i;
 	
-	packet = udp4_get_packet_mem(8, UP4DAR_UDP_IDENT_PORT, UP4DAR_UDP_IDENT_PORT, dest_ipv4_addr);
-	// packet = eth_txmem_get( UDP_PACKET_SIZE(8) );
+		for (i=0; i < 4; i++)
+		{
+			dest_ipv4_addr[i] = ipv4_addr[i] | (ipv4_netmask[i] ^ 0xFF);  // ipv4 subnet broadcast
+		}
 	
-	if (packet == NULL) // nomem
-		return;
+		packet = udp4_get_packet_mem(CALLSIGN_LENGTH + SNMP_CMNTY_LENGTH,
+			 UP4DAR_UDP_IDENT_PORT, UP4DAR_UDP_IDENT_PORT, dest_ipv4_addr);
+		// packet = eth_txmem_get( UDP_PACKET_SIZE(8) );
 	
-	memcpy(packet->data + UDP_PACKET_SIZE(0), settings.s.my_callsign, 8);
+		if (packet == NULL) // nomem
+			return;
 	
-	udp4_calc_chksum_and_send(packet, NULL); // send broadcast
+		memcpy(packet->data + UDP_PACKET_SIZE(0), settings.s.my_callsign, CALLSIGN_LENGTH);
+		memcpy(packet->data + UDP_PACKET_SIZE(CALLSIGN_LENGTH), settings.s.snmp_cmnty, SNMP_CMNTY_LENGTH);
+	
+		udp4_calc_chksum_and_send(packet, NULL); // send broadcast	
+	}	
 	
 }

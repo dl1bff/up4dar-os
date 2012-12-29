@@ -39,7 +39,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define A_KEY_HOLD_500MS	3
 #define A_KEY_REPEAT		4
 #define A_KEY_HOLD_2S		5
-
+#define A_KEY_HOLD_5S		6
+#define A_KEY_HOLD_10S		7
 
 
 void a_set_key_event_handler ( void * app_context, int (*key_event_handler) (void * a, int key_num, int key_event));

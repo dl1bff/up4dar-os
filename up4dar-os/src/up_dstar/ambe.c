@@ -302,17 +302,14 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	char buf_ready_rx = 1;
 	char buf_ready_tx = 1;
 	
-// #define AUDIO_DEBUG 1
 
-#if defined(AUDIO_DEBUG)
-	int audio_debug_sample_counter = 0;
-	#define AUDIO_DEBUG_NUM_SAMPLES 160
+	int audio_meter_sample_counter = 0;
+#define AUDIO_METER_NUM_SAMPLES 160
 	
-	int audio_debug_square_sum = 0;
+	int audio_meter_square_sum = 0;
 	
-	char audio_debug_max_value = 0;
-	char audio_debug_hold_timer = 0;
-#endif
+	char audio_meter_max_value = 0;
+	char audio_meter_hold_timer = 0;
 
 	char audio_clip = 0;
 	
@@ -394,28 +391,18 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 			{
 				short sample = encbuf[ (i >> 2) ];
 				
-#if defined(AUDIO_DEBUG)
-			/*
-				int abs_value = (sample < 0) ? (- sample) : sample;
-				
-				if (abs_value > audio_debug_max_value)
-				{
-					audio_debug_max_value = abs_value;
-				}
-				
-				*/
 			
-				audio_debug_square_sum += (sample*sample) >> 7;
+				audio_meter_square_sum += (sample*sample) >> 7;
 				
-				audio_debug_sample_counter++;
+				audio_meter_sample_counter++;
 				
-				if (audio_debug_sample_counter >= AUDIO_DEBUG_NUM_SAMPLES)
+				if (audio_meter_sample_counter >= AUDIO_METER_NUM_SAMPLES)
 				{
-					audio_debug_sample_counter = 0;
+					audio_meter_sample_counter = 0;
 					
 					//char buf[5];
 					
-					unsigned int v = (unsigned int) (-1 * fixpoint_milliBel( audio_debug_square_sum));
+					unsigned int v = (unsigned int) (-1 * fixpoint_milliBel( audio_meter_square_sum));
 					
 					//vdisp_i2s(buf, 4, 10, 1, v);
 					//vdisp_prints_xy(0, 32, VDISP_FONT_6x8, 0, buf);
@@ -424,44 +411,58 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 					
 					v /= 100;
 					
-					if (v < audio_debug_max_value)
+					if (v < audio_meter_max_value)
 					{
 						
-						audio_debug_max_value = v;
-						audio_debug_hold_timer = 50;
+						audio_meter_max_value = v;
+						audio_meter_hold_timer = 50;
 					}
 					
 					char buf[4];
-					vdisp_i2s(buf+1, 2, 10, 1, audio_debug_max_value);
+					vdisp_i2s(buf+1, 2, 10, 1, audio_meter_max_value);
 					buf[0] = '-';
-					vdisp_prints_xy(64, 27, VDISP_FONT_4x6, audio_clip, buf);
+					vd_prints_xy(VDISP_AUDIO_LAYER, 69, 25, VDISP_FONT_6x8, audio_clip, buf);
 					
-					for (i=0; i < 100; i++)
+					for (i=0; i < 104; i+=8)
 					{
-						int pixel = (i > v) ? 1 : 0;
+						int j;
+						int tmp_byte = 0;
 						
-						if (i == audio_debug_max_value)
+						#define BIT7SET 0x80
+						
+						for (j=0; j < 8; j++)
 						{
-							pixel = 1;
+							int pixel = ((i+j) > v) ? BIT7SET : 0;
+							
+							if ((i+j) == audio_meter_max_value)
+							{
+								pixel = BIT7SET;
+							}
+							
+							tmp_byte = (tmp_byte >> 1) | pixel;
 						}
 						
-						vdisp_set_pixel(100-i, 34, 0, pixel, 1);
+						#undef BIT7SET
+						
+						vd_set_pixel(VDISP_AUDIO_LAYER, 105-i, 36, 0, tmp_byte, 8);
+						vd_set_pixel(VDISP_AUDIO_LAYER, 105-i, 37, 0, tmp_byte, 8);
+						vd_set_pixel(VDISP_AUDIO_LAYER, 105-i, 38, 0, tmp_byte, 8);
 					}
 					
-					if (audio_debug_hold_timer > 0)
+					if (audio_meter_hold_timer > 0)
 					{
-						audio_debug_hold_timer --;
+						audio_meter_hold_timer --;
 					}
 					
-					if (audio_debug_hold_timer == 0)
+					if (audio_meter_hold_timer == 0)
 					{
-						audio_debug_max_value = 99;
+						audio_meter_max_value = 99;
 						audio_clip = 0;
 					}
 					
-					audio_debug_square_sum = 0;
+					audio_meter_square_sum = 0;
 				}
-#endif
+
 
 				/*
 				if (sample > 3276)

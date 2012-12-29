@@ -157,8 +157,8 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	}
 	else if ((crc_result == 0) && (ypos == 9))
 	{
-		vdisp_prints_xy(48, 18, VDISP_FONT_4x6, 0, "/");
-		vdisp_prints_xy(52, 18, VDISP_FONT_4x6, 0, buf);
+		vdisp_prints_xy(44, 18, VDISP_FONT_4x6, 0, "/");
+		vdisp_prints_xy(48, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
 	memcpy(buf, header_data + 11, 8);

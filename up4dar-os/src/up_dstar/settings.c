@@ -98,7 +98,9 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_STANDBY_BEEP_VOLUME		13
 	{  0,		100,		10  },
 	// #define C_REF_MODULE_CHAR			14
-	{  65,		90,		67  }
+	{  65,		90,		67  },
+	// #define C_DISABLE_UDP_BEACON			15
+	{  0,		1,		1  }
 };
 
 

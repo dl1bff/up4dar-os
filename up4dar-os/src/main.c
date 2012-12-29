@@ -356,7 +356,7 @@ static void send_phy ( const unsigned char * d )
 
 #define NUMBER_OF_KEYS  6
 
-static int touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0 };
+static short touchKeyCounter[NUMBER_OF_KEYS] = { 0,0,0,0,0,0 };
 	
 	
 
@@ -365,7 +365,7 @@ int debug1;
 
 int maxTXQ;
 
-int8_t lldp_counter = 0;
+int8_t lldp_counter = 15;
 
 
 static void show_dcs_state(void)
@@ -454,6 +454,14 @@ static void vButtonTask( void *pvParameters )
 			{
 				a_dispatch_key_event( i, A_KEY_HOLD_2S);
 			}
+			else if (touchKeyCounter[i] == 500)
+			{
+				a_dispatch_key_event( i, A_KEY_HOLD_5S);
+			}
+			else if (touchKeyCounter[i] == 1000)
+			{
+				a_dispatch_key_event( i, A_KEY_HOLD_10S);
+			}
 			
 			if (touchKeyCounter[i] > 63) // start repeat after 630ms
 			{
@@ -492,6 +500,8 @@ static void set_phy_parameters(void)
 	snmp_set_phy_sysparam(6, &value, 1);
 }
 
+
+static int initialHeapSize;
 		
 static void vServiceTask( void *pvParameters )
 {
@@ -527,14 +537,18 @@ static void vServiceTask( void *pvParameters )
 		vdisp_prints_xy( 55, 0, VDISP_FONT_4x6, 0, tmp_buf );
 			
 			
+		vdisp_i2s( tmp_buf, 5, 10, 0, initialHeapSize );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 52, VDISP_FONT_4x6, 0, tmp_buf );
+		vdisp_i2s( tmp_buf, 5, 10, 0, xPortGetFreeHeapSize() );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 58, VDISP_FONT_4x6, 0, tmp_buf );
+			
 		// ethernet status
 			
 		int v = AVR32_MACB.MAN.data;
 			
 		AVR32_MACB.man = 0x60C20000; // read register 0x10
 			
-		//  vdisp_i2s( tmp_buf, 4, 16, 1, maxTXQ );
-		//  vdisp_prints_xy( 80, 56, VDISP_FONT_6x8, 0, tmp_buf );
+		
 			
 		const char * net_status = "     ";
 			
@@ -610,6 +624,8 @@ static void vServiceTask( void *pvParameters )
 			
 		if (lldp_counter < 0)
 		{ 
+			snmp_cmnty_init();
+			
 			lldp_counter = 10;
 			lldp_send();
 				
@@ -809,6 +825,8 @@ int main (void)
 {
 	board_init();
 	
+	initialHeapSize = xPortGetFreeHeapSize();
+	
 	
 /*	debugOutput = xSerialPortInitMinimal( 0, 4800, 10 );
 	
@@ -851,7 +869,10 @@ int main (void)
 		// error handling..
 	}
 	
-	
+	if (vd_new_screen() != VDISP_AUDIO_LAYER)
+	{
+		// error handling..
+	}
 	
 	
 	lcd_init();
