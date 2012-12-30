@@ -91,7 +91,11 @@ static int chip_init(void)
 	AVR32_TWI.cr = 0x24; // MSEN + SVDIS
 	AVR32_TWI.mmr =  0x001A0100;    // DADR= 0011010   , One-byte internal device address, MREAD = 0
 	
+	vTaskDelay(50);
+	
 	if (send_wm8510(  0, 0x000) != 0) goto error;  // reset
+	
+	vTaskDelay(50);
 	
 	if (send_wm8510(  49, 0x003) != 0) goto error;  // TSDEN, VROI (charge output C slowly)
 	
@@ -196,7 +200,7 @@ static portTASK_FUNCTION( wm8510Task, pvParameters )
 			}
 			else
 			{
-				// vdisp_prints_xy(0, 40, VDISP_FONT_6x8, 0, "ERR");
+				vdisp_prints_xy(0, 40, VDISP_FONT_6x8, 0, "WM8510 init error");
 			}
 			break;
 			

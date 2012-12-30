@@ -131,6 +131,10 @@ int crypto_get_random_16bit(void)
 	return (random_seed >> 0x10) & 0xFFFF;
 }
 
+int crypto_is_ready (void)
+{
+	return crypto_init_ready;
+}
 
 static portTASK_FUNCTION( cryptoTask, pvParameters )
 {
@@ -141,6 +145,8 @@ static portTASK_FUNCTION( cryptoTask, pvParameters )
 	
 	vTaskDelay(3000);
 	
+	vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 1, "  " );
+	
 	randmem.adc_value = AVR32_ADC.cdr0; // voltage adc input
 	
 	ambe_start_encode();
@@ -149,6 +155,9 @@ static portTASK_FUNCTION( cryptoTask, pvParameters )
 	vTaskDelay(200);
 	ambe_q_get(mic_ambe_q, randmem.ambe_buf);
 	ambe_stop_encode();
+	
+	vdisp_prints_xy( 0, 0, VDISP_FONT_6x8, 0, "  " );
+	
 	randmem.counter = rtclock_get_ticks();
 	
 	crypto_get_random_bytes(ecc_secret_key, 20);

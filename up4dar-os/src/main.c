@@ -77,6 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "software_version.h"
 #include "up_dstar/sw_update.h"
+#include "up_crypto/up_crypto.h"
 
 extern unsigned char software_version[];
 
@@ -624,21 +625,27 @@ static void vServiceTask( void *pvParameters )
 			
 		if (lldp_counter < 0)
 		{ 
-			snmp_cmnty_init();
+			if (crypto_is_ready())
+			{
+				snmp_cmnty_init();
 			
-			lldp_counter = 10;
-			lldp_send();
-				
-				if ((AVR32_USBB.usbsta & 0x0400) == 0) // ID pin pulled low
-				{
-				gpio_set_pin_low (AVR32_PIN_PB17); // turn on power
-				}	
-				else
-				{
-				gpio_set_pin_high (AVR32_PIN_PB17);
-				}		
+				lldp_send();
+			}
+			
+			lldp_counter = 10;	
 		}				
 			 
+			 
+	     // USB Host Power
+		if ((AVR32_USBB.usbsta & 0x0400) == 0) // ID pin pulled low
+		{
+			gpio_set_pin_low (AVR32_PIN_PB17); // turn on power
+		}
+		else
+		{
+			gpio_set_pin_high (AVR32_PIN_PB17);
+		}
+		
 		ipneigh_service();
 		
 		a_app_manager_service();
