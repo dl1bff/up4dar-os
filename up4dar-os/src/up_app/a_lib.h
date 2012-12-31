@@ -49,6 +49,7 @@ void * a_get_private_data ( void * app_context );
 void * a_malloc ( void * app_context, int num_bytes );
 void a_set_button_text ( void * app_context, const char * button1, const char * button2, const char * button3);
 void * a_new_app ( const char * app_name, char screen_num);
+void a_app_manager_select_first(void);
 
 extern char software_ptt;
 

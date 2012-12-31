@@ -229,6 +229,18 @@ static void set_help_text (void)
 }
 
 
+void a_app_manager_select_first(void)
+{
+	current_app = app_list_head;
+	
+	if (current_app != NULL)
+	{
+		set_help_text();
+		
+		lcd_show_layer(current_app->screen_num);
+	}
+}
+
 static void app_manager_select_next(void)
 {
 	app_context_t * a = current_app;

@@ -51,6 +51,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/dns.h"
 
 #include "up_app/a_lib_internal.h"
+#include "up_app/a_lib.h"
 
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
@@ -337,6 +338,8 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 				dcs_state = DCS_CONNECTED;
 				dcs_timeout_timer = DCS_KEEPALIVE_TIMEOUT;
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "ACK ");
+				
+				a_app_manager_select_first(); // switch to main screen
 			}
 			else
 			{
