@@ -73,7 +73,7 @@ static int dcs_udp_local_port;
 
 static int dcs_state;
 
-#define DCS_KEEPALIVE_TIMEOUT  60
+#define DCS_KEEPALIVE_TIMEOUT  100
 #define DCS_CONNECT_REQ_TIMEOUT  6
 #define DCS_CONNECT_RETRIES		  3
 #define DCS_DISCONNECT_REQ_TIMEOUT  6
@@ -355,13 +355,21 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			}
 		}
 	}
-	else if (data_len == 9)  // keep alive packet
+	else if (data_len == 9)  // keep alive packet (old version)
 	{
 		if (dcs_state == DCS_CONNECTED)
 		{
 			dcs_timeout_timer = DCS_KEEPALIVE_TIMEOUT;
 			dcs_keepalive_response();
 		}			
+	}
+	else if (data_len == 22)  // keep alive packet (new version)
+	{
+		if (dcs_state == DCS_CONNECTED)
+		{
+			dcs_timeout_timer = DCS_KEEPALIVE_TIMEOUT;
+			dcs_keepalive_response();
+		}
 	}
 }
 
@@ -478,18 +486,18 @@ static void dcs_keepalive_response (void)
 	
 	memcpy (d, settings.s.my_callsign, 7);
 	
-	d[7] = ' ';
+	d[7] = DCS_REGISTER_MODULE;
 	d[8] = 0;
 	
 	char buf[8];
 	dcs_get_current_reflector_name(buf);
 	
-	memcpy(d + 9, buf, 7);
-	
-	d[16] = ' ';
+	memcpy(d + 9, buf, 8);
 	
 	dcs_calc_chksum_and_send( packet, DCS_KEEPALIVE_RESP_FRAME_SIZE );
 }
+
+
 
 
 static int slow_data_count = 0;

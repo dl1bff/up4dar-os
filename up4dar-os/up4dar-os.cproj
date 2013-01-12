@@ -65,7 +65,7 @@
         <documentation help="http://asf.atmel.com/docs/latest/common/applications/user_application/user_board/doxygen/html/" />
       </framework-data>
     </AsfFrameworkConfig>
-    <AsfVersion>2.9.0</AsfVersion>
+    <AsfVersion>2.11.1</AsfVersion>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
     <OverrideVtorValue />
