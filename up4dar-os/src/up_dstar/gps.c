@@ -582,7 +582,7 @@ static void gps_parse_nmea(void)
 				copy_dstar_gps_line(gprmc_data, 13);
 				if (gpgga_data[0] != 0) // gpgga_data is not empty
 				{
-					slow_data_ptr = gprmc_data;
+					slow_data_ptr = gpgga_data;
 					slow_data_state = 1;
 				}
 			}				
@@ -606,7 +606,7 @@ static void gps_parse_nmea(void)
 				copy_dstar_gps_line(gpgga_data, 15);
 				if (gprmc_data[0] != 0) // gprmc_data is not empty
 				{
-					slow_data_ptr = gprmc_data;
+					slow_data_ptr = gpgga_data;
 					slow_data_state = 1;
 				}
 			}			
@@ -695,7 +695,7 @@ int gps_get_slow_data(uint8_t * slow_data)
 		case 0:  // no data to send
 			break;
 			
-		case 1: // send GPRMC
+		case 1: // send GPGGA 
 			if (slow_data_ptr == 0)
 			{
 				slow_data_state = 4; // end
@@ -705,12 +705,12 @@ int gps_get_slow_data(uint8_t * slow_data)
 				if (copy_slow_data(&ret_val, slow_data) != 0) // if all bytes are copied
 				{
 					slow_data_state = 2;
-					slow_data_ptr = gpgga_data;
+					slow_data_ptr = gprmc_data;
 				}
 			}
 			break;
 		
-		case 2: // send GPGGA
+		case 2: // send GPRMC
 			if (slow_data_ptr == 0)
 			{
 				slow_data_state = 4; // end

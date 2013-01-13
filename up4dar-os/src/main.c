@@ -79,7 +79,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/sw_update.h"
 #include "up_crypto/up_crypto.h"
 
-extern unsigned char software_version[];
+
 
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
@@ -732,9 +732,12 @@ static void vTXTask( void *pvParameters )
 	dstarChangeMode(2);
 	
 	vdisp_clear_rect(0,0,128,64);
+	gps_reset_slow_data();
 	
 #define PTT_CONDITION  ((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1))
 
+	int dcs_active = 0;
+	
 	for(;;)
 	{
 		switch(tx_state)
@@ -749,11 +752,12 @@ static void vTXTask( void *pvParameters )
 				phy_start_tx();
 				vTaskDelay(80); // pre-buffer audio while PHY sends header
 				dcs_reset_tx_counters();
-				gps_reset_slow_data();
+				// gps_reset_slow_data();
 				ambe_q_flush(& microphone, 1);
 				vTaskDelay(45); // pre-buffer one AMBE frame
 				
 				session_id ++;
+				dcs_active = dcs_is_connected();
 			}
 			else
 			{
@@ -766,20 +770,35 @@ static void vTXTask( void *pvParameters )
 			{
 				tx_state = 2;
 				ambe_stop_encode();
+				gps_reset_slow_data();
 			}
 			else
 			{
 				if (ambe_q_get(& microphone, dcs_ambe_data) != 0) // queue unexpectedly empty
 				{
 					ambe_stop_encode();
-					send_dcs( session_id, 1); // send end frame
-					send_phy ( dcs_ambe_data );
+					if (dcs_active)
+					{
+						send_dcs( session_id, 1); // send end frame
+					}
+					else
+					{
+						send_phy ( dcs_ambe_data );
+					}
+					
 					tx_state = 3; // wait for PTT release
 				}					
 				else
 				{
-					send_dcs(  session_id, 0); // send normal frame
-					send_phy ( dcs_ambe_data );
+					if (dcs_active)
+					{
+						send_dcs(  session_id, 0); // send normal frame
+					}
+					else
+					{
+						send_phy ( dcs_ambe_data );
+					}						
+					
 					vTaskDelay(20); // wait 20ms
 				}
 			}
@@ -788,14 +807,26 @@ static void vTXTask( void *pvParameters )
 		case 2: // PTT off, drain microphone data
 			if (ambe_q_get(& microphone, dcs_ambe_data) != 0) // queue empty
 			{
-				send_dcs( session_id, 1); // send end frame
-				send_phy ( dcs_ambe_data );
+				if (dcs_active)
+				{
+					send_dcs( session_id, 1); // send end frame
+				}
+				else
+				{
+					send_phy ( dcs_ambe_data );
+				}					
 				tx_state = 3; // wait for PTT
 			}
 			else
 			{
-				send_dcs(  session_id, 0); // send normal frame
-				send_phy ( dcs_ambe_data );
+				if (dcs_active)
+				{
+					send_dcs(  session_id, 0); // send normal frame
+				}
+				else
+				{
+					send_phy ( dcs_ambe_data );
+				}					
 				vTaskDelay(20); // wait 20ms
 			}
 			break;

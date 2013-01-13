@@ -29,8 +29,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef SW_UPDATE_H_
 #define SW_UPDATE_H_
 
+extern unsigned char software_version[];
+
 int sw_update_pending(void);
 void sw_update_init(xQueueHandle dq );
-
+void version2string (char * buf, const unsigned char * version_info);
 
 #endif /* SW_UPDATE_H_ */

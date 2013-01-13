@@ -52,6 +52,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_app/a_lib_internal.h"
 #include "up_app/a_lib.h"
+#include "sw_update.h"
 
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
@@ -59,10 +60,12 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<td width=\"96%\">"
 
-                              "<font size=\"1\">Universal Platform for Digital Amateur Radio</br></font>"
+                              "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
 
-                              "<font size=\"2\"><b>www.UP4DAR.de</b></font>"
-
+                              "<font size=\"2\"><b>www.UP4DAR.de</b></font></br>"
+							  
+							  "<font size=\"1\">Software Version: X.0.00.00 </font>"
+		 
                               "</td>"
 
                               "</tr></table>";
@@ -435,6 +438,7 @@ static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 #define DCS_REGISTER_MODULE  'D'
 
 #define DCS_CONNECT_FRAME_SIZE  19
+// #define DCS_CONNECT_FRAME_SIZE  519
 
 static void dcs_link_to (int module)
 {
@@ -466,6 +470,9 @@ static void dcs_link_to (int module)
 	memcpy(d + 11, buf, 7);
 	
 	d[18] = ' ';
+	
+	// d[18] = '@';
+	// memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
 	
 	dcs_calc_chksum_and_send( packet, DCS_CONNECT_FRAME_SIZE );
 }
@@ -522,13 +529,27 @@ void send_dcs (int session_id, int last_frame)
 		return;
 	}
 	
-	
+	char buf[11];
 	
 	uint8_t * d = packet->data + 42; // skip ip+udp header
 	
 	if (frame_size > DCS_VOICE_FRAME_SIZE) // send HTML info
 	{
-		memcpy(d + 100, dcs_html_info, sizeof dcs_html_info);
+		memcpy(d + DCS_VOICE_FRAME_SIZE, dcs_html_info, sizeof dcs_html_info);
+		
+		version2string(buf, software_version); // get current software version
+		
+		int i;
+		
+		for (i=DCS_VOICE_FRAME_SIZE; i < (frame_size - strlen(buf)); i++)
+		{
+			if (d[i] == 'X')  // look for 'X'
+			{
+				memcpy(d + i, buf, strlen(buf));
+				// replace  X.0.00.00  with current software version
+				break;
+			}	
+		}		
 	}
 	
 	memcpy(d, "0001", 4);
@@ -537,7 +558,7 @@ void send_dcs (int session_id, int last_frame)
 	d[5] = 0;
 	d[6] = 0;
 	
-	char buf[8];
+	
 	
 	dcs_get_current_reflector_name( buf );
 	
@@ -600,8 +621,8 @@ void send_dcs (int session_id, int last_frame)
 			{
 				if (dcs_frame_counter & 1)
 				{
-					// slow_data_count = gps_get_slow_data(slow_data);
-					slow_data_count = 0;
+					slow_data_count = gps_get_slow_data(slow_data);
+					// slow_data_count = 0;
 					if (slow_data_count == 0)
 					{
 						d[55] = 0x16;  // NOP

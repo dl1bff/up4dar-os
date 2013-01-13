@@ -361,7 +361,7 @@ int snmp_set_sw_update (int32_t arg, const uint8_t * req, int req_len)
 
 
 
-static void version2string (char * buf, const unsigned char * version_info)
+void version2string (char * buf, const unsigned char * version_info)
 {
 	char image = '?';
 	char maturity = 0;
