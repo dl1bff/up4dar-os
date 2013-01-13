@@ -688,6 +688,11 @@ int gps_get_slow_data(uint8_t * slow_data)
 	slow_data[0] = 0x66; // NOP data
 	slow_data[1] = 0x66;
 	
+	if (SETTING_CHAR(C_DPRS_ENABLED) != 1)
+	{
+		return 0;
+	}
+	
 	// vdisp_printc_xy(0,0,VDISP_FONT_6x8, 0, 0x30 + slow_data_state);
 	
 	switch (slow_data_state)
