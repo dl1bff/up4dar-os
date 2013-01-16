@@ -581,7 +581,11 @@ void send_dcs (int session_id, int last_frame)
 	d[59] = (dcs_tx_counter >> 8) & 0xFF;
 	d[60] = (dcs_tx_counter >> 16) & 0xFF;
 	
-	d[61] = 0x01;
+	d[61] = 0x01; // Frame Format version low
+	// d[62] = 0x00; // Frame Format version high
+	d[63] = 0x21; // Language Set 0x21
+	
+	memcpy (d + 64, settings.s.txmsg, 20);
 	
 	if (last_frame != 0)
 	{
