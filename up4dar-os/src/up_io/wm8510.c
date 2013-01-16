@@ -91,6 +91,10 @@ static int chip_init(void)
 	AVR32_TWI.cr = 0x24; // MSEN + SVDIS
 	AVR32_TWI.mmr =  0x001A0100;    // DADR= 0011010   , One-byte internal device address, MREAD = 0
 	
+	vTaskDelay(5);
+	
+	send_wm8510(  0, 0x000);  // reset (without checking for I2C errors)
+	
 	vTaskDelay(50);
 	
 	if (send_wm8510(  0, 0x000) != 0) goto error;  // reset
