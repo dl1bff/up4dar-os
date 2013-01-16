@@ -736,7 +736,8 @@ static void vTXTask( void *pvParameters )
 	
 #define PTT_CONDITION  ((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1))
 
-	int dcs_active = 0;
+	short dcs_active = 0;
+	short tx_min_count = 0;
 	
 	for(;;)
 	{
@@ -758,22 +759,27 @@ static void vTXTask( void *pvParameters )
 				
 				session_id ++;
 				dcs_active = dcs_is_connected();
+				tx_min_count = 8; // send at least 8 AMBE frames+data (full TX Message)
 			}
 			else
 			{
-				vTaskDelay(100); // watch for PTT every 100ms
+				vTaskDelay(10); // watch for PTT every 10ms
 			}
 			break;
 			
 		case 1:  // PTT on
-			if (!PTT_CONDITION)  // PTT released
+			if ((!PTT_CONDITION) && (tx_min_count <= 0))  // PTT released
 			{
 				tx_state = 2;
 				ambe_stop_encode();
-				gps_reset_slow_data();
 			}
 			else
 			{
+				if (tx_min_count > 0)
+				{
+					tx_min_count--;
+				}
+				
 				if (ambe_q_get(& microphone, dcs_ambe_data) != 0) // queue unexpectedly empty
 				{
 					ambe_stop_encode();
