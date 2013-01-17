@@ -191,7 +191,7 @@ static char send_data [ 4];
 // static const char MY1[9]  = "DL1BFF  ";
 // static const char MY2[5]  = "    ";
 
-static int phy_frame_counter = 0;
+// static int phy_frame_counter = 0;
 static int txmsg_counter = 0;
 
 static const char direct_callsign[8] = "DIRECT  ";
@@ -257,7 +257,7 @@ static void phy_start_tx(void)
 	
 	send_cmd(header, 40);
 	
-	phy_frame_counter = 0;
+	// phy_frame_counter = 0;
 	txmsg_counter = 0;
 }
 
@@ -268,7 +268,7 @@ static uint8_t slow_data[5];
 // const char dstar_tx_msg[20] = "Michael, Berlin, D23";
 // --------------------------- 12345678901234567890
 
-static void send_phy ( const unsigned char * d )
+static void send_phy ( const unsigned char * d, char phy_frame_counter )
 {
 	send_voice[0] = 0x21;
 	send_voice[1] = 0x01;
@@ -336,11 +336,11 @@ static void send_phy ( const unsigned char * d )
 		send_cmd(send_data, 4);
 	}
 	
-	phy_frame_counter++;
+	// phy_frame_counter++;
 	
-	if (phy_frame_counter >= 21)
+	if (phy_frame_counter >= 20)
 	{
-		phy_frame_counter = 0;
+		// phy_frame_counter = 0;
 		txmsg_counter ++;
 		if (txmsg_counter >= 60)
 		{
@@ -738,6 +738,10 @@ static void vTXTask( void *pvParameters )
 
 	short dcs_active = 0;
 	short tx_min_count = 0;
+	char frame_counter = 0;
+	short secs = 0;
+	short tx_counter = 0;
+	char buf[4];
 	
 	for(;;)
 	{
@@ -750,16 +754,28 @@ static void vTXTask( void *pvParameters )
 				ambe_set_automute(0); // switch off automute
 				tx_state = 1;
 				ambe_start_encode();
-				phy_start_tx();
+				
+				dcs_active = dcs_is_connected();
+				
+				if (!dcs_active)
+				{
+					phy_start_tx();
+				}
+				
+				frame_counter = 0; // counter 0..20
+				tx_counter = 0;
+									
 				vTaskDelay(80); // pre-buffer audio while PHY sends header
 				dcs_reset_tx_counters();
-				// gps_reset_slow_data();
+				
 				ambe_q_flush(& microphone, 1);
 				vTaskDelay(45); // pre-buffer one AMBE frame
 				
 				session_id ++;
-				dcs_active = dcs_is_connected();
+				
 				tx_min_count = 8; // send at least 8 AMBE frames+data (full TX Message)
+				
+				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " TX " );
 			}
 			else
 			{
@@ -785,11 +801,11 @@ static void vTXTask( void *pvParameters )
 					ambe_stop_encode();
 					if (dcs_active)
 					{
-						send_dcs( session_id, 1); // send end frame
+						send_dcs( session_id, 1, frame_counter); // send end frame
 					}
 					else
 					{
-						send_phy ( dcs_ambe_data );
+						send_phy ( dcs_ambe_data, frame_counter );
 					}
 					
 					tx_state = 3; // wait for PTT release
@@ -798,11 +814,11 @@ static void vTXTask( void *pvParameters )
 				{
 					if (dcs_active)
 					{
-						send_dcs(  session_id, 0); // send normal frame
+						send_dcs(  session_id, 0, frame_counter ); // send normal frame
 					}
 					else
 					{
-						send_phy ( dcs_ambe_data );
+						send_phy ( dcs_ambe_data, frame_counter );
 					}						
 					
 					vTaskDelay(20); // wait 20ms
@@ -815,11 +831,11 @@ static void vTXTask( void *pvParameters )
 			{
 				if (dcs_active)
 				{
-					send_dcs( session_id, 1); // send end frame
+					send_dcs( session_id, 1, frame_counter ); // send end frame
 				}
 				else
 				{
-					send_phy ( dcs_ambe_data );
+					send_phy ( dcs_ambe_data, frame_counter );
 				}					
 				tx_state = 3; // wait for PTT
 			}
@@ -827,11 +843,11 @@ static void vTXTask( void *pvParameters )
 			{
 				if (dcs_active)
 				{
-					send_dcs(  session_id, 0); // send normal frame
+					send_dcs(  session_id, 0, frame_counter ); // send normal frame
 				}
 				else
 				{
-					send_phy ( dcs_ambe_data );
+					send_phy ( dcs_ambe_data, frame_counter );
 				}					
 				vTaskDelay(20); // wait 20ms
 			}
@@ -846,12 +862,38 @@ static void vTXTask( void *pvParameters )
 					SETTING_SHORT(S_PTT_BEEP_FREQUENCY),
 					SETTING_CHAR(C_PTT_BEEP_VOLUME)
 					);
+					
+				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 0, "    " );
+				vdisp_i2s(buf, 3, 10, 0, secs);
+				vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 0, buf );
+				vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, 0, "s" );
 			}
 			else
 			{
-				vTaskDelay(100); // watch for PTT every 100ms
+				vTaskDelay(10); // watch for PTT every 10ms
 			}
 			break;
+		}
+		
+		if (tx_state > 0)
+		{
+			frame_counter ++;
+			
+			if (frame_counter >= 21)
+			{
+				frame_counter = 0;
+			}
+			
+			tx_counter++;
+			
+			secs = tx_counter / 50;
+			
+			if ((tx_counter & 0x0F) == 0x01) // show seconds on every 16th frame
+			{
+				vdisp_i2s(buf, 3, 10, 0, secs);
+				vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 1, buf );
+				vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, 1, "s" );
+			}
 		}
 	}		
 	

@@ -37,7 +37,8 @@ void dcs_init(void);
 void dcs_service (void);
 void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);
 void dcs_off (void);
-void send_dcs (int session_id, int last_frame);
+
+void send_dcs (int session_id, int last_frame, char dcs_frame_counter);
 void dcs_get_current_reflector_name (char * s);
 int dcs_is_connected (void);
 void dcs_reset_tx_counters(void);

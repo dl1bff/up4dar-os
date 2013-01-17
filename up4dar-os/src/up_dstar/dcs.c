@@ -394,12 +394,12 @@ int dcs_is_connected (void)
 uint8_t dcs_ambe_data[9];
 
 static int dcs_tx_counter = 0;
-static int dcs_frame_counter = 0;
+// static int dcs_frame_counter = 0;
 
 
 void dcs_reset_tx_counters(void)
 {
-	dcs_frame_counter = 0;
+	// dcs_frame_counter = 0;
 	dcs_tx_counter = 0;
 }
 
@@ -510,7 +510,7 @@ static void dcs_keepalive_response (void)
 static int slow_data_count = 0;
 static uint8_t slow_data[5];
 
-void send_dcs (int session_id, int last_frame)
+void send_dcs (int session_id, int last_frame, char dcs_frame_counter)
 {
 	if (dcs_state == DCS_CONNECTED)  // only send voice if connected
 	{
@@ -667,15 +667,18 @@ void send_dcs (int session_id, int last_frame)
 	
 	} // if (dcs_state == DCS_CONNECTED)
 	
+	/*
 	dcs_frame_counter ++;
 	
 	if (dcs_frame_counter >= 21)
 	{
 		dcs_frame_counter = 0;
 	}
+	*/
 	
 	dcs_tx_counter ++;
 	
+	/*
 	int secs = dcs_tx_counter / 50;
 				
 	if ((last_frame != 0) || ((dcs_tx_counter & 0x0F) == 0x01)) // show seconds on every 16th call
@@ -685,6 +688,6 @@ void send_dcs (int session_id, int last_frame)
 		vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, buf );
 		vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, "s" );
 	}
-	
+	*/
 }
 
