@@ -77,16 +77,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gpio.h"
 
 
-unsigned long serialRXError = 0;
-unsigned long serialRXOK = 0;
+int serial_rx_error = 0;
+int serial_rx_ok = 0;
 
 
 static void vUSART0_ISR( void );
 static void vUSART1_ISR( void );
-static void vUSART2_ISR( void );
+// static void vUSART2_ISR( void );
 
 
-#define NUM_USART 3
+// #define NUM_USART 3
+#define NUM_USART 2
 
 #define USART_BUFLEN	100
 
@@ -150,15 +151,13 @@ static struct usartParams
 	volatile avr32_usart_t * usart;
 	int irq;
 	void (* intrHandler) (void);
-	// xQueueHandle xRxedChars;
-	// xQueueHandle xCharsForTx;
 	struct usartBuffer rx;
 	struct usartBuffer tx;
 } usarts[NUM_USART] =
 {
-	{ &AVR32_USART0,  AVR32_USART0_IRQ,  vUSART0_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} },
-	{ &AVR32_USART1,  AVR32_USART1_IRQ,  vUSART1_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} },
-	{ &AVR32_USART2,  AVR32_USART2_IRQ,  vUSART2_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
+	{ &AVR32_USART0,  AVR32_USART0_IRQ,  vUSART0_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
+	,{ &AVR32_USART1,  AVR32_USART1_IRQ,  vUSART1_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
+	// ,{ &AVR32_USART2,  AVR32_USART2_IRQ,  vUSART2_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
 };
 
 
@@ -229,18 +228,18 @@ static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( int usartNum )
 		
 		if (retstatus == 1)
 		{
-			serialRXOK ++;
+			serial_rx_ok ++;
 		}
 		else
 		{
-			serialRXError ++;
+			serial_rx_error ++;
 		}
 	}
 	
 	
 	if (ulStatus & (AVR32_USART_CSR_OVRE_MASK | AVR32_USART_CSR_FRAME_MASK ))
 	{
-			serialRXError ++;	
+			serial_rx_error ++;	
 			usart->cr = AVR32_USART_CR_RSTSTA_MASK;
 	}
 	
@@ -308,9 +307,7 @@ static void vUSART1_ISR( void )
 }
 /*-----------------------------------------------------------*/
 
-/*
- * USART interrupt service routine.
- */
+/* USART2 not used
 #if __GNUC__
 	__attribute__((__naked__))
 #elif __ICCAVR32__
@@ -319,17 +316,14 @@ static void vUSART1_ISR( void )
 
 static void vUSART2_ISR( void )
 {
-	/* This ISR can cause a context switch, so the first statement must be a
-	call to the portENTER_SWITCHING_ISR() macro.  This must be BEFORE any
-	variable declarations. */
+	
 	portENTER_SWITCHING_ISR();
 
 	prvUSART_ISR_NonNakedBehaviour(2);
 
-	/* Exit the ISR.  If a task was woken by either a character being received
-	or transmitted then a context switch will occur. */
 	portEXIT_SWITCHING_ISR();
 }
+*/
 /*-----------------------------------------------------------*/
 
 
@@ -479,10 +473,78 @@ int serial_stop ( int usartNum )
 }
 
 
-int serial_putc ( int usartNum, char cOutChar );
+int serial_timeout_error = 0;
+int serial_putc_q_full = 0;
 
-int serial_getc ( int usartNum, char * cOutChar );
-int serial_rx_char_available (int usartNum);
+
+int serial_putc ( int usartNum, char cOutChar )
+{
+	volatile avr32_usart_t  *usart = usarts[usartNum].usart;
+
+	struct usartBuffer * q = & usarts[usartNum].tx;
+	int returnval;
+	
+	returnval = put_q(q, cOutChar);
+	
+	
+	/* Turn on the Tx interrupt so the ISR will remove the character from the
+	queue and send it.   This does not need to be in a critical section as
+	if the interrupt has already removed the character the next interrupt
+	will simply turn off the Tx interrupt again. */
+	usart->ier = (1 << AVR32_USART_IER_TXRDY_OFFSET);
+
+	if (returnval != 1)
+	{
+		serial_putc_q_full++;
+		return 0; // queue is full
+	}
+
+	return 1;
+}
+
+
+
+void serial_putc_tmo (int comPort, char c, short timeout)
+{
+	short i = timeout;
+	
+	while (i > 0)
+	{
+		if (serial_putc(comPort, c) == 1)
+		break;
+		i--;
+		vTaskDelay(1);
+	}
+	
+	if (i <= 0)
+	{
+		serial_timeout_error ++;
+	}
+}
+
+int serial_getc ( int usartNum, char * cOutChar )
+{
+	struct usartBuffer * q = & usarts[usartNum].rx;
+	int returnval;
+	
+	returnval = get_q(q, cOutChar);
+	
+	if (returnval != 1)
+	{
+		return 0; // queue is empty
+	}
+	
+	return 1;
+}
+
+
+
+int serial_rx_char_available (int usartNum)
+{
+	struct usartBuffer * q = & usarts[usartNum].rx;
+
+	return q->input_ptr != q->output_ptr;
+}
 
 
 
@@ -495,7 +557,7 @@ int serial_puts (int usartNum, const char * s)
 	{
 		int res = serial_putc(usartNum, *p);
 		
-		if (res == pdFAIL) // queue is full
+		if (res != 1) // queue is full
 		{
 			return -1;
 		}

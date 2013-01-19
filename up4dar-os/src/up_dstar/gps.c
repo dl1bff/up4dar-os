@@ -36,7 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gcc_builtin.h"
 #include "vdisp.h"
 
-#include "up_io\serial.h"
+#include "up_io\serial2.h"
 
 #include "fixpoint_math.h"
 
@@ -46,7 +46,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-static xComPortHandle gpsSerialHandle;
+static int gpsSerialHandle;
 
 #define MAXLINELEN 100
 static char input_line[MAXLINELEN];
@@ -861,38 +861,55 @@ static void vGPSTask( void *pvParameters )
 	*/
 	 vTaskDelay(1000);
 	 // vSerialPutString(gpsSerialHandle, "$PMTK102*31\r\n");   // warm reset
-	 vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
+	 // vSerialPutString(gpsSerialHandle, "$PMTK301,0*2C\r\n"); // disable WAAS
 	 //vSerialPutString(gpsSerialHandle, "$PMTK301,2*2E\r\n"); // enable WAAS
 	 // vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
 	 // vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
 	 
+	 
+	
+	short timeout_counter = 0;
+	
 	for (;;)
 	{
-		if (xSerialGetChar(gpsSerialHandle, (signed char *) input_line + input_ptr, 1000) == pdTRUE)  // one second timeout
+		if (serial_rx_char_available(gpsSerialHandle))
 		{
+			timeout_counter = 0;
 			
-			if (input_line[input_ptr] < 32) // probably CR or LF
+			while (serial_getc(gpsSerialHandle, input_line + input_ptr) == 1)
 			{
-				input_line[input_ptr] = 0; // end of string
-				
-				if ((input_line[0] == '$') && (gps_chksum_ok(input_line + 1) != 0) )
+				if (input_line[input_ptr] < 32) // probably CR or LF
 				{
-					gps_parse_nmea();
+					input_line[input_ptr] = 0; // end of string
+					
+					if ((input_line[0] == '$') && (gps_chksum_ok(input_line + 1) != 0) )
+					{
+						gps_parse_nmea();
+					}
+					input_ptr = 0;
 				}
-				input_ptr = 0;
-			}
-			else
-			{
-				input_ptr ++;
-				if (input_ptr >= MAXLINELEN)
+				else
 				{
-					input_ptr --; // don't go over the end of the buffer
+					input_ptr ++;
+					
+					if (input_ptr >= MAXLINELEN)
+					{
+						input_ptr --; // don't go over the end of the buffer
+					}
 				}
 			}
 		}
-		else // timeout
+		else // no chars available
 		{
-			input_ptr = 0;
+			vTaskDelay(1);
+			
+			timeout_counter ++;
+			if (timeout_counter >= 1000)  // one second
+			{
+				input_ptr = 0;
+				timeout_counter = 0;
+			}
+			
 		}
 		
 	}
@@ -912,12 +929,6 @@ void gps_init(int comPortHandle)
 	
 	gpsSerialHandle = comPortHandle;
 	
-	if (gpsSerialHandle < 0)
-	{
-		// TODO: error handling
-		
-		return;
-	}
 	
 	xTaskCreate( vGPSTask, (signed char *) "GPS", configMINIMAL_STACK_SIZE, ( void * ) 0,
 		 ( tskIDLE_PRIORITY + 1 ), ( xTaskHandle * ) NULL );

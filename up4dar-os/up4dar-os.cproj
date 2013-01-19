@@ -478,12 +478,6 @@
     <Compile Include="src\up_io\sdcard.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="src\up_io\serial.c">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="src\up_io\serial.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="src\up_io\serial2.c">
       <SubType>compile</SubType>
     </Compile>

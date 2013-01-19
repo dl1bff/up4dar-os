@@ -42,7 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/audio_q.h"
 #include "up_dstar/ambe_q.h"
 #include "settings.h"
-#include "up_io/serial.h"
+#include "up_io/serial2.h"
 #include "fixpoint_math.h"
 
 

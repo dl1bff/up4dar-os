@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "task.h"
 #include "queue.h"
 
-#include "up_io/serial.h"
+#include "up_io/serial2.h"
 
 #include "up_dstar/phycomm.h"
 
@@ -537,11 +537,19 @@ static void vServiceTask( void *pvParameters )
 			
 		vdisp_prints_xy( 55, 0, VDISP_FONT_4x6, 0, tmp_buf );
 			
-			
+		vdisp_i2s( tmp_buf, 5, 10, 0, serial_rx_error );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 28, VDISP_FONT_4x6, 0, tmp_buf );
+		vdisp_i2s( tmp_buf, 5, 10, 0, serial_rx_ok );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 34, VDISP_FONT_4x6, 0, tmp_buf );	
+		vdisp_i2s( tmp_buf, 5, 10, 0, serial_timeout_error );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 40, VDISP_FONT_4x6, 0, tmp_buf );
+		vdisp_i2s( tmp_buf, 5, 10, 0, serial_putc_q_full );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 46, VDISP_FONT_4x6, 0, tmp_buf );
 		vdisp_i2s( tmp_buf, 5, 10, 0, initialHeapSize );
 		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 52, VDISP_FONT_4x6, 0, tmp_buf );
 		vdisp_i2s( tmp_buf, 5, 10, 0, xPortGetFreeHeapSize() );
 		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 58, VDISP_FONT_4x6, 0, tmp_buf );
+		
 			
 		// ethernet status
 			
@@ -962,14 +970,27 @@ int main (void)
 	
 	
 	lcd_init();
-		
-	xComPortHandle phyComPort = xSerialPortInitMinimal( 1, 115200, 100 );
-	xComPortHandle externalComPort = xSerialPortInitMinimal( 0, 4800, 20 );
 	
 	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");
 	vdisp_prints_xy(0, 18, VDISP_FONT_8x12, 0, " Platform");
 	vdisp_prints_xy(0, 30, VDISP_FONT_8x12, 0, "  for Digital");
 	vdisp_prints_xy(0, 42, VDISP_FONT_8x12, 0, "   Amateur Radio");
+		
+	int phyComPort = 1;
+	
+	if (serial_init(phyComPort, 115200) != 0)
+	{
+		vdisp_prints_xy(0, 0, VDISP_FONT_6x8, 0,  "PHY ComPort ERROR");
+	}
+	
+	int externalComPort = 0;
+	
+	if (serial_init(externalComPort, 4800) != 0)
+	{
+		vdisp_prints_xy(0, 8, VDISP_FONT_6x8, 0,  "GPS ComPort ERROR");
+	}
+	
+	
 	
 	dstarQueue = xQueueCreate( 10, sizeof (struct dstarPacket) );
 

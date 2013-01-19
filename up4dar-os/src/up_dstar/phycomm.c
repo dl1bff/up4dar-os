@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "phycomm.h"
 
-#include "up_io/serial.h"
+#include "up_io/serial2.h"
 
 #include "compiler.h"
 
@@ -39,7 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-static xComPortHandle xPort;
+static int xPort;
 
 #define comRX_BLOCK_TIME			( ( portTickType ) 100 )
 #define comSTACK_SIZE				configMINIMAL_STACK_SIZE
@@ -222,24 +222,36 @@ static void hexRx( char c )
 
 static portTASK_FUNCTION( vComRxTask, pvParameters )
 {
-	signed char cByteRxed;
+	char cByteRxed;
+	short timeout_counter = 0;
 
 	for( ;; )
 	{
-		if( xSerialGetChar( xPort, &cByteRxed, comRX_BLOCK_TIME ) )
+		if (serial_rx_char_available(xPort))
 		{
-			// hexRx(cByteRxed)´;
-			rxByte(cByteRxed);
-		}
-		else
-		{
-			// timeout, abort packet
+			timeout_counter = 0;
 			
-			rxState = RXSTATE_IDLE;
+			while (serial_getc(xPort, &cByteRxed) == 1)
+			{
+				rxByte(cByteRxed);
+			}
+		}
+		else // no chars available
+		{
+			vTaskDelay(1);
+			
+			timeout_counter ++;
+			if (timeout_counter >= 1000)  // one second
+			{
+				rxState = RXSTATE_IDLE;
+				timeout_counter = 0;
+			}
+			
 		}
 		
 	}
 } 
+
 
 
 void phyCommSend (char * buf, int len)
@@ -248,7 +260,7 @@ void phyCommSend (char * buf, int len)
 	
 	for (i=0; i < len; i++)
 	{
-		xSerialPutChar( xPort, buf[i], 500 );  // half a second...
+		serial_putc_tmo( xPort, buf[i], 500 );  // half a second...
 	}
 }
 
@@ -263,8 +275,8 @@ void phyCommSendCmd (const char * cmd, int len)
 	const char * p = cmd;
 	int i;
 	
-	xSerialPutChar( xPort, DLE, 50 );
-	xSerialPutChar( xPort, STX, 50 );
+	serial_putc_tmo( xPort, DLE, 50 );
+	serial_putc_tmo( xPort, STX, 50 );
 	
 	for (i=0; i < len; i++)
 	{
@@ -272,18 +284,18 @@ void phyCommSendCmd (const char * cmd, int len)
 		
 		if (d == DLE)
 		{
-			xSerialPutChar( xPort, DLE, 50 );
-			xSerialPutChar( xPort, DLE, 50 );
+			serial_putc_tmo( xPort, DLE, 50 );
+			serial_putc_tmo( xPort, DLE, 50 );
 		}
 		else
 		{
-			xSerialPutChar( xPort, d, 50 );
+			serial_putc_tmo( xPort, d, 50 );
 		}
 		p++;
 	}
 	
-	xSerialPutChar( xPort, DLE, 50 );
-	xSerialPutChar( xPort, ETX, 50 );
+	serial_putc_tmo( xPort, DLE, 50 );
+	serial_putc_tmo( xPort, ETX, 50 );
 }
 
 
@@ -294,12 +306,6 @@ void phyCommInit( xQueueHandle dq, int comPortHandle )
 	// xPort = xSerialPortInitMinimal( 1, 115200, 20 );
 	
 	xPort = comPortHandle;
-	
-	if (xPort < 0)
-	{
-		//  TODO error handling
-		return ;
-	}
 	
 	xTaskCreate( vComRxTask, ( signed char * ) "COMRx", comSTACK_SIZE, NULL, mainCOM_TEST_PRIORITY, ( xTaskHandle * ) NULL );
 }

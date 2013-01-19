@@ -29,12 +29,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef SERIAL2_H_
 #define SERIAL2_H_
 
+extern int serial_timeout_error;
+extern int serial_putc_q_full;
+extern int serial_rx_error;
+extern int serial_rx_ok;
 
 int serial_init ( int usartNum, int baudrate );
 int serial_putc ( int usartNum, char cOutChar );
 int serial_stop ( int usartNum );
 int serial_getc ( int usartNum, char * cOutChar );
 int serial_rx_char_available (int usartNum);
-int serial_puts (int usartNum, const char * s);
+void serial_putc_tmo (int comPort, char c, short timeout);
+
+// int serial_puts (int usartNum, const char * s);
 
 #endif /* SERIAL2_H_ */
