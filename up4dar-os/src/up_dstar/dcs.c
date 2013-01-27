@@ -62,9 +62,9 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
 
-                              "<font size=\"2\"><b>www.UP4DAR.de</b></font></br>"
+                              "<font size=\"2\"><b>www.UP4DAR.de</b>&nbsp;</font>"
 							  
-							  "<font size=\"1\">Software Version: X.0.00.00 </font>"
+							  "<font size=\"1\">Version: X.0.00.00 </font>"
 		 
                               "</td>"
 
@@ -435,10 +435,31 @@ static void dcs_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 }
 
 
+static void infocpy ( uint8_t * mem )
+{
+	char buf[11];
+	
+	memcpy(mem, dcs_html_info, sizeof dcs_html_info);
+			
+	version2string(buf, software_version); // get current software version
+			
+	int i;
+			
+	for (i=0; i < (500 - strlen(buf)); i++)
+	{
+		if (mem[i] == 'X')  // look for 'X'
+		{
+			memcpy(mem + i, buf, strlen(buf));
+			// replace  X.0.00.00  with current software version
+			break;
+		}
+	}
+}
+
 #define DCS_REGISTER_MODULE  'D'
 
-#define DCS_CONNECT_FRAME_SIZE  19
-// #define DCS_CONNECT_FRAME_SIZE  519
+// #define DCS_CONNECT_FRAME_SIZE  19
+#define DCS_CONNECT_FRAME_SIZE  519
 
 static void dcs_link_to (int module)
 {
@@ -469,10 +490,11 @@ static void dcs_link_to (int module)
 	
 	memcpy(d + 11, buf, 7);
 	
-	d[18] = ' ';
+	// d[18] = ' ';
 	
-	// d[18] = '@';
+	d[18] = '@';
 	// memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
+	infocpy(d + 19);
 	
 	dcs_calc_chksum_and_send( packet, DCS_CONNECT_FRAME_SIZE );
 }
@@ -507,6 +529,7 @@ static void dcs_keepalive_response (void)
 
 
 
+
 static int slow_data_count = 0;
 static uint8_t slow_data[5];
 
@@ -517,10 +540,12 @@ void send_dcs (int session_id, int last_frame, char dcs_frame_counter)
 		
 	int frame_size = DCS_VOICE_FRAME_SIZE;
 	
+	/*
 	if ((dcs_tx_counter & 0x7F) == 0x03)  // approx every 2 seconds
 	{
 		frame_size += 500; // send HTML info
-	}		
+	}
+	*/		
 		
 	eth_txmem_t * packet = dcs_get_packet_mem( frame_size );
 	
@@ -529,28 +554,17 @@ void send_dcs (int session_id, int last_frame, char dcs_frame_counter)
 		return;
 	}
 	
-	char buf[11];
+	
 	
 	uint8_t * d = packet->data + 42; // skip ip+udp header
 	
+	/*
 	if (frame_size > DCS_VOICE_FRAME_SIZE) // send HTML info
 	{
-		memcpy(d + DCS_VOICE_FRAME_SIZE, dcs_html_info, sizeof dcs_html_info);
-		
-		version2string(buf, software_version); // get current software version
-		
-		int i;
-		
-		for (i=DCS_VOICE_FRAME_SIZE; i < (frame_size - strlen(buf)); i++)
-		{
-			if (d[i] == 'X')  // look for 'X'
-			{
-				memcpy(d + i, buf, strlen(buf));
-				// replace  X.0.00.00  with current software version
-				break;
-			}	
-		}		
+		infocpy(d + DCS_VOICE_FRAME_SIZE);
+
 	}
+	*/
 	
 	memcpy(d, "0001", 4);
 	
@@ -559,6 +573,7 @@ void send_dcs (int session_id, int last_frame, char dcs_frame_counter)
 	d[6] = 0;
 	
 	
+	char buf[8];
 	
 	dcs_get_current_reflector_name( buf );
 	
