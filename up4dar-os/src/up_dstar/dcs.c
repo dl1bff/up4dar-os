@@ -94,9 +94,10 @@ static int dcs_retry_counter;
 #define DCS_DISCONNECT_REQ_SENT	4
 #define DCS_DNS_REQ_SENT		5
 #define DCS_DNS_REQ				6
+#define DCS_WAIT				7
 
 
-static const char * const dcs_state_text[7] =
+static const char * const dcs_state_text[8] =
 {
 	"            ",
 	"disconnected",
@@ -104,7 +105,8 @@ static const char * const dcs_state_text[7] =
 	"connected   ",
 	"disc request",
 	"DNS request ",
-	"DNS request "
+	"DNS request ",
+	"waiting     "
 };	
 
 static int current_module;
@@ -164,7 +166,8 @@ void dcs_service (void)
 		case DCS_CONNECTED:
 			if (dcs_timeout_timer == 0)
 			{
-				dcs_state = DCS_DISCONNECTED;
+				dcs_timeout_timer = 2; // 1 second
+				dcs_state = DCS_WAIT;
 				udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "NOWD");
 			}
@@ -180,7 +183,8 @@ void dcs_service (void)
 				
 				if (dcs_retry_counter == 0)
 				{
-					dcs_state = DCS_DISCONNECTED;
+					dcs_timeout_timer = 20; // 10 seconds
+					dcs_state = DCS_WAIT;
 					udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 					vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "RQTO");
 				}
@@ -222,18 +226,11 @@ void dcs_service (void)
 				}
 				else
 				{
-					// problem within resolver
+					// network probably not ready
 					dns_release_lock();
 					
-					if (dcs_retry_counter > 0)
-					{
-						dcs_retry_counter --;
-					}
-					
-					if (dcs_retry_counter == 0)
-					{
-						dcs_state = DCS_DISCONNECTED;
-					}						
+					dcs_timeout_timer = 10; // 5 seconds
+					dcs_state = DCS_WAIT;
 				}
 			}			
 			else if (dcs_timeout_timer == 0)
@@ -245,7 +242,8 @@ void dcs_service (void)
 				
 				if (dcs_retry_counter == 0)
 				{
-					dcs_state = DCS_DISCONNECTED;
+					dcs_timeout_timer = 30; // 15 seconds
+					dcs_state = DCS_WAIT;
 					dns_release_lock();
 				}
 				else
@@ -260,7 +258,8 @@ void dcs_service (void)
 			{
 				if (dns_get_A_addr(dcs_server_ipaddr) < 0) // DNS didn't work
 				{
-					dcs_state = DCS_DISCONNECTED;
+					dcs_timeout_timer = 30; // 15 seconds
+					dcs_state = DCS_WAIT;
 				}
 				else
 				{
@@ -277,6 +276,15 @@ void dcs_service (void)
 				
 				dns_release_lock();
 			}
+			break;
+			
+		case DCS_WAIT:
+			if (dcs_timeout_timer == 0)
+			{
+				dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
+				dcs_timeout_timer = DCS_DNS_TIMEOUT;
+				dcs_state = DCS_DNS_REQ;
+			}				
 			break;
 	}
 }
@@ -310,14 +318,18 @@ void dcs_off(void)
 		case DCS_CONNECTED:
 		
 		
-		dcs_link_to(' ');
+			dcs_link_to(' ');
+			
+			dcs_state = DCS_DISCONNECT_REQ_SENT;
+			dcs_retry_counter = DCS_DISCONNECT_RETRIES;
+			dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
+			break;
 		
-		dcs_state = DCS_DISCONNECT_REQ_SENT;
-		dcs_retry_counter = DCS_DISCONNECT_RETRIES;
-		dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
-		break;
+		default:
 		
-		
+			dcs_state = DCS_DISCONNECTED;
+			udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+			break;
 	}
 }
 
@@ -357,6 +369,7 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			}
 			else
 			{
+				dcs_state = DCS_DISCONNECTED;
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "NACK");
 			} 
 		}
