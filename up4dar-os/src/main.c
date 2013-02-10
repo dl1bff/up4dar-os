@@ -373,8 +373,9 @@ static void show_dcs_state(void)
 {
 	char buf[10];
 	dcs_get_current_reflector_name(buf);
-	buf[8] = 0;
-	vdisp_prints_xy( 96, 27, VDISP_FONT_4x6, 
+	buf[8] = 32;
+	buf[9] = 0;
+	vdisp_prints_xy( 95, 27, VDISP_FONT_4x6, 
 		dcs_is_connected(), buf );
 }		
 
