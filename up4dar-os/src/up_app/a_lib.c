@@ -453,11 +453,11 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 		{
 			case A_KEY_BUTTON_1:  // connect button
 				
-				ref_selected_item = REF_SELECTION_SPECIAL;
-				
 				if (dcs_mode != 0)
 				{
+					ref_selected_item = REF_SELECTION_SPECIAL;
 					dcs_on();
+					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 1;
 				}
 				break;
 			
@@ -468,6 +468,7 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				if (dcs_mode != 0)
 				{
 					dcs_off();
+					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 0;
 				}
 				break;
 			
@@ -524,6 +525,7 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 		
 		SETTING_SHORT(S_REF_SERVER_NUM) = n;
 		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[5] + 0x41;
+		SETTING_CHAR(C_DCS_MODE) = ref_items[0];
 		
 		ref_print_status();
 		
@@ -624,6 +626,28 @@ void a_app_manager_init(void)
 		(SETTING_CHAR(C_REF_MODULE_CHAR) <= 'Z'))
 	{
 		ref_items[5] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
+	}
+	
+	if (SETTING_CHAR(C_DCS_MODE) == 1)
+	{
+		ref_items[0] = 1;
+	}		
+	
+	
+	
+	dcs_mode = (ref_items[0] == 1);
+	
+	int n = ref_items[2] * 100 +
+	ref_items[3] * 10 +
+	ref_items[4];
+	
+	dcs_select_reflector( n, ref_items[5] + 0x41);
+	
+	if ((dcs_mode != 0)  && 
+		(SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)) 
+	{
+		ref_selected_item = REF_SELECTION_SPECIAL;
+		dcs_on();
 	}
 	
 	ref_print_status();

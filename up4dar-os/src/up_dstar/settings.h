@@ -118,6 +118,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_RPTR_BEEP_VOLUME			13
 #define C_REF_MODULE_CHAR			14
 #define C_DISABLE_UDP_BEACON		15
+#define C_DCS_MODE					16
+#define C_DCS_CONNECT_AFTER_BOOT	17
 
 
 #define SETTING_LONG(a) (settings.s.long_values[a])

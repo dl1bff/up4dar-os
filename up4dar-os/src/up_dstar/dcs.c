@@ -83,6 +83,7 @@ static int dcs_state;
 #define DCS_DISCONNECT_RETRIES	  3
 #define DCS_DNS_TIMEOUT			 2
 #define DCS_DNS_RETRIES		  3
+#define DCS_DNS_INITIAL_RETRIES		  15
 
 static int dcs_timeout_timer;
 static int dcs_retry_counter;
@@ -221,8 +222,18 @@ void dcs_service (void)
 				}
 				else
 				{
-					dcs_state = DCS_DISCONNECTED; // problem within resolver
+					// problem within resolver
 					dns_release_lock();
+					
+					if (dcs_retry_counter > 0)
+					{
+						dcs_retry_counter --;
+					}
+					
+					if (dcs_retry_counter == 0)
+					{
+						dcs_state = DCS_DISCONNECTED;
+					}						
 				}
 			}			
 			else if (dcs_timeout_timer == 0)
@@ -283,7 +294,7 @@ void dcs_on(void)
 			dcs_set_dns_name();
 			
 			dcs_state = DCS_DNS_REQ;
-			dcs_retry_counter = DCS_DNS_RETRIES;
+			dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
 			dcs_timeout_timer = DCS_DNS_TIMEOUT;
 			
 			break;

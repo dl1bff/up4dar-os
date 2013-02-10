@@ -100,7 +100,11 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_REF_MODULE_CHAR			14
 	{  65,		90,		67  },
 	// #define C_DISABLE_UDP_BEACON			15
-	{  0,		1,		1  }
+	{  0,		1,		0  },
+	// #define C_DCS_MODE					16
+	{  0,		1,		0	  },
+	// #define C_DCS_CONNECT_AFTER_BOOT		17
+	{  0,		1,		0	  }	
 };
 
 

@@ -1041,7 +1041,7 @@ int main (void)
 
 	gps_init( externalComPort );
 	
-	a_app_manager_init();
+	
 	
 	// sdcard_init(& audio_tx_q);
 	
@@ -1055,6 +1055,7 @@ int main (void)
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
 	
+	a_app_manager_init();
 
 	vTaskStartScheduler();
   
