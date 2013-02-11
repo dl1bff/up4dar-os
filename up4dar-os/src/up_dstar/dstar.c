@@ -434,6 +434,12 @@ void dstarChangeMode(int m)
 	dstarResetCounters();
 }
 
+static void dstarGetPHYVersion(void)
+{
+	char buf[7] = { 0x00, 0x00, 0x10, 0x02, 0x01, 0x10, 0x03 };
+
+	phyCommSend( buf, sizeof buf );
+}
 
 #define CPU_ID_LEN 15
 
@@ -751,6 +757,8 @@ static void processPacket(void)
 
 static portTASK_FUNCTION( dstarRXTask, pvParameters )
 {
+	dstarGetPHYVersion();
+	
 	for( ;; )
 	{
 		if( xQueueReceive( dstarQueue, &dp, 500 ) )
