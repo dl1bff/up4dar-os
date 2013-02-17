@@ -510,8 +510,8 @@ static void vServiceTask( void *pvParameters )
 	
 	int last_backlight = -1;
 	int last_contrast = -1;
-	int last_dcs_mode = 0;
-	
+	char last_dcs_mode = 0;
+	char dcs_boot_timer = 8;
 
 	for (;;)
 	{	
@@ -660,31 +660,37 @@ static void vServiceTask( void *pvParameters )
 		a_app_manager_service();
 			 
 			
-		dcs_service();
-		
-		if (dcs_mode != last_dcs_mode)
+		if (dcs_boot_timer > 0)
 		{
-			vdisp_clear_rect(0,0,128,64);
+			dcs_boot_timer--;
+		}
+		else
+		{
+			dcs_service();
+		
+			if (dcs_mode != last_dcs_mode)
+			{
+				vdisp_clear_rect(0,0,128,64);
 			
+				if (dcs_mode != 0)
+				{
+					dstarChangeMode(1); // Service mode
+				}
+				else
+				{				
+					dstarChangeMode(1);
+					set_phy_parameters();
+					dstarChangeMode(2); // single user mode
+				}
+			
+				last_dcs_mode = dcs_mode;
+			}
+		
 			if (dcs_mode != 0)
 			{
-				dstarChangeMode(1); // Service mode
+				show_dcs_state();
 			}
-			else
-			{				
-				dstarChangeMode(1);
-				set_phy_parameters();
-				dstarChangeMode(2); // single user mode
-			}
-			
-			last_dcs_mode = dcs_mode;
 		}
-		
-		if (dcs_mode != 0)
-		{
-			show_dcs_state();
-		}
-		
 		
 		if (wm8510_get_spkr_volume() != SETTING_CHAR(C_SPKR_VOLUME))
 		{
