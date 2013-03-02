@@ -407,10 +407,10 @@ void a_dispatch_key_event( int key_num, int key_event )
 #define REF_SELECTION_SPECIAL 6
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 0, 9, 9, 9, 25 };
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 1, 9, 9, 9, 25 };
 static const char * const ref_modes[2] = { "DSTAR Modem ",
 										   "DCS Internet"};
-static const char * const ref_types[2] = { "DCS", "URF" };
+static const char * const ref_types[2] = { "DCS", "TST" };
 
 
 static void ref_print_status (void)
@@ -521,8 +521,9 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				ref_items[3] * 10 +
 				ref_items[4];
 				
-		dcs_select_reflector( n, ref_items[5] + 0x41);
+		dcs_select_reflector( n, ref_items[5] + 0x41, ref_items[1] );
 		
+		SETTING_CHAR(C_REF_TYPE) = ref_items[1];
 		SETTING_SHORT(S_REF_SERVER_NUM) = n;
 		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[5] + 0x41;
 		SETTING_CHAR(C_DCS_MODE) = ref_items[0];
@@ -633,6 +634,11 @@ void a_app_manager_init(void)
 		ref_items[0] = 1;
 	}		
 	
+	if ((SETTING_CHAR(C_REF_TYPE) >= 0) &&
+		(SETTING_CHAR(C_REF_TYPE) <= 1))
+	{
+		ref_items[1] = SETTING_CHAR(C_REF_TYPE);
+	}
 	
 	
 	dcs_mode = (ref_items[0] == 1);
@@ -641,7 +647,7 @@ void a_app_manager_init(void)
 	ref_items[3] * 10 +
 	ref_items[4];
 	
-	dcs_select_reflector( n, ref_items[5] + 0x41);
+	dcs_select_reflector( n, ref_items[5] + 0x41,  ref_items[1] );
 	
 	if ((dcs_mode != 0)  && 
 		(SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)) 

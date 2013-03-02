@@ -104,7 +104,9 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DCS_MODE					16
 	{  0,		1,		0	  },
 	// #define C_DCS_CONNECT_AFTER_BOOT		17
-	{  0,		1,		0	  }	
+	{  0,		1,		0	  },
+	// #define C_REF_TYPE					18
+	{  0,		1,		0	  }
 };
 
 

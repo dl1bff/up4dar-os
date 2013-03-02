@@ -109,9 +109,12 @@ static const char * const dcs_state_text[8] =
 	"waiting     "
 };	
 
-static int current_module;
-static int current_server;
+static char current_module;
+static short current_server;
+static char current_server_type;
 
+#define SERVER_TYPE_DCS		0
+#define SERVER_TYPE_TST		1
 
 
 #define NUM_SERVERS 30
@@ -124,11 +127,23 @@ void dcs_init(void)
 	
 	current_module = 'C';
 	current_server = 1;  // DCS001
+	current_server_type = 0; // DCS
 }
 
 void dcs_get_current_reflector_name (char * s)
 {
-	memcpy(s, "DCS", 3);
+	switch(current_server_type)
+	{
+		case SERVER_TYPE_TST:
+			memcpy(s, "TST", 3);
+			break;
+			
+		default:
+		case SERVER_TYPE_DCS:
+			memcpy(s, "DCS", 3);
+			break;
+	}
+	
 	vdisp_i2s(s + 3, 3, 10, 1, current_server);
 	s[6] = ' ';
 	s[7] = current_module;
@@ -138,15 +153,28 @@ void dcs_get_current_reflector_name (char * s)
 
 static uint8_t dcs_server_ipaddr[4];
 
-static void dcs_link_to (int module);
+static void dcs_link_to (char module);
 
 static char dcs_server_dns_name[25]; // dns name of reflector e.g. "dcs001.xreflector.net"
 
 static void dcs_set_dns_name(void)
 {
-	memcpy(dcs_server_dns_name, "dcs", 3);
-	vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
-	memcpy(dcs_server_dns_name+6, ".xreflector.net", 16);
+	switch(current_server_type)
+	{
+		case SERVER_TYPE_TST:
+			memcpy(dcs_server_dns_name, "tst", 3);
+			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
+			memcpy(dcs_server_dns_name+6, ".mdx.de", 8);
+			break;
+			
+		default:
+		case SERVER_TYPE_DCS:
+			memcpy(dcs_server_dns_name, "dcs", 3);
+			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
+			memcpy(dcs_server_dns_name+6, ".xreflector.net", 16);
+			break;
+	}			
+			
 }
 
 
@@ -382,14 +410,14 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			}
 		}
 	}
-	else if (data_len == 9)  // keep alive packet (old version)
+/*	else if (data_len == 9)  // keep alive packet (old version)
 	{
 		if (dcs_state == DCS_CONNECTED)
 		{
 			dcs_timeout_timer = DCS_KEEPALIVE_TIMEOUT;
 			dcs_keepalive_response();
 		}			
-	}
+	}  */
 	else if (data_len == 22)  // keep alive packet (new version)
 	{
 		if (dcs_state == DCS_CONNECTED)
@@ -427,11 +455,12 @@ void dcs_reset_tx_counters(void)
 	dcs_tx_counter = 0;
 }
 
-void dcs_select_reflector (int server_num, char module)
+void dcs_select_reflector (short server_num, char module, char server_type)
 {
 	if (dcs_state != DCS_DISCONNECTED)  // only when disconnected
 		return;
 		
+	current_server_type = server_type;
 	current_server = server_num;
 	current_module = module;
 	
@@ -485,7 +514,7 @@ static void infocpy ( uint8_t * mem )
 // #define DCS_CONNECT_FRAME_SIZE  19
 #define DCS_CONNECT_FRAME_SIZE  519
 
-static void dcs_link_to (int module)
+static void dcs_link_to (char module)
 {
 	eth_txmem_t * packet = dcs_get_packet_mem( DCS_CONNECT_FRAME_SIZE );
 	

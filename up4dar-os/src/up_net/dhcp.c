@@ -229,7 +229,7 @@ static void dhcp_calc_chksum_and_send (eth_txmem_t * packet, int udp_size)
 
 static const uint8_t dhcp_discover_packet[] =
 	{	53, 0x01, 0x01,   // DHCP Message Type DHCPDISCOVER
-		55, 0x03, 0x01, 0x03, 0x05, // Request Parameter List: netmask, router, DNS
+		55, 0x04, 1, 3, 5, 42, // Request Parameter List: netmask, router, DNS, NTP
 		0xFF  // END
 	};	
 	

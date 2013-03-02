@@ -43,6 +43,6 @@ void dcs_get_current_reflector_name (char * s);
 int dcs_is_connected (void);
 void dcs_reset_tx_counters(void);
 
-void dcs_select_reflector (int server_num, char module);
+void dcs_select_reflector (short server_num, char module, char server_type);
 void dcs_on(void);
 #endif /* DCS_H_ */
