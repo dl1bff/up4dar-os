@@ -1,6 +1,8 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+
+Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -44,5 +46,5 @@ void dstarChangeMode(int m);
 void dstarResetCounters(void);
 
 void dstarProcessDCSPacket( const uint8_t * data );
-
+void dstarProcessDExtraPacket(const uint8_t* data);
 #endif /* DSTAR_H_ */

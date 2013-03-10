@@ -407,10 +407,10 @@ void a_dispatch_key_event( int key_num, int key_event )
 #define REF_SELECTION_SPECIAL 6
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 1, 9, 9, 9, 25 };
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 2, 9, 9, 9, 25 };
 static const char * const ref_modes[2] = { "DSTAR Modem ",
 										   "DCS Internet"};
-static const char * const ref_types[2] = { "DCS", "TST" };
+static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
 
 
 static void ref_print_status (void)
@@ -635,7 +635,7 @@ void a_app_manager_init(void)
 	}		
 	
 	if ((SETTING_CHAR(C_REF_TYPE) >= 0) &&
-		(SETTING_CHAR(C_REF_TYPE) <= 1))
+		(SETTING_CHAR(C_REF_TYPE) <= 2))
 	{
 		ref_items[1] = SETTING_CHAR(C_REF_TYPE);
 	}

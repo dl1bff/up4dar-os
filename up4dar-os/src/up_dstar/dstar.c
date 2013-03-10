@@ -1,6 +1,9 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+
+Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
+
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -118,7 +121,12 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vdisp_prints_xy(86, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
-	
+	if (ypos == 5)
+	{
+		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 58, VDISP_FONT_4x6, 0, "UR:");
+		vd_prints_xy(VDISP_DEBUG_LAYER, 12, 58, VDISP_FONT_4x6, 0, buf);
+	}
+		
 	memcpy(buf, header_data + 27, 8);
 	mkPrintableString(buf,8);
 	
@@ -141,6 +149,12 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vdisp_prints_xy(12, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
+	if (ypos == 5)
+	{
+		vd_prints_xy(VDISP_DEBUG_LAYER, 50, 58, VDISP_FONT_4x6, crc_result, "RX:");
+		vd_prints_xy(VDISP_DEBUG_LAYER, 62, 58, VDISP_FONT_4x6, crc_result, buf);
+	}
+	
 	
 	memcpy(buf, header_data + 35, 4);
 	mkPrintableString(buf,4);
@@ -161,6 +175,12 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vdisp_prints_xy(48, 18, VDISP_FONT_4x6, 0, buf);
 	}
 	
+	if (ypos == 5)
+	{
+		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 46, VDISP_FONT_4x6, 0, "/");
+		vd_prints_xy(VDISP_DEBUG_LAYER, 4, 46, VDISP_FONT_4x6, 0, buf);
+	}
+	
 	memcpy(buf, header_data + 11, 8);
 	mkPrintableString(buf,8);
 	
@@ -170,6 +190,12 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vdisp_prints_xy(18, 9, VDISP_FONT_6x8, 0, buf);
 	}
 	
+	if (ypos == 5)
+	{
+		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 52, VDISP_FONT_4x6, 0, "R1:");
+		vd_prints_xy(VDISP_DEBUG_LAYER, 12, 52, VDISP_FONT_4x6, 0, buf);
+	}
+		
 	memcpy(buf, header_data + 3, 8);
 	mkPrintableString(buf,8);
 	
@@ -178,6 +204,12 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vdisp_prints_xy(74, 11, VDISP_FONT_4x6, 0, "RPT2:");
 		vdisp_prints_xy(94, 11, VDISP_FONT_4x6, 0, buf);
 	}
+	
+	if (ypos == 5)
+	{
+		vd_prints_xy(VDISP_DEBUG_LAYER, 50, 52, VDISP_FONT_4x6, 0, "R2:");
+		vd_prints_xy(VDISP_DEBUG_LAYER, 62, 52, VDISP_FONT_4x6, 0, buf);
+	}	
 }
 
 
@@ -588,10 +620,32 @@ static void processPacket(void)
 		case 0x30:
 			if (dp.dataLen == 40)
 			{
-				
 				printHeader (5, dp.data[0], dp.data + 1); 
+			}
+			else if (dp.dataLen == 42)
+			{
+				printHeader (5, dp.data[0], dp.data + 1);
 				
-			}				
+				unsigned short crc = rx_dstar_crc_header( dp.data + 1 );
+				
+				char buf[5];
+				vdisp_i2s (buf, 4, 16, 1, crc);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 80, 16, VDISP_FONT_6x8, 0, buf);
+				
+				crc = ( dp.data[40] | (dp.data[41] << 8));
+				vdisp_i2s (buf, 4, 16, 1, crc);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 80, 24, VDISP_FONT_6x8, 0, buf);
+				
+				vdisp_i2s (buf, 2, 16, 1, dp.data[1]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 80, 0, VDISP_FONT_6x8, 0, buf);
+				
+				vdisp_i2s (buf, 2, 16, 1, dp.data[2]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 98, 0, VDISP_FONT_6x8, 0, buf);
+				
+				vdisp_i2s (buf, 2, 16, 1, dp.data[3]);
+				vd_prints_xy(VDISP_DEBUG_LAYER, 116, 0, VDISP_FONT_6x8, 0, buf);
+				
+			}						
 			break;
 			
 		case 0x31:
@@ -828,6 +882,44 @@ void dstarProcessDCSPacket( const uint8_t * data )
 		vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, (last_frame == 0) ? 1 : 0, "s" );
 	}	
 	
+}
+
+
+
+void dstarProcessDExtraPacket(const uint8_t* data)
+{
+	uint8_t buf[4];
+
+	int dcs_session = data[12] | (data[13] << 8);
+
+	if (data[4] == 0x10)
+	{
+		if (dcs_session != dcs_last_session)
+		{
+			dcs_last_session = dcs_session;
+
+			sdHeaderPos = 0;
+
+			vdisp_clear_rect (0, 0, 128, 64);
+			printHeader (5, 0, data + 15);
+			rtclock_disp_xy(84, 0, 2, 1);
+		}
+		return;
+	}
+
+
+	if ((data[14] & 0x40) == 0)
+	{
+		ambe_input_data(data + 15);
+
+		buf[0] = 0x70 ^ data[24];
+		buf[1] = 0x4F ^ data[25];
+		buf[2] = 0x93 ^ data[26];
+
+		processSlowData(data[14], buf);
+
+		return;
+	}
 }
 
 
