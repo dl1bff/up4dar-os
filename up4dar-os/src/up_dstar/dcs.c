@@ -55,6 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_app/a_lib_internal.h"
 #include "up_app/a_lib.h"
 #include "sw_update.h"
+#include "rx_dstar_crc_header.h"
 
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
@@ -826,15 +827,16 @@ static void send_dextra_header(int session_id)
   dcs_get_current_reflector_name(reflector);
 
   memcpy(d + 18, reflector, 8);
-  d[25] = 'G';
+  // d[25] = 'G';
   memcpy(d + 26, reflector, 8);
+  d[33] = 'G';
   memcpy(d + 34, "CQCQCQ  ", 8); 
   memcpy(d + 42, settings.s.my_callsign, 8);
   memcpy(d + 50, settings.s.my_ext, 4);
-
-  // Dummy chechsum
-  d[54] = 0xFF;
-  d[55] = 0xFF;
+  
+  unsigned short sum = rx_dstar_crc_header(d + 15);
+  d[54] = sum & 0xFF;
+  d[55] = sum >> 8;
 
   dcs_calc_chksum_and_send(packet, DEXTRA_RADIO_HEADER_SIZE);
 }
