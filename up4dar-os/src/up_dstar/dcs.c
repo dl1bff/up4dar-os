@@ -85,7 +85,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SERVER_TYPE_TST             1
 #define SERVER_TYPE_DEXTRA          2
 
-const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
+const char* dcs_html_info =
+  "<table border=\"0\" width=\"95%\"><tr>"
   "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
   "<td width=\"96%\">"
   "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
@@ -104,6 +105,13 @@ const char* const dcs_state_text[] =
   "DNS request ",
   "DNS request ",
   "waiting     "
+};
+
+const char* const reflector_prefixes[] =
+{
+  "DCS",
+  "TST",
+  "XRF"
 };
 
 int dcs_state;
@@ -139,21 +147,7 @@ void dcs_init()
 
 void dcs_get_current_reflector_name(char* buffer)
 {
-  switch (current_server_type)
-  {
-    case SERVER_TYPE_TST:
-      memcpy(buffer, "TST", 3);
-      break;
-
-    case SERVER_TYPE_DEXTRA:
-      memcpy(buffer, "XRF", 3);
-      break;
-
-    case SERVER_TYPE_DCS:
-      memcpy(buffer, "DCS", 3);
-      break;
-  }
-  
+  memcpy(buffer, reflector_prefixes[current_server_type], 3);
   vdisp_i2s(buffer + 3, 3, 10, 1, current_server);
   buffer[6] = ' ';
   buffer[7] = current_module;
