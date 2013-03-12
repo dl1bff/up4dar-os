@@ -40,11 +40,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_app/a_lib.h"
 
 #include "rx_dstar_crc_header.h"
+#include "slow_data.h"
 #include "sw_update.h"
 #include "settings.h"
 #include "vdisp.h"
 #include "dstar.h"
-#include "gps.h"
 #include "dcs.h"
 
 #define DCS_KEEPALIVE_TIMEOUT       100
@@ -132,9 +132,6 @@ int dcs_udp_local_port;
 uint8_t dcs_ambe_data[9];
 int dcs_tx_counter = 0;
 
-uint8_t slow_data[5];
-int slow_data_count = 0;
-
 void dcs_link_to(char module);
 void dcs_keepalive_response(int request_size);
 
@@ -213,14 +210,14 @@ void dcs_service()
       udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
       vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "NOWD");
       break;
-    
+
     case DCS_CONNECT_REQ_SENT:
       if (dcs_timeout_timer > 0)
         break;
 
       if (dcs_retry_counter > 0)
         dcs_retry_counter --;
-        
+
       if (dcs_retry_counter > 0)
       {
         dcs_link_to(current_module);
@@ -233,14 +230,14 @@ void dcs_service()
       udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
       vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "RQTO");
       break;
-    
+
     case DCS_DISCONNECT_REQ_SENT:
       if (dcs_timeout_timer > 0)
         break;
 
       if (dcs_retry_counter > 0)
         dcs_retry_counter --;
-        
+
       if (dcs_retry_counter > 0)
       {
         dcs_link_to(' ');
@@ -251,7 +248,7 @@ void dcs_service()
       dcs_state = DCS_DISCONNECTED;
       udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
       break;
-      
+
     case DCS_DNS_REQ:
       if (!dns_get_lock()) // resolver busy
       {
@@ -260,7 +257,7 @@ void dcs_service()
 
         if (dcs_retry_counter > 0)
           dcs_retry_counter --;
-        
+
         if (dcs_retry_counter > 0)
         {
           dcs_timeout_timer = DCS_DNS_TIMEOUT;
@@ -283,7 +280,7 @@ void dcs_service()
 
       dcs_state = DCS_DNS_REQ_SENT;
       break;
-      
+
     case DCS_DNS_REQ_SENT:
       if (!dns_result_available()) // resolver is busy
         break;
@@ -300,12 +297,12 @@ void dcs_service()
 
       dcs_set_source_port();
       dcs_link_to(current_module);
-          
+
       dcs_state = DCS_CONNECT_REQ_SENT;
       dcs_retry_counter = DCS_CONNECT_RETRIES;
       dcs_timeout_timer =  DCS_CONNECT_REQ_TIMEOUT;
       break;
-      
+
     case DCS_WAIT:
       if (dcs_timeout_timer > 0)
         break;
@@ -322,7 +319,7 @@ void dcs_on()
   if (dcs_state == DCS_DISCONNECTED)
   {
     dcs_set_dns_name();
-      
+
     dcs_state = DCS_DNS_REQ;
     dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
     dcs_timeout_timer = DCS_DNS_TIMEOUT;
@@ -335,12 +332,12 @@ void dcs_off()
   {
     case DCS_CONNECTED:
       dcs_link_to(' ');
-      
+
       dcs_state = DCS_DISCONNECT_REQ_SENT;
       dcs_retry_counter = DCS_DISCONNECT_RETRIES;
       dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
       break;
-    
+
     default:
       dcs_state = DCS_DISCONNECTED;
       udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
@@ -353,7 +350,7 @@ void dcs_input_packet(const uint8_t * data, int data_len, const uint8_t * ipv4_s
   // packet is not from the currently selected server
   if (memcmp(ipv4_src_addr, dcs_server_ipaddr, sizeof ipv4_addr) != 0)
     return;
- 
+
   switch (data_len)
   {
     case DCS_VOICE_FRAME_SIZE:
@@ -367,7 +364,7 @@ void dcs_input_packet(const uint8_t * data, int data_len, const uint8_t * ipv4_s
       if (memcmp(data, "DSVT", 4) == 0)
         dstarProcessDExtraPacket(data);
       break;
- 
+
     case DCS_CONNECT_REPLY_SIZE:
     // case DEXTRA_CONNECT_REPLY_SIZE:
       if (dcs_state == DCS_CONNECT_REQ_SENT)
@@ -459,10 +456,10 @@ void dcs_link_to(char module)
 {
   int size = (current_server_type == SERVER_TYPE_DEXTRA) ? DEXTRA_CONNECT_SIZE : DCS_CONNECT_SIZE;
   eth_txmem_t * packet = dcs_get_packet_mem(size);
-  
+
   if (packet == NULL)
     return;
-  
+
   char buf[8];
   memcpy (buf, settings.s.my_callsign, 7);
   buf[7] = 0;
@@ -492,12 +489,12 @@ void dcs_keepalive_response(int request_size)
   int size = (current_server_type == SERVER_TYPE_DEXTRA) ? request_size : DCS_KEEPALIVE_REPLY_SIZE;
 
   eth_txmem_t * packet = dcs_get_packet_mem(size);
-  
+
   if (packet == NULL)
     return;
-  
+
   uint8_t* d = packet->data + ETHERNET_PAYLOAD_OFFSET;
-  
+
   memcpy (d, settings.s.my_callsign, 7);
 
   switch (request_size)
@@ -523,73 +520,10 @@ void dcs_keepalive_response(int request_size)
   dcs_calc_chksum_and_send(packet, size);
 }
 
-void build_slow_data(uint8_t* d, int last_frame, char frame_counter)
-{
-  if (last_frame != 0)
-  {
-    d[0] = 0x55;
-    d[1] = 0x55;
-    d[2] = 0x55;
-    return;
-  }
-
-  if (frame_counter == 0)
-  {
-    d[0] = 0x55;
-    d[1] = 0x2d;
-    d[2] = 0x16;
-    return;
-  }
-
-  if ((frame_counter <= 8) && (dcs_tx_counter < 20))  // send tx_msg only in first frame
-  {
-    int index = (frame_counter - 1) >> 1;
-    if (frame_counter & 1)
-    {
-      d[0] = (0x40 | index) ^ 0x70;
-      d[1] = settings.s.txmsg[index * 5 + 0] ^ 0x4F;
-      d[2] = settings.s.txmsg[index * 5 + 1] ^ 0x93;
-    }
-    else
-    {
-      d[0] = settings.s.txmsg[index * 5 + 2] ^ 0x70;
-      d[1] = settings.s.txmsg[index * 5 + 3] ^ 0x4F;
-      d[2] = settings.s.txmsg[index * 5 + 4] ^ 0x93;
-    }
-    return;
-  }
-
-  if (frame_counter & 1)
-  {
-    slow_data_count = gps_get_slow_data(slow_data);
-    if (slow_data_count > 0)
-    {
-      d[0] = (0x30 | slow_data_count) ^ 0x70;
-      d[1] = slow_data[0] ^ 0x4F;
-      d[2] = slow_data[1] ^ 0x93;
-      return;
-    }
-  }
-  else
-  {
-    if (slow_data_count > 2)
-    {
-      d[0] = slow_data[2] ^ 0x70;
-      d[1] = slow_data[3] ^ 0x4F;
-      d[2] = slow_data[4] ^ 0x93;
-      return;
-    }
-  }
-
-  d[0] = 0x16;
-  d[1] = 0x29;
-  d[2] = 0xf5;
-}
-
 void send_xcs(int session_id, char last_frame, char frame_counter)
 {
   eth_txmem_t * packet = dcs_get_packet_mem(DCS_VOICE_FRAME_SIZE);
-  
+
   if (packet == NULL)
     return;
 
@@ -601,46 +535,35 @@ void send_xcs(int session_id, char last_frame, char frame_counter)
   d[4] = 0;
   d[5] = 0;
   d[6] = 0;
-  
+
   dcs_get_current_reflector_name(d + 7);
   memcpy (d + 15, settings.s.my_callsign, 7);
   d[22] = DCS_REGISTER_MODULE;
   memcpy(d + 23, "CQCQCQ  ", 8);
   memcpy (d + 31, settings.s.my_callsign, 8);
   memcpy (d + 39, settings.s.my_ext, 4);
-  
+
   d[43] = (session_id >> 8) & 0xFF;
   d[44] = session_id & 0xFF;
-  
+
   d[45] = frame_counter | (last_frame << 6);
 
   memcpy(d + 46, dcs_ambe_data, sizeof(dcs_ambe_data));
-  build_slow_data(d + 55, last_frame, frame_counter);
+  build_slow_data(d + 55, last_frame, frame_counter, dcs_tx_counter);
 
   d[58] = dcs_tx_counter & 0xFF;
   d[59] = (dcs_tx_counter >> 8) & 0xFF;
   d[60] = (dcs_tx_counter >> 16) & 0xFF;
-  
+
   d[61] = 0x01; // Frame Format version low
   d[62] = 0x00; // Frame Format version high
   d[63] = 0x21; // Language Set 0x21
-  
+
   memcpy(d + 64, settings.s.txmsg, 20);
 
   dcs_calc_chksum_and_send(packet, DCS_VOICE_FRAME_SIZE);
 
   dcs_tx_counter ++;
-
-  /*
-  int secs = dcs_tx_counter / 50;
-  if ((last_frame != 0) || ((dcs_tx_counter & 0x0F) == 0x01)) // show seconds on every 16th call
-  {
-    char buf[4];
-    vdisp_i2s(buf, 3, 10, 0, secs);
-    vdisp_prints_xy(104, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, buf);
-    vdisp_prints_xy(122, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, "s");
-  }
-  */
 }
 
 void send_dextra_header(int session_id)
@@ -717,7 +640,7 @@ void send_dextra_frame(int session_id, char last_frame, char frame_counter)
   d[14] = frame_counter | (last_frame << 6);
 
   memcpy(d + 15, dcs_ambe_data, sizeof(dcs_ambe_data));
-  build_slow_data(d + 24, last_frame, frame_counter);
+  build_slow_data(d + 24, last_frame, frame_counter, dcs_tx_counter);
 
   dcs_calc_chksum_and_send(packet, DEXTRA_VOICE_FRAME_SIZE);
 
@@ -743,4 +666,3 @@ void send_dcs(int session_id, int last_frame, char frame_counter)
     }
   }
 }
-
