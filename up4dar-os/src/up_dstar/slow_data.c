@@ -23,9 +23,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "slow_data.h"
 #include "settings.h"
 #include "gps.h"
+#include "aprs.h"
 
 uint8_t slow_data[5];
 int slow_data_count = 0;
+
+
+size_t get_slow_data_cunk(uint8_t* data)
+{
+  if (settings.s.dprs_source == 'A')
+    return aprs_get_slow_data(data);
+  else
+    return gps_get_slow_data(data);
+}
 
 void build_slow_data(uint8_t* buffer, char last, char frame, int duration)
 {
@@ -65,7 +75,7 @@ void build_slow_data(uint8_t* buffer, char last, char frame, int duration)
 
   if (frame & 1)
   {
-    slow_data_count = gps_get_slow_data(slow_data);
+    slow_data_count = get_slow_data_cunk(slow_data);
     if (slow_data_count > 0)
     {
       buffer[0] = (0x30 | slow_data_count) ^ 0x70;
