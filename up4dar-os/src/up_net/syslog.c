@@ -26,6 +26,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io/eth_txmem.h"
 #include "up_net/ipneigh.h"
 #include "up_net/ipv4.h"
+#include "up_net/dhcp.h"
 
 #include "up_dstar/vdisp.h"
 
@@ -47,6 +48,9 @@ const char* const template = "<000>1 - 000.000.000.000 UP4DAR - - - - ";
 
 void syslog(char facility, char severity, const char* message, int length)
 {
+  if (dhcp_is_ready() == 0)
+    return;
+
   IPAddress address;
 
   // For the first time we use local network broadcast as destination address

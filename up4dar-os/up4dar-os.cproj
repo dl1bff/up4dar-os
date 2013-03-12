@@ -514,6 +514,12 @@
     <Compile Include="src\up_net\dns.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\dns_cache.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\dns_cache.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_net\ipneigh.c">
       <SubType>compile</SubType>
     </Compile>
