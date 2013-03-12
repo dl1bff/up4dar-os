@@ -29,7 +29,7 @@ uint8_t slow_data[5];
 int slow_data_count = 0;
 
 
-size_t get_slow_data_cunk(uint8_t* data)
+size_t get_slow_data_chunk(uint8_t* data)
 {
   if (settings.s.dprs_source == 'A')
     return aprs_get_slow_data(data);
@@ -75,7 +75,7 @@ void build_slow_data(uint8_t* buffer, char last, char frame, int duration)
 
   if (frame & 1)
   {
-    slow_data_count = get_slow_data_cunk(slow_data);
+    slow_data_count = get_slow_data_chunk(slow_data);
     if (slow_data_count > 0)
     {
       buffer[0] = (0x30 | slow_data_count) ^ 0x70;
