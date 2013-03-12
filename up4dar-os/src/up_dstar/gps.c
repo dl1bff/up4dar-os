@@ -43,7 +43,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gps.h"
 #include "settings.h"
 
-
+#include "aprs.h"
 
 
 static int gpsSerialHandle;
@@ -586,6 +586,8 @@ static void gps_parse_nmea(void)
 					slow_data_state = 1;
 				}
 			}				
+
+			aprs_process_gps_data(nmea_params);
 		}			
 	}
 	else if (memcmp(nmea_params[0], "GPGGA", 6) == 0)
@@ -609,7 +611,9 @@ static void gps_parse_nmea(void)
 					slow_data_ptr = gpgga_data;
 					slow_data_state = 1;
 				}
-			}			
+			}
+
+			aprs_process_gps_data(nmea_params);
 		}			
 	}
 	/*

@@ -74,6 +74,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto_init.h"
 #include "up_net/dns.h"
 
+#include "up_net/dns_cache.h"
+#include "up_dstar/aprs.h"
 
 #include "software_version.h"
 #include "up_dstar/sw_update.h"
@@ -250,7 +252,7 @@ static void phy_start_tx(void)
 	}
 	
 	// Bis zu 70ms kann man sich Zeit lassen, bevor die Header-Daten uebergeben werden.
-	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhängig.
+	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhâ€°ngig.
 	//usleep(70000);
 	
 	// vTaskDelay (50); // 50ms
@@ -1060,6 +1062,10 @@ int main (void)
 	{
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
+
+	dns_cache_init();
+
+	aprs_init();
 	
 	a_app_manager_init();
 

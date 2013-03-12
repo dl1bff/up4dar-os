@@ -63,6 +63,11 @@ typedef union settings_union
 		char txmsg[TXMSG_LENGTH];
 		char dprs_msg[DPRS_MSG_LENGTH];
 		char snmp_cmnty[SNMP_CMNTY_LENGTH];
+    // APRS / D-PRS
+    char dprs_source;
+    char aprs_ssid;
+    char aprs_symbol[2];
+    char beacon_interval;
 	} s;
 	
 } settings_t;

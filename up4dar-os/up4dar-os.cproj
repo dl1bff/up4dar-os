@@ -433,6 +433,12 @@
     <Compile Include="src\up_dstar\settings.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\slow_data.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\slow_data.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\sw_update.c">
       <SubType>compile</SubType>
     </Compile>
@@ -506,6 +512,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_net\dns.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\dns_cache.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\dns_cache.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_net\ipneigh.c">
@@ -611,6 +623,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\main.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\syslog.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\syslog.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>
