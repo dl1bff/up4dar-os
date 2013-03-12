@@ -49,6 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 int64_t altitude = UNDEFINED_ALTITUDE;
 
 xSemaphoreHandle lock;
+
 char buffer[APRS_BUFFER_SIZE];
 
 char* pointer1 = NULL;  // Pointer to TNC-2 packet header
@@ -60,14 +61,7 @@ char* reader = NULL;
 int port;
 char password[6];
 
-#pragma mark Generic packet building functions
-
-void handle_position_fix_data(const char** parameters)
-{
-  altitude = (*parameters[9] != 0) ? 
-    ((atoi(parameters[9]) * 26444) >> 13) :
-    UNDEFINED_ALTITUDE;
-}
+#pragma mark APRS packet building
 
 size_t build_alitude_extension(char* buffer)
 {
@@ -141,7 +135,7 @@ size_t build_aprs_call(char* buffer)
   return number;
 }
 
-#pragma mark Buffered packet building functions
+#pragma mark Buffered operations
 
 void prepare_packet()
 {
@@ -171,7 +165,64 @@ void update_packet(const char** parameters)
   memset(terminator, 0x66, 5);
 }
 
-#pragma mark APRS-IS functions
+int has_packet_data()
+{
+  return (pointer2 != terminator);
+}
+
+#pragma mark GPS data handling
+
+void process_position_fix_data(const char** parameters)
+{
+  altitude = (*parameters[9] != 0) ? 
+    ((atoi(parameters[9]) * 26444) >> 13) :
+    UNDEFINED_ALTITUDE;
+}
+
+void aprs_process_gps_data(const char** parameters)
+{
+  if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
+      (*parameters[4] != '0') &&
+      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
+  {
+    process_position_fix_data(parameters);
+    xSemaphoreGive(lock);
+    return;
+  }
+  if ((memcmp(parameters[0], "GPRMC", 6) == 0) &&
+      (*parameters[2] == 'A') &&
+      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
+  {
+    update_packet(parameters);
+    xSemaphoreGive(lock);
+    return;
+  }
+}
+
+#pragma mark DV-A reporting
+
+size_t aprs_get_slow_data(uint8_t* data)
+{
+  size_t count = 0;
+  if ((xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE) &&
+      (has_packet_data() != 0))
+  {
+    memcpy(data, reader, SLOW_DATA_CHUNK_SIZE);
+
+    count = terminator - reader;
+    if (count > SLOW_DATA_CHUNK_SIZE)
+      count = SLOW_DATA_CHUNK_SIZE;
+
+    reader += SLOW_DATA_CHUNK_SIZE;
+    if (reader > terminator)
+      reader = buffer;
+
+    xSemaphoreGive(lock);
+  }
+  return count;
+}
+
+#pragma mark APRS-IS reporting
 
 void calculate_aprs_password()
 {
@@ -187,7 +238,8 @@ void send_network_report()
   ip_addr_t address;
   if ((dhcp_is_ready() != 0) && 
       (dns_cache_get_address(DNS_CACHE_SLOT_APRS, &address) != 0) &&
-      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
+      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE) &&
+      (has_packet_data() != 0))
   {
     eth_txmem_t * packet = udp4_get_packet_mem(APRS_BUFFER_SIZE, port, APRS_SEND_ONLY_PORT, address.ipv4.addr);
 
@@ -219,53 +271,11 @@ void send_network_report()
   }
 }
 
-#pragma mark Common exported functions
-
-void aprs_process_gps_data(const char** parameters)
-{
-  if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
-      (*parameters[4] != '0') &&
-      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
-  {
-    handle_position_fix_data(parameters);
-    xSemaphoreGive(lock);
-    return;
-  }
-  if ((memcmp(parameters[0], "GPRMC", 6) == 0) &&
-      (*parameters[2] == 'A') &&
-      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
-  {
-    update_packet(parameters);
-    xSemaphoreGive(lock);
-    return;
-  }
-}
-
-size_t aprs_get_slow_data(uint8_t* data)
-{
-  size_t count = 0;
-  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
-  {
-    memcpy(data, reader, SLOW_DATA_CHUNK_SIZE);
-
-    count = terminator - reader;
-    if (count > SLOW_DATA_CHUNK_SIZE)
-      count = SLOW_DATA_CHUNK_SIZE;
-
-    reader += SLOW_DATA_CHUNK_SIZE;
-    if (reader > terminator)
-      reader = buffer;
-
-    xSemaphoreGive(lock);
-  }
-  return count;
-}
-
-#pragma mark APRS-IS Task
+#pragma mark Routine
 
 void handle_dns_cache_event()
 {
-
+  // TODO: Create timer for beacon
 }
 
 void aprs_init()
@@ -274,5 +284,6 @@ void aprs_init()
   prepare_packet();
   calculate_aprs_password();
   port = udp_get_new_srcport();
+  lock = xSemaphoreCreateMutex();
   dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
 }
