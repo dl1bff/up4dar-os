@@ -85,6 +85,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SERVER_TYPE_TST             1
 #define SERVER_TYPE_DEXTRA          2
 
+#define ETHERNET_PAYLOAD_OFFSET     42  // Skip IP + UDP headers
+
 const char* dcs_html_info =
   "<table border=\"0\" width=\"95%\"><tr>"
   "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
@@ -357,7 +359,7 @@ void dcs_input_packet(const uint8_t * data, int data_len, const uint8_t * ipv4_s
     case DCS_VOICE_FRAME_SIZE:
       if ((memcmp(data, "0001", 4) == 0) &&
           (data[14] == current_module)) // filter out the right channel
-        dstarProcessDCSPacket( data );
+        dstarProcessDCSPacket(data);
       break;
 
     case DEXTRA_RADIO_HEADER_SIZE:
@@ -428,8 +430,7 @@ void dcs_select_reflector(short server_num, char module, char server_type)
 static eth_txmem_t * dcs_get_packet_mem(int udp_size)
 {
   short port = (current_server_type != SERVER_TYPE_DEXTRA) ? DCS_UDP_PORT : DEXTRA_UDP_PORT;
-  return udp4_get_packet_mem( udp_size, dcs_udp_local_port, port, dcs_server_ipaddr );
-  
+  return udp4_get_packet_mem(udp_size, dcs_udp_local_port, port, dcs_server_ipaddr);
 }
 
 static void dcs_calc_chksum_and_send(eth_txmem_t* packet, int udp_size)
@@ -468,7 +469,7 @@ void dcs_link_to(char module)
   vd_prints_xy(VDISP_DEBUG_LAYER, 86, 0, VDISP_FONT_6x8, 1, buf);
   vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "    ");
 
-  uint8_t* d = packet->data + 42; // skip ip+udp header
+  uint8_t* d = packet->data + ETHERNET_PAYLOAD_OFFSET;
 
   memcpy(d, settings.s.my_callsign, 7);
   d[7] = ' ';
@@ -495,7 +496,7 @@ void dcs_keepalive_response(int request_size)
   if (packet == NULL)
     return;
   
-  uint8_t* d = packet->data + 42; // skip ip+udp header
+  uint8_t* d = packet->data + ETHERNET_PAYLOAD_OFFSET;
   
   memcpy (d, settings.s.my_callsign, 7);
 
@@ -585,14 +586,14 @@ void build_slow_data(uint8_t* d, int last_frame, char frame_counter)
   d[2] = 0xf5;
 }
 
-void send_dcs_private(int session_id, int last_frame, char frame_counter)
+void send_xcs(int session_id, char last_frame, char frame_counter)
 {
   eth_txmem_t * packet = dcs_get_packet_mem(DCS_VOICE_FRAME_SIZE);
   
   if (packet == NULL)
     return;
 
-  uint8_t * d = packet->data + 42; // skip ip+udp header
+  uint8_t * d = packet->data + ETHERNET_PAYLOAD_OFFSET;
 
   memcpy(d, "0001", 4);
 
@@ -611,7 +612,7 @@ void send_dcs_private(int session_id, int last_frame, char frame_counter)
   d[43] = (session_id >> 8) & 0xFF;
   d[44] = session_id & 0xFF;
   
-  d[45] = frame_counter | ((last_frame != 0) ? 0x40 : 0);
+  d[45] = frame_counter | (last_frame << 6);
 
   memcpy(d + 46, dcs_ambe_data, sizeof(dcs_ambe_data));
   build_slow_data(d + 55, last_frame, frame_counter);
@@ -636,8 +637,8 @@ void send_dcs_private(int session_id, int last_frame, char frame_counter)
   {
     char buf[4];
     vdisp_i2s(buf, 3, 10, 0, secs);
-    vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, buf );
-    vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, "s" );
+    vdisp_prints_xy(104, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, buf);
+    vdisp_prints_xy(122, 48, VDISP_FONT_6x8, last_frame ? 0 : 1, "s");
   }
   */
 }
@@ -649,7 +650,7 @@ void send_dextra_header(int session_id)
   if (packet == NULL)
     return;
 
-  uint8_t* d = packet->data + 42; // skip ip+udp header
+  uint8_t* d = packet->data + ETHERNET_PAYLOAD_OFFSET;
 
   // DSVT Header, 8 bytes
   memcpy(d, "DSVT", 4);
@@ -688,14 +689,14 @@ void send_dextra_header(int session_id)
   dcs_calc_chksum_and_send(packet, DEXTRA_RADIO_HEADER_SIZE);
 }
 
-void send_dextra_frame(int session_id, int last_frame, char frame_counter)
+void send_dextra_frame(int session_id, char last_frame, char frame_counter)
 {
   eth_txmem_t * packet = dcs_get_packet_mem(DEXTRA_VOICE_FRAME_SIZE);
 
   if (packet == NULL)
     return;
 
-  uint8_t* d = packet->data + 42; // skip ip+udp header
+  uint8_t* d = packet->data + ETHERNET_PAYLOAD_OFFSET;
 
   // DSVT Header, 8 bytes
   memcpy(d, "DSVT", 4);
@@ -713,7 +714,7 @@ void send_dextra_frame(int session_id, int last_frame, char frame_counter)
   d[12] = (session_id >> 8) & 0xff;
   d[13] = session_id & 0xff;
 
-  d[14] = frame_counter | ((last_frame != 0) ? 0x40 : 0);
+  d[14] = frame_counter | (last_frame << 6);
 
   memcpy(d + 15, dcs_ambe_data, sizeof(dcs_ambe_data));
   build_slow_data(d + 24, last_frame, frame_counter);
@@ -737,7 +738,7 @@ void send_dcs(int session_id, int last_frame, char frame_counter)
 
       case SERVER_TYPE_DCS:
       case SERVER_TYPE_TST:
-        send_dcs_private(session_id, last_frame, frame_counter);
+        send_xcs(session_id, last_frame, frame_counter);
         break;
     }
   }
