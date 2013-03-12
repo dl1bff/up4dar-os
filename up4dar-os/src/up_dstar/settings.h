@@ -67,7 +67,7 @@ typedef union settings_union
     char dprs_source;
     char aprs_ssid;
     char aprs_symbol[2];
-    char beacon_interval;
+    char aprs_beacon;
 	} s;
 	
 } settings_t;

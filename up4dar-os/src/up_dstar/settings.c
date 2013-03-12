@@ -165,6 +165,13 @@ void settings_init(void)
 		memcpy(settings.s.urcall + (2*CALLSIGN_LENGTH), "CQCQ DVR", CALLSIGN_LENGTH);
 		
 	}
+
+  // TODO: Remove this!!!!
+  settings.s.dprs_source = 'A';
+  settings.s.aprs_ssid = 3;
+  memcpy(settings.s.aprs_symbol, "/>", 2);
+  settings.s.aprs_beacon = 0;
+
 }
 
 

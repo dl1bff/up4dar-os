@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "syslog.h"
 
 #include "FreeRTOS.h"
+#include "queue.h"
 #include "gcc_builtin.h"
 
 #include "up_io/eth.h"
@@ -49,7 +50,7 @@ const char* const template = "<000>1 - 000.000.000.000 UP4DAR - - - - ";
 
 void syslog(char facility, char severity, const char* message, int length)
 {
-  if ((facility == LOG_DEBUG) && ((version_info[0] & 0xc0) == 0))
+  if ((facility == LOG_DEBUG) && ((software_version[0] & 0xc0) == 0))
     return;
 
   if (dhcp_is_ready() == 0)
