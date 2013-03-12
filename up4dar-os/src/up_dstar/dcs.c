@@ -87,7 +87,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define ETHERNET_PAYLOAD_OFFSET     42  // Skip IP + UDP headers
 
-const char* dcs_html_info =
+const char dcs_html_info[] =
   "<table border=\"0\" width=\"95%\"><tr>"
   "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
   "<td width=\"96%\">"
@@ -430,17 +430,16 @@ static eth_txmem_t * dcs_get_packet_mem(int udp_size)
   return udp4_get_packet_mem(udp_size, dcs_udp_local_port, port, dcs_server_ipaddr);
 }
 
-static void dcs_calc_chksum_and_send(eth_txmem_t* packet, int udp_size)
+static void dcs_calc_chksum_and_send(eth_txmem_t* packet)
 {
   udp4_calc_chksum_and_send(packet, dcs_server_ipaddr);
 }
 
-void infocpy(char* buffer)
+void copy_html_info(char* buffer)
 {
-  int index;
   memcpy(buffer, dcs_html_info, sizeof(dcs_html_info));
 
-  for (index = 0; index < sizeof(dcs_html_info) - 11; index ++)
+  for (size_t index = 0; index < sizeof(dcs_html_info) - 11; index ++)
   {
     if (buffer[index] == 'X')  // look for 'X'
     {
@@ -478,10 +477,10 @@ void dcs_link_to(char module)
   {
     dcs_get_current_reflector_name(d + 11);
     d[18] = '@';
-    infocpy(d + 19);
+    copy_html_info(d + 19);
   }
 
-  dcs_calc_chksum_and_send(packet, size);
+  dcs_calc_chksum_and_send(packet);
 }
 
 void dcs_keepalive_response(int request_size)
@@ -517,7 +516,7 @@ void dcs_keepalive_response(int request_size)
       break;
   }
 
-  dcs_calc_chksum_and_send(packet, size);
+  dcs_calc_chksum_and_send(packet);
 }
 
 void send_xcs(int session_id, char last_frame, char frame_counter)
@@ -561,7 +560,7 @@ void send_xcs(int session_id, char last_frame, char frame_counter)
 
   memcpy(d + 64, settings.s.txmsg, 20);
 
-  dcs_calc_chksum_and_send(packet, DCS_VOICE_FRAME_SIZE);
+  dcs_calc_chksum_and_send(packet);
 
   dcs_tx_counter ++;
 }
@@ -609,7 +608,7 @@ void send_dextra_header(int session_id)
   d[54] = sum & 0xff;
   d[55] = (sum >> 8) & 0xff;
 
-  dcs_calc_chksum_and_send(packet, DEXTRA_RADIO_HEADER_SIZE);
+  dcs_calc_chksum_and_send(packet);
 }
 
 void send_dextra_frame(int session_id, char last_frame, char frame_counter)
@@ -642,7 +641,7 @@ void send_dextra_frame(int session_id, char last_frame, char frame_counter)
   memcpy(d + 15, dcs_ambe_data, sizeof(dcs_ambe_data));
   build_slow_data(d + 24, last_frame, frame_counter, dcs_tx_counter);
 
-  dcs_calc_chksum_and_send(packet, DEXTRA_VOICE_FRAME_SIZE);
+  dcs_calc_chksum_and_send(packet);
 
   dcs_tx_counter ++;
 }
