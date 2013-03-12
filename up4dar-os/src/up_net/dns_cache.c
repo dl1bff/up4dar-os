@@ -117,5 +117,5 @@ void dns_cache_init()
 {
   lock = xSemaphoreCreateMutex();
   memset(slots, 0, sizeof(slots));
-  xTaskCreate(dns_cache_task, "dns_cache", 200, NULL, tskIDLE_PRIORITY, NULL);
+  xTaskCreate(dns_cache_task, "dns_cache", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 }
