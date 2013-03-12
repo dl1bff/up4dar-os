@@ -619,6 +619,12 @@
     <Compile Include="src\main.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\syslog.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\syslog.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\" />
