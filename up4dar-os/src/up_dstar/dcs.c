@@ -93,7 +93,7 @@ const char dcs_html_info[] =
   "<td width=\"96%\">"
   "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
   "<font size=\"2\"><b>www.UP4DAR.de</b>&nbsp;</font>"
-  "<font size=\"1\">Version: X.0.00.00 </font>"
+  "<font size=\"1\">Version: X.0.00.00  </font>"
   "</td>"
   "</tr></table>";
 
