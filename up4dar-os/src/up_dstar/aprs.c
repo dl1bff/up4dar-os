@@ -20,6 +20,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "aprs.h"
 
 #include "semphr.h"
+// #include "timers.h"
 
 #include "settings.h"
 #include "sw_update.h"
@@ -49,6 +50,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 int64_t altitude = UNDEFINED_ALTITUDE;
 
 xSemaphoreHandle lock;
+// xTimerHandle timer;
 
 char buffer[APRS_BUFFER_SIZE];
 
@@ -255,10 +257,10 @@ void send_network_report()
     pointer += build_aprs_call(pointer + 5);
     memcpy(pointer, " pass ", 6);
     memcpy(pointer + 6, password, 6);
-    memcpy(pointer + 12, " vers UP4DAR X.0.00.00 \r\n", 25);
+    memcpy(pointer + 12, " vers UP4DAR X.0.00.00  \r\n", 26);
     version2string(pointer + 25, software_version);
     pointer[35] = ' ';
-    pointer += 37;
+    pointer += 38;
 
     size_t length = terminator - pointer1;
     memcpy(pointer, pointer1, length);
@@ -275,7 +277,7 @@ void send_network_report()
 
 void handle_dns_cache_event()
 {
-  // TODO: Create timer for beacon
+  // xTimerStart(timer, 0);
 }
 
 void aprs_init()
@@ -285,5 +287,10 @@ void aprs_init()
   calculate_aprs_password();
   port = udp_get_new_srcport();
   lock = xSemaphoreCreateMutex();
-  dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
+  if (settings.s.aprs_beacon > 0)
+  {
+    // portTickType period = settings.s.aprs_beacon * 60 * 1000 / portTICK_RATE_MS;
+    // timer = xTimerCreate("aprs_beacon", priod, pdTRUE, NULL, send_network_report);
+    dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
+  }
 }
