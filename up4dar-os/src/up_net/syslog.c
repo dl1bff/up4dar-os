@@ -38,12 +38,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PRIORITY_POSITION        1
 #define ADDRESS_POSITION         9
 
-union _IPAddress
-{
-  uint8_t b[4];
-  uint32_t s_addr;
-};
-
 typedef union _IPAddress IPAddress;
 
 const char* const template = "<000>1 - 000.000.000.000 UP4DAR - - - - ";
@@ -56,15 +50,13 @@ void syslog(char facility, char severity, const char* message, int length)
   if (dhcp_is_ready() == 0)
     return;
 
-  IPAddress address;
-
-  // For the first time we use local network broadcast as destination address
-  address.s_addr = ((IPAddress*)ipv4_addr)->s_addr | ~ ((IPAddress*)ipv4_netmask)->s_addr;
+  if (ipv4_syslog[0] == 0)
+    return;
 
   size_t size = length + sizeof(template);
 
   short port = udp_get_new_srcport();
-  eth_txmem_t* packet = udp4_get_packet_mem(size, port, SYSLOG_UDP_PORT, address.b);
+  eth_txmem_t* packet = udp4_get_packet_mem(size, port, SYSLOG_UDP_PORT, ipv4_syslog);
 
   if (packet == NULL)
     return;
@@ -79,5 +71,5 @@ void syslog(char facility, char severity, const char* message, int length)
   for (size_t index = 0; index < sizeof(ipv4_addr); index ++)
     vdisp_i2s(buffer + ADDRESS_POSITION + index * 4, 3, 10, 1, ipv4_addr[index]);
 
-  udp4_calc_chksum_and_send(packet, address.b);
+  udp4_calc_chksum_and_send(packet, ipv4_syslog);
 };

@@ -114,6 +114,9 @@ static const uint8_t dhcp_magic_cookie[4] = { 99, 130, 83, 99 };
 
 void dhcp_init(void)
 {
+	memset(ipv4_ntp, 0, sizeof(ipv4_ntp));
+	memset(ipv4_syslog, 0, sizeof(ipv4_syslog));
+
 	dhcp_state = DHCP_NO_LINK;
 	dhcp_timer = 0;
 	dhcp_T1 = 900; // 15 minutes if not overwritten by DHCPOFFER
@@ -263,7 +266,7 @@ static uint8_t dhcp_request_packet[] =
 		53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 		50, 0x04, 0,0,0,0,  // requested IP address
 		54, 0x04, 0,0,0,0,  // server identifier
-		55, 0x04, 0x01, 0x03, 0x06, 42, // Request Parameter List: netmask, router, DNS, NTP
+		55, 0x05, 0x01, 0x03, 0x06, 42, 7, // Request Parameter List: netmask, router, DNS, NTP, syslog
 		0xFF  // END
 	};
 	
@@ -271,7 +274,7 @@ static uint8_t dhcp_rebind_packet[] =
 {
 	53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 	54, 0x04, 0,0,0,0,  // server identifier
-	55, 0x04, 0x01, 0x03, 0x06, 42, // Request Parameter List: netmask, router, DNS, NTP
+	55, 0x05, 0x01, 0x03, 0x06, 42, 7, // Request Parameter List: netmask, router, DNS, NTP, syslog
 	0xFF  // END
 };
 
@@ -512,6 +515,17 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 						// use only first entry
 						memcpy(ipv4_ntp, p+2, 4);
 						ipv4_print_ip_addr(42, "NTP", p+2);
+					}
+				}
+				break;
+			case 7: // NTP server
+				if (res == RECEIVED_ACK) // assumption: message type comes first!
+				{
+					if (option_len >= 4)
+					{
+						// use only first entry
+						memcpy(ipv4_syslog, p + 2, 4);
+						ipv4_print_ip_addr(42, "syslog", p + 2);
 					}
 				}
 				break;
