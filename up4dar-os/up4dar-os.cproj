@@ -544,6 +544,12 @@
     <Compile Include="src\up_net\lldp.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\ntp.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\ntp.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_net\snmp.c">
       <SubType>compile</SubType>
     </Compile>
@@ -637,6 +643,12 @@
     <Compile Include="src\up_net\syslog.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_sys\timer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_sys\timer.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\" />
@@ -665,6 +677,7 @@
     <Folder Include="src\FreeRTOSV6.1.1\portable\GCC" />
     <Folder Include="src\FreeRTOSV6.1.1\portable\GCC\AVR32_UC3" />
     <Folder Include="src\FreeRTOSV6.1.1\portable\MemMang" />
+    <Folder Include="src\up_sys" />
     <Folder Include="src\up_crypto" />
     <Folder Include="src\up_app" />
     <Folder Include="src\up_dstar" />

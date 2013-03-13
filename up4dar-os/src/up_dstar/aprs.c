@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "aprs.h"
 
 #include "semphr.h"
-// #include "timers.h"
 
 #include "settings.h"
 #include "sw_update.h"
@@ -32,6 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/ipv4.h"
 #include "up_net/dhcp.h"
 #include "up_net/dns_cache.h"
+
+#include "up_sys/timer.h"
 
 #define UNDEFINED_ALTITUDE       INT64_MIN
 
@@ -277,7 +278,8 @@ void send_network_report()
 
 void handle_dns_cache_event()
 {
-  // xTimerStart(timer, 0);
+  int interval = settings.s.aprs_beacon * 60 * 1000;
+  timer_set_slot(TIMER_SLOT_APRS, interval, send_network_report);
 }
 
 void aprs_init()
@@ -288,9 +290,5 @@ void aprs_init()
   port = udp_get_new_srcport();
   lock = xSemaphoreCreateMutex();
   if (settings.s.aprs_beacon > 0)
-  {
-    // portTickType period = settings.s.aprs_beacon * 60 * 1000 / portTICK_RATE_MS;
-    // timer = xTimerCreate("aprs_beacon", priod, pdTRUE, NULL, send_network_report);
     dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
-  }
 }

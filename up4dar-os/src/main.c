@@ -74,7 +74,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto_init.h"
 #include "up_net/dns.h"
 
+#include "up_sys/timer.h"
 #include "up_net/dns_cache.h"
+#include "up_net/ntp.h"
 #include "up_dstar/aprs.h"
 
 #include "software_version.h"
@@ -1063,8 +1065,9 @@ int main (void)
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
 
+	timer_init();
 	dns_cache_init();
-
+	ntp_init();
 	aprs_init();
 	
 	a_app_manager_init();

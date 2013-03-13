@@ -20,10 +20,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dns_cache.h"
 
 #include "semphr.h"
-#include "task.h"
 
 #include "dhcp.h"
 #include "dns.h"
+
+#include "up_sys/timer.h"
 
 #define FALSE          0
 #define TRUE           1
@@ -41,6 +42,7 @@ struct dns_cache_slot
 
 xSemaphoreHandle lock;
 struct dns_cache_slot slots[DNS_CACHE_SLOT_COUNT];
+int current = -1;
 
 void dns_cache_set_slot(int slot, const char* host, dns_cache_handler callback)
 {
@@ -65,51 +67,45 @@ int dns_cache_get_address(int slot, ip_addr_t* address)
   return FALSE;
 }
 
-void dns_cache_task()
+void dns_cache_event()
 {
-  int current = -1;
+  int candidate = -1;
 
-  for ( ; ; )
+  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
   {
-    int candidate = -1;
-
-    if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+    for (size_t index = 0; index < DNS_CACHE_SLOT_COUNT; index ++)
     {
-      for (size_t index = 0; index < DNS_CACHE_SLOT_COUNT; index ++)
-      {
-        if (slots[index].expire > 0)
-          slots[index].expire --;
-        if ((slots[index].expire == 0) &&
-            (slots[index].host != NULL))
-          candidate = index;
-      }
-
-      if ((current == -1) &&
-          (candidate >= 0) &&
-          (dhcp_is_ready() != 0) &&
-          (dns_get_lock() != 0) &&
-          (dns_req_A(slots[candidate].host) == 0))
-        current = candidate;
-
-      if ((current >= 0) &&
-          (dns_result_available() != 0))
-      {
-        if (dns_get_A_addr(&slots[current].address) == 0)
-        {
-          slots[current].expire = CACHE_EXPIRE;
-          if (slots[current].callback != NULL)
-          {
-            xSemaphoreGive(lock);
-            slots[current].callback(current);
-          }
-        }
-        dns_release_lock();
-        current = -1;
-      }
-
-      xSemaphoreGive(lock);
+      if (slots[index].expire > 0)
+        slots[index].expire --;
+      if ((slots[index].expire == 0) &&
+          (slots[index].host != NULL))
+        candidate = index;
     }
-    vTaskDelay(POLL_INTERVAL);
+
+    if ((current == -1) &&
+        (candidate >= 0) &&
+        (dhcp_is_ready() != 0) &&
+        (dns_get_lock() != 0) &&
+        (dns_req_A(slots[candidate].host) == 0))
+      current = candidate;
+
+    if ((current >= 0) &&
+        (dns_result_available() != 0))
+    {
+      if (dns_get_A_addr(&slots[current].address) == 0)
+      {
+        slots[current].expire = CACHE_EXPIRE;
+        if (slots[current].callback != NULL)
+        {
+          xSemaphoreGive(lock);
+          slots[current].callback(current);
+        }
+      }
+      dns_release_lock();
+      current = -1;
+    }
+
+    xSemaphoreGive(lock);
   }
 }
 
@@ -117,5 +113,5 @@ void dns_cache_init()
 {
   lock = xSemaphoreCreateMutex();
   memset(slots, 0, sizeof(slots));
-  xTaskCreate(dns_cache_task, "dns_cache", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+  timer_set_slot(TIMER_SLOT_DNS_CACHE, POOL_INTERVAL, dns_cache_event);
 }
