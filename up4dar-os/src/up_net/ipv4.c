@@ -60,6 +60,7 @@ unsigned char ipv4_netmask[4];
 unsigned char ipv4_gw[4];
 
 unsigned char ipv4_ntp[4];
+unsigned char ipv4_syslog[4];
 
 unsigned char ipv4_dns_pri[4];
 unsigned char ipv4_dns_sec[4];
@@ -537,6 +538,7 @@ void ipv4_init(void)
 	memcpy(ipv4_dns_pri, ipv4_zero_addr, sizeof ipv4_zero_addr); // no primary dns
 	memcpy(ipv4_dns_sec, ipv4_zero_addr, sizeof ipv4_zero_addr); // no secondary dns
 	memcpy(ipv4_ntp, ipv4_zero_addr, sizeof ipv4_zero_addr); // no NTP server
+	memcpy(ipv4_syslog, ipv4_zero_addr, sizeof ipv4_zero_addr); // no syslog server
 	
 	ipneigh_init(); // delete neighbor cache
 }

@@ -36,6 +36,7 @@ extern unsigned char ipv4_netmask[4];
 extern unsigned char ipv4_gw[4];
 
 extern unsigned char ipv4_ntp[4];
+extern unsigned char ipv4_syslog[4];
 
 extern unsigned char ipv4_dns_pri[4];
 extern unsigned char ipv4_dns_sec[4];

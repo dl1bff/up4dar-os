@@ -114,9 +114,6 @@ static const uint8_t dhcp_magic_cookie[4] = { 99, 130, 83, 99 };
 
 void dhcp_init(void)
 {
-	memset(ipv4_ntp, 0, sizeof(ipv4_ntp));
-	memset(ipv4_syslog, 0, sizeof(ipv4_syslog));
-
 	dhcp_state = DHCP_NO_LINK;
 	dhcp_timer = 0;
 	dhcp_T1 = 900; // 15 minutes if not overwritten by DHCPOFFER

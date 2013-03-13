@@ -50,7 +50,7 @@ void syslog(char facility, char severity, const char* message, int length)
   if (dhcp_is_ready() == 0)
     return;
 
-  if (ipv4_syslog[0] == 0)
+  if (memcmp(ipv4_syslog, ipv4_zero_addr, sizeof(ipv4_zero_addr)) == 0)
     return;
 
   size_t size = length + sizeof(template);
