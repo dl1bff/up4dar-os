@@ -795,6 +795,8 @@ static void vTXTask( void *pvParameters )
 				tx_min_count = 8; // send at least 8 AMBE frames+data (full TX Message)
 				
 				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " TX " );
+				
+				aprs_reset();
 			}
 			else
 			{

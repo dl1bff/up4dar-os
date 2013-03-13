@@ -207,9 +207,14 @@ void aprs_process_gps_data(const char** parameters)
 size_t aprs_get_slow_data(uint8_t* data)
 {
   size_t count = 0;
-  if ((xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE) &&
-      (has_packet_data() != 0))
+  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
   {
+    if (has_packet_data() != 0)
+    {
+      xSemaphoreGive(lock);
+      return;
+    }
+
     memcpy(data, reader, SLOW_DATA_CHUNK_SIZE);
 
     count = terminator - reader;
@@ -217,7 +222,7 @@ size_t aprs_get_slow_data(uint8_t* data)
       count = SLOW_DATA_CHUNK_SIZE;
 
     reader += SLOW_DATA_CHUNK_SIZE;
-    if (reader > terminator)
+    if (reader >= terminator)
       reader = buffer;
 
     xSemaphoreGive(lock);
@@ -241,9 +246,14 @@ void send_network_report()
   ip_addr_t address;
   if ((dhcp_is_ready() != 0) && 
       (dns_cache_get_address(DNS_CACHE_SLOT_APRS, &address) != 0) &&
-      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE) &&
-      (has_packet_data() != 0))
+      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
+    if (has_packet_data() != 0)
+    {
+      xSemaphoreGive(lock);
+      return;
+    }
+
     eth_txmem_t * packet = udp4_get_packet_mem(APRS_BUFFER_SIZE, port, APRS_SEND_ONLY_PORT, address.ipv4.addr);
 
     if (packet == NULL)
@@ -275,6 +285,12 @@ void send_network_report()
 }
 
 #pragma mark Routine
+
+void aprs_reset()
+{
+  reader = buffer;
+  send_network_report();
+}
 
 void handle_dns_cache_event()
 {
