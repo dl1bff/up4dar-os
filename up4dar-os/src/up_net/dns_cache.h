@@ -25,6 +25,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io/eth_txmem.h"
 #include "up_net/ipneigh.h"
 
+#define DNS_CACHE_SLOT_NTP    0
+#define DNS_CACHE_SLOT_APRS   1
+
 #define DNS_CACHE_SLOT_COUNT  2
 
 typedef void (*dns_cache_handler)(int slot);
