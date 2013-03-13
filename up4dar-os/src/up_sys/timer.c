@@ -53,7 +53,7 @@ void timer_task()
     {
       for (size_t index = 0; index < TIMER_SLOT_COUNT; index ++)
       {
-		struct timer_slot* slot = &slots[index];
+        struct timer_slot* slot = &slots[index];
         if (slot->callback != NULL)
         {
           slot->timeout -= TIMER_INTERVAL;
