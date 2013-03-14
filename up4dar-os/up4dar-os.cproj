@@ -11,7 +11,7 @@
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <Name>$(MSBuildProjectName)</Name>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <avrtool />
+    <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
     <OutputType>Executable</OutputType>
     <Language>C</Language>
     <ToolchainName>com.Atmel.AVRGCC32</ToolchainName>
@@ -70,6 +70,22 @@
     <OverrideVtor>false</OverrideVtor>
     <OverrideVtorValue />
     <eraseonlaunchrule>0</eraseonlaunchrule>
+    <avrtoolinterface />
+    <com_atmel_avrdbg_tool_simulator>
+      <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
+      <ToolName xmlns="">AVR Simulator</ToolName>
+      <ToolNumber xmlns="">
+      </ToolNumber>
+      <KeepTimersRunning xmlns="">true</KeepTimersRunning>
+      <OverrideVtor xmlns="">false</OverrideVtor>
+      <OverrideVtorValue xmlns="">
+      </OverrideVtorValue>
+      <Channel xmlns="">
+        <host>127.0.0.1</host>
+        <port>49171</port>
+        <ssl>False</ssl>
+      </Channel>
+    </com_atmel_avrdbg_tool_simulator>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <OutputFileName>up4dar-os</OutputFileName>

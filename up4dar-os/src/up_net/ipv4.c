@@ -52,6 +52,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/vdisp.h"
 #include "up_crypto/up_crypto.h"
 
+#include "ntp.h"
 
 unsigned char ipv4_addr[4];
 
@@ -396,6 +397,9 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 				dns_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
 				break;
 			
+			case UDP_SOCKET_NTP:
+				ntp_handle_packet(p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+				break;
 			}
 			
 			return;

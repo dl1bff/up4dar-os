@@ -74,5 +74,5 @@ void timer_init()
 {
   lock = xSemaphoreCreateRecursiveMutex();
   memset(slots, 0, sizeof(slots));
-  xTaskCreate(timer_task, "Timer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
+  xTaskCreate(timer_task, "Timer", 400, NULL, tskIDLE_PRIORITY + 1, NULL);
 }
