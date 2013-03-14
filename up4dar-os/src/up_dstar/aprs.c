@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "aprs.h"
 
+#include "queue.h"
 #include "semphr.h"
 
 #include "settings.h"
@@ -217,7 +218,7 @@ void aprs_process_gps_data(const char** parameters)
   {
     validity1 = the_clock + DATA_VALIDITY_INTERVAL;
     update_packet(parameters);
-    xSemaphoreGive(lock);
+    xSemaphoreGiveFromISR(lock, NULL);
     return;
   }
   if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
@@ -226,7 +227,7 @@ void aprs_process_gps_data(const char** parameters)
   {
     validity2 = the_clock + DATA_VALIDITY_INTERVAL;
     process_position_fix_data(parameters);
-    xSemaphoreGive(lock);
+    xSemaphoreGiveFromISR(lock, NULL);
     return;
   }
 }
@@ -240,7 +241,7 @@ size_t aprs_get_slow_data(uint8_t* data)
   {
     if (has_packet_data() == 0)
     {
-      xSemaphoreGive(lock);
+      xSemaphoreGiveFromISR(lock, NULL);
       return;
     }
 
@@ -254,7 +255,7 @@ size_t aprs_get_slow_data(uint8_t* data)
     if (reader >= terminator)
       reader = buffer;
 
-    xSemaphoreGive(lock);
+    xSemaphoreGiveFromISR(lock, NULL);
   }
   return count;
 }
@@ -279,7 +280,7 @@ void send_network_report()
   {
     if (has_packet_data() == 0)
     {
-      xSemaphoreGive(lock);
+      xSemaphoreGiveFromISR(lock, NULL);
       return;
     }
 
@@ -287,7 +288,7 @@ void send_network_report()
 
     if (packet == NULL)
     {
-      xSemaphoreGive(lock);
+      xSemaphoreGiveFromISR(lock, NULL);
       return;
     }
 
@@ -309,7 +310,7 @@ void send_network_report()
     packet->tx_size = pointer - packet->data; // Is it correct?
 
     udp4_calc_chksum_and_send(packet, address.ipv4.addr);
-    xSemaphoreGive(lock);
+    xSemaphoreGiveFromISR(lock, NULL);
   }
 }
 
@@ -333,7 +334,7 @@ void aprs_init()
   prepare_packet();
   calculate_aprs_password();
   port = udp_get_new_srcport();
-  lock = xSemaphoreCreateMutex();
+  vSemaphoreCreateBinary(lock);
   if (settings.s.aprs_beacon > 0)
     dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
 }
