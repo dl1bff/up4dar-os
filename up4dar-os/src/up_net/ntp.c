@@ -50,10 +50,6 @@ struct ntp_packet {
 
 #pragma pack(pop)
 
-#define SECONDS_PER_DAY          86400
-#define UNIX_TO_NTP_EPOCH        (SECONDS_PER_DAY * (365 * 70 + 17))
-#define INITIAL_TIME_VALUE       (1362096000 + UNIX_TO_NTP_EPOCH)    // 2013, March 1
-
 #define NTP_PORT                 123
 #define LOCAL_PORT               udp_socket_ports[UDP_SOCKET_NTP]
 #define ETHERNET_PAYLOAD_OFFSET  42
@@ -82,7 +78,7 @@ void ntp_handle_packet(const uint8_t* buffer, int length, const uint8_t* address
   if (length == sizeof(struct ntp_packet))
   {
     struct ntp_packet* data = (struct ntp_packet*)buffer;
-    the_clock = ntohl(data->transmit_timestamp_secs) % SECONDS_PER_DAY;
+    the_clock = ntohl(data->transmit_timestamp_secs);
   }
 }
 
@@ -99,10 +95,9 @@ void query_time()
     return;
 
   struct ntp_packet* data = (struct ntp_packet*)(packet->data + ETHERNET_PAYLOAD_OFFSET);
-  memset(data, 0, sizeof(struct ntp_packet));
 
+  memset(data, 0, sizeof(struct ntp_packet));
   data->mode = (4 << 3) | 3;
-  data->originate_timestamp_secs = htonl(INITIAL_TIME_VALUE);
 
   udp4_calc_chksum_and_send(packet, address.ipv4.addr);
 }

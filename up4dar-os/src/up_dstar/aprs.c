@@ -180,11 +180,33 @@ int has_packet_data()
 
 #pragma mark GPS data handling
 
+int parse_digits(const char* data, size_t length)
+{
+  int outcome = 0;
+  for (size_t index = 0; index < length; index ++)
+    outcome = outcome * 10 + data[index] - 0x30;
+  return outcome;
+}
+
+long parse_time(const char* time)
+{
+  if (*time != 0)
+    return
+      parse_digits(time, 2) * 3600 +
+      parse_digits(time + 2, 2) * 60 +
+      parse_digits(time + 4, 2);
+  return 0;
+}
+
 void process_position_fix_data(const char** parameters)
 {
   altitude = (*parameters[9] != 0) ? 
     ((atoi(parameters[9]) * 26444) >> 13) :
     UNDEFINED_ALTITUDE;
+
+  long time = parse_time(parameters[1]);
+  if (the_clock < time)
+    the_clock = time;
 }
 
 void aprs_process_gps_data(const char** parameters)
