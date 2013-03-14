@@ -19,10 +19,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "timer.h"
 
-#include "semphr.h"
 #include "task.h"
+#include "semphr.h"
 
-#define TIMER_INTERVAL  50
+#define TIMER_INTERVAL     50
+#define TIMER_START_DELAY  2000
 
 struct timer_slot
 {
@@ -31,14 +32,14 @@ struct timer_slot
   timer_handler callback;
 };
 
-xSemaphoreHandle lock;
-struct timer_slot slots[TIMER_SLOT_COUNT];
+static xSemaphoreHandle lock;
+static struct timer_slot slots[TIMER_SLOT_COUNT];
 
 void timer_set_slot(int slot, int interval, timer_handler callback)
 {
   if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
   {
-    slots[slot].timeout = 0;
+    slots[slot].timeout = interval;
     slots[slot].interval = interval;
     slots[slot].callback = callback;
     xSemaphoreGiveRecursive(lock);
@@ -47,6 +48,7 @@ void timer_set_slot(int slot, int interval, timer_handler callback)
 
 void timer_task()
 {
+  vTaskDelay(TIMER_START_DELAY * portTICK_RATE_MS);
   for ( ; ; )
   {
     if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
@@ -66,7 +68,7 @@ void timer_task()
       }
       xSemaphoreGiveRecursive(lock);
     }
-    vTaskDelay(TIMER_INTERVAL);
+    vTaskDelay(TIMER_INTERVAL * portTICK_RATE_MS);
   }
 }
 
@@ -74,5 +76,5 @@ void timer_init()
 {
   lock = xSemaphoreCreateRecursiveMutex();
   memset(slots, 0, sizeof(slots));
-  xTaskCreate(timer_task, "Timer", 400, NULL, tskIDLE_PRIORITY + 1, NULL);
+  xTaskCreate(timer_task, "Timer", 600, NULL, tskIDLE_PRIORITY + 1, NULL);
 }

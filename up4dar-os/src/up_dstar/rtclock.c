@@ -30,10 +30,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "rtclock.h"
 
 #include "FreeRTOS.h"
+#include "task.h"
 #include "vdisp.h"
 
-unsigned long the_clock;
-unsigned short rtclock_ticks;
+unsigned long volatile the_clock;
+static unsigned short rtclock_ticks;
 
 
 void vApplicationTickHook( void )
@@ -43,7 +44,9 @@ void vApplicationTickHook( void )
 	if (rtclock_ticks >= configTICK_RATE_HZ)
 	{
 		rtclock_ticks = 0;
+    taskENTER_CRITICAL();
 		the_clock ++;
+    taskEXIT_CRITICAL();
 	}
 }
 
@@ -95,4 +98,11 @@ void rtclock_disp_xy(int x, int y, int dots, int display_seconds)
 		vdisp_i2s(buf, 2, 10, 1, seconds);
 		vdisp_prints_xy(x + 32, y, VDISP_FONT_6x8, 0, buf);
 	}
+}
+
+void rtclock_set_time(unsigned long time)
+{
+  taskENTER_CRITICAL();
+  the_clock = time;
+  taskEXIT_CRITICAL();
 }

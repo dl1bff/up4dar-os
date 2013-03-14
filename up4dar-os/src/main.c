@@ -1069,8 +1069,8 @@ int main (void)
 
 	timer_init();
 	dns_cache_init();
-	ntp_init();
 	aprs_init();
+	ntp_init();
 	
 	a_app_manager_init();
 

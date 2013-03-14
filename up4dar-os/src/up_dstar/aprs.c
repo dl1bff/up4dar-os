@@ -208,7 +208,7 @@ void process_position_fix_data(const char** parameters)
 
   long time = parse_time(parameters[1]);
   if (the_clock < time)
-    the_clock = time;
+    rtclock_set_time(time);
 }
 
 void aprs_process_gps_data(const char** parameters)

@@ -40,6 +40,7 @@ void vApplicationTickHook( void );
 void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
 unsigned long rtclock_get_ticks( void );
 
-extern unsigned long the_clock;
+extern unsigned long volatile the_clock;
+void rtclock_set_time(unsigned long time);
 
 #endif /* RTCLOCK_H_ */

@@ -170,7 +170,7 @@ void settings_init(void)
   settings.s.dprs_source = 'A';
   settings.s.aprs_ssid = 3;
   memcpy(settings.s.aprs_symbol, "/>", 2);
-  settings.s.aprs_beacon = 0;
+  settings.s.aprs_beacon = 5; // 5 min
 
 }
 

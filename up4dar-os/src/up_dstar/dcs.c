@@ -116,21 +116,22 @@ const char* const reflector_prefixes[] =
   "XRF"
 };
 
-int dcs_state;
-int dcs_timeout_timer;
-int dcs_retry_counter;
+static int dcs_state;
+static int dcs_timeout_timer;
+static int dcs_retry_counter;
 
-char current_module;
-char current_server_type;
-short current_server;
+static char current_module;
+static char current_server_type;
+static short current_server;
 
-uint8_t dcs_server_ipaddr[4];
-char dcs_server_dns_name[25]; // dns name of reflector e.g. "dcs001.xreflector.net"
+static uint8_t dcs_server_ipaddr[4];
+static char dcs_server_dns_name[25]; // dns name of reflector e.g. "dcs001.xreflector.net"
 
-int dcs_udp_local_port;
+static int dcs_udp_local_port;
 
 uint8_t dcs_ambe_data[9];
-int dcs_tx_counter = 0;
+
+static int dcs_tx_counter = 0;
 
 void dcs_link_to(char module);
 void dcs_keepalive_response(int request_size);

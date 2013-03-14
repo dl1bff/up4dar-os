@@ -33,7 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 typedef void (*dns_cache_handler)(int slot);
 
 void dns_cache_set_slot(int slot, const char* host, dns_cache_handler callback);
-int dns_cache_get_address(int slot, ip_addr_t* address);
+int dns_cache_get_address(int slot, uint8_t* address);
 
 void dns_cache_init();
 
