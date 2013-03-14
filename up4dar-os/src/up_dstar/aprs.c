@@ -39,7 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define UNDEFINED_ALTITUDE       INT64_MIN
 #define DATA_VALIDITY_INTERVAL   600
 
-#define APRS_BUFFER_SIZE         400
+#define APRS_BUFFER_SIZE         (100 + DPRS_MSG_LENGTH)
 #define APRS_POSITION_LENGTH     34
 #define DPRS_SIGN_LENGTH         10
 
@@ -170,6 +170,7 @@ void update_packet(const char** parameters)
   memcpy(terminator, "\r\n", 2);
   terminator += 2;
   memset(terminator, 0x66, 5);
+  reader = buffer;
 }
 
 int has_packet_data()
@@ -218,7 +219,7 @@ void aprs_process_gps_data(const char** parameters)
   {
     validity1 = the_clock + DATA_VALIDITY_INTERVAL;
     update_packet(parameters);
-    xSemaphoreGiveFromISR(lock, NULL);
+    xSemaphoreGive(lock);
     return;
   }
   if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
@@ -227,7 +228,7 @@ void aprs_process_gps_data(const char** parameters)
   {
     validity2 = the_clock + DATA_VALIDITY_INTERVAL;
     process_position_fix_data(parameters);
-    xSemaphoreGiveFromISR(lock, NULL);
+    xSemaphoreGive(lock);
     return;
   }
 }
@@ -237,11 +238,11 @@ void aprs_process_gps_data(const char** parameters)
 size_t aprs_get_slow_data(uint8_t* data)
 {
   size_t count = 0;
-  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTake(lock, portTICK_RATE_MS * 2) == pdTRUE)
   {
     if (has_packet_data() == 0)
     {
-      xSemaphoreGiveFromISR(lock, NULL);
+      xSemaphoreGive(lock);
       return;
     }
 
@@ -280,7 +281,7 @@ void send_network_report()
   {
     if (has_packet_data() == 0)
     {
-      xSemaphoreGiveFromISR(lock, NULL);
+      xSemaphoreGive(lock);
       return;
     }
 
@@ -288,7 +289,7 @@ void send_network_report()
 
     if (packet == NULL)
     {
-      xSemaphoreGiveFromISR(lock, NULL);
+      xSemaphoreGive(lock);
       return;
     }
 
@@ -310,7 +311,7 @@ void send_network_report()
     packet->tx_size = pointer - packet->data; // Is it correct?
 
     udp4_calc_chksum_and_send(packet, address.ipv4.addr);
-    xSemaphoreGiveFromISR(lock, NULL);
+    xSemaphoreGive(lock);
   }
 }
 
@@ -330,11 +331,10 @@ void handle_dns_cache_event()
 
 void aprs_init()
 {
-  reader = buffer;
   prepare_packet();
   calculate_aprs_password();
   port = udp_get_new_srcport();
-  vSemaphoreCreateBinary(lock);
+  lock = xSemaphoreCreateMutex();
   if (settings.s.aprs_beacon > 0)
     dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
 }
