@@ -19,6 +19,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "dns_cache.h"
 
+#include "queue.h"
 #include "semphr.h"
 
 #include "dhcp.h"
@@ -46,22 +47,22 @@ int current = -1;
 
 void dns_cache_set_slot(int slot, const char* host, dns_cache_handler callback)
 {
-  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
   {
     slots[slot].host = host;
     slots[slot].expire = 0;
     slots[slot].callback = callback;
-    xSemaphoreGive(lock);
+    xSemaphoreGiveRecursive(lock);
   }
 }
 
 int dns_cache_get_address(int slot, ip_addr_t* address)
 {
-  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
   {
     memcpy(address, &slots[slot].address, sizeof(ip_addr_t));
     int result = (slots[slot].expire > 0);
-    xSemaphoreGive(lock);
+    xSemaphoreGiveRecursive(lock);
     return result;
   }
   return FALSE;
@@ -71,7 +72,7 @@ void dns_cache_event()
 {
   int candidate = -1;
 
-  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
   {
     for (size_t index = 0; index < DNS_CACHE_SLOT_COUNT; index ++)
     {
@@ -96,22 +97,19 @@ void dns_cache_event()
       {
         slots[current].expire = CACHE_EXPIRE;
         if (slots[current].callback != NULL)
-        {
-          xSemaphoreGive(lock);
           slots[current].callback(current);
-        }
       }
       dns_release_lock();
       current = -1;
     }
 
-    xSemaphoreGive(lock);
+    xSemaphoreGiveRecursive(lock);
   }
 }
 
 void dns_cache_init()
 {
-  lock = xSemaphoreCreateMutex();
+  lock = xSemaphoreCreateRecursiveMutex();
   memset(slots, 0, sizeof(slots));
-  timer_set_slot(TIMER_SLOT_DNS_CACHE, POOL_INTERVAL, dns_cache_event);
+  timer_set_slot(TIMER_SLOT_DNS_CACHE, POLL_INTERVAL, dns_cache_event);
 }

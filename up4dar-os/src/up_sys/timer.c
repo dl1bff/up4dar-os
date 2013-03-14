@@ -36,12 +36,12 @@ struct timer_slot slots[TIMER_SLOT_COUNT];
 
 void timer_set_slot(int slot, int interval, timer_handler callback)
 {
-  if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+  if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
   {
     slots[slot].timeout = 0;
     slots[slot].interval = interval;
     slots[slot].callback = callback;
-    xSemaphoreGive(lock);
+    xSemaphoreGiveRecursive(lock);
   }
 }
 
@@ -49,7 +49,7 @@ void timer_task()
 {
   for ( ; ; )
   {
-    if (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE)
+    if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)
     {
       for (size_t index = 0; index < TIMER_SLOT_COUNT; index ++)
       {
@@ -64,7 +64,7 @@ void timer_task()
           }
         }
       }
-      xSemaphoreGive(lock);
+      xSemaphoreGiveRecursive(lock);
     }
     vTaskDelay(TIMER_INTERVAL);
   }
@@ -72,7 +72,7 @@ void timer_task()
 
 void timer_init()
 {
-  lock = xSemaphoreCreateMutex();
+  lock = xSemaphoreCreateRecursiveMutex();
   memset(slots, 0, sizeof(slots));
   xTaskCreate(timer_task, "Timer", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, NULL);
 }

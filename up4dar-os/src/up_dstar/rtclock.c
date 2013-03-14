@@ -32,8 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "FreeRTOS.h"
 #include "vdisp.h"
 
-static unsigned long the_clock;
-static unsigned short rtclock_ticks;
+unsigned long the_clock;
+unsigned short rtclock_ticks;
 
 
 void vApplicationTickHook( void )

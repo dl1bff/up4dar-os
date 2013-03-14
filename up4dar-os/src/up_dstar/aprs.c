@@ -25,6 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "sw_update.h"
 #include "rx_dstar_crc_header.h"
 #include "vdisp.h"
+#include "rtclock.h"
 #include "up_io/eth.h"
 #include "up_io/eth_txmem.h"
 #include "up_net/ipneigh.h"
@@ -35,6 +36,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_sys/timer.h"
 
 #define UNDEFINED_ALTITUDE       INT64_MIN
+#define DATA_VALIDITY_INTERVAL   600
 
 #define APRS_BUFFER_SIZE         400
 #define APRS_POSITION_LENGTH     34
@@ -48,11 +50,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma mark APRS and D-PRS packet building functions
 
-int64_t altitude = UNDEFINED_ALTITUDE;
-
 xSemaphoreHandle lock;
-// xTimerHandle timer;
 
+unsigned long validity1 = 0;  // Position data validity time
+unsigned long validity2 = 0;  // Altitude data validity time
+
+int64_t altitude = UNDEFINED_ALTITUDE;
 char buffer[APRS_BUFFER_SIZE];
 
 char* pointer1 = NULL;  // Pointer to TNC-2 packet header
@@ -68,7 +71,7 @@ char password[6];
 
 size_t build_alitude_extension(char* buffer)
 {
-  if (altitude != UNDEFINED_ALTITUDE)
+  if ((altitude != UNDEFINED_ALTITUDE)  && (validity2 > the_clock))
   {
     if (altitude >= 0)
     {
@@ -170,7 +173,9 @@ void update_packet(const char** parameters)
 
 int has_packet_data()
 {
-  return (pointer2 != terminator);
+  return
+    (validity1 > the_clock) &&
+    (pointer2 < terminator);
 }
 
 #pragma mark GPS data handling
@@ -184,19 +189,21 @@ void process_position_fix_data(const char** parameters)
 
 void aprs_process_gps_data(const char** parameters)
 {
-  if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
-      (*parameters[4] != '0') &&
-      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
-  {
-    process_position_fix_data(parameters);
-    xSemaphoreGive(lock);
-    return;
-  }
   if ((memcmp(parameters[0], "GPRMC", 6) == 0) &&
       (*parameters[2] == 'A') &&
       (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
+    validity1 = the_clock + DATA_VALIDITY_INTERVAL;
     update_packet(parameters);
+    xSemaphoreGive(lock);
+    return;
+  }
+  if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
+      (*parameters[4] != '0') &&
+      (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
+  {
+    validity2 = the_clock + DATA_VALIDITY_INTERVAL;
+    process_position_fix_data(parameters);
     xSemaphoreGive(lock);
     return;
   }
@@ -295,7 +302,7 @@ void aprs_reset()
 void handle_dns_cache_event()
 {
   int interval = settings.s.aprs_beacon * 60 * 1000;
-  timer_set_slot(TIMER_SLOT_APRS, interval, send_network_report);
+  timer_set_slot(TIMER_SLOT_APRS_BEACON, interval, send_network_report);
 }
 
 void aprs_init()

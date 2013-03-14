@@ -23,10 +23,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "FreeRTOS.h"
 #include "gcc_builtin.h"
 
-#define TIMER_SLOT_DNS_CACHE  0
-#define TIMER_SLOT_APRS       1
+#define TIMER_SLOT_DNS_CACHE    0
+#define TIMER_SLOT_APRS_BEACON  1
 
-#define TIMER_SLOT_COUNT      2
+#define TIMER_SLOT_COUNT        2
 
 typedef void (*timer_handler)(int slot);
 
