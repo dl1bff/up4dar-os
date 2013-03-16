@@ -106,6 +106,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define configIDLE_SHOULD_YIELD   1
 
 #define configUSE_MUTEXES		  1
+#define configUSE_RECURSIVE_MUTEXES 1
 
 /* Co-routine definitions. */
 #define configUSE_CO_ROUTINES     0
