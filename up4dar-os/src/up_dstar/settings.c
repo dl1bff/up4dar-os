@@ -86,7 +86,7 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DV_DIRECT					7
 	{  0,		 1,			0  },
 	// #define C_DPRS_ENABLED				8
-	{  0,		 1,			0  },
+	{  0,		 2,			0  },
 	// #define C_DPRS_SYMBOL				9
 	{  0,		 5,			2  },
 	// #define C_DISP_CONTRAST				10
@@ -106,7 +106,11 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DCS_CONNECT_AFTER_BOOT		17
 	{  0,		1,		0	  },
 	// #define C_REF_TYPE					18
-	{  0,		1,		0	  }
+	{  0,		1,		0	  },
+	// #define C_APRS_SSID					17
+	{  0,		15,		0	  },
+	// #define C_APRS_BEACON				18
+	{  0,		60,		0	  }
 };
 
 
