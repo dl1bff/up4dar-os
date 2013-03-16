@@ -66,6 +66,7 @@ static char* terminator = NULL;
 static char* reader = NULL;
 
 static int port;
+static char password[6];
 
 static const char* const symbols[] =
   {
@@ -296,7 +297,7 @@ uint8_t aprs_get_slow_data(uint8_t* data)
 
 #pragma mark APRS-IS reporting
 
-void calculate_aprs_password(char* buffer)
+void calculate_aprs_password()
 {
   uint8_t hash[] = { 0x73, 0xe2 };
 
@@ -304,7 +305,7 @@ void calculate_aprs_password(char* buffer)
     hash[index & 1] ^= settings.s.my_callsign[index];
 
   uint16_t code = ((hash[0] << 8) | hash[1]) & 0x7fff;
-  vdisp_i2s(buffer, 5, 10, 0, code);
+  vdisp_i2s(password, 5, 10, 0, code);
 }
 
 void send_network_report()
@@ -337,7 +338,7 @@ void send_network_report()
     pointer += build_aprs_call(pointer);
 
     memcpy(pointer, " pass ", 6);
-    calculate_aprs_password(pointer + 6);
+    memcpy(pointer + 6, password, 5);
     pointer += 11;
 
     memcpy(pointer, " vers UP4DAR X.0.00.00  \r\n", 26);
@@ -379,6 +380,7 @@ void aprs_activate_beacon()
 void aprs_init()
 {
   prepare_packet();
+  calculate_aprs_password();
   port = udp_get_new_srcport();
   lock = xSemaphoreCreateMutex();
   dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "aprs.dstar.su", aprs_activate_beacon);
