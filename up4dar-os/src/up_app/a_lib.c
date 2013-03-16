@@ -408,8 +408,8 @@ void a_dispatch_key_event( int key_num, int key_event )
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
 static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 2, 9, 9, 9, 25 };
-static const char * const ref_modes[2] = { "DSTAR Modem ",
-										   "DCS Internet"};
+static const char * const ref_modes[2] = { "D-STAR Modem",
+										   "IP Reflector"};
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
 
 

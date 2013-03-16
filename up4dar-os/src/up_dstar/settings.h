@@ -121,6 +121,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DCS_MODE					16
 #define C_DCS_CONNECT_AFTER_BOOT	17
 #define C_REF_TYPE					18
+#define C_APRS_SSID					19
+#define C_APRS_BEACON				20
 
 
 #define SETTING_LONG(a) (settings.s.long_values[a])

@@ -1,11 +1,11 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 2 of the License, or
-(at your option) any later version.
+at your option) any later version.
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -17,30 +17,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#ifndef DNS_CACHE_H
+#define DNS_CACHE_H
 
-/*
- * rtclock.h
- *
- * Created: 11.06.2011 12:53:12
- *  Author: mdirska
- */ 
+#include "FreeRTOS.h"
+#include "gcc_builtin.h"
+#include "up_io/eth_txmem.h"
+#include "up_net/ipneigh.h"
 
+#define DNS_CACHE_SLOT_NTP    0
+#define DNS_CACHE_SLOT_APRS   1
 
-#ifndef RTCLOCK_H_
-#define RTCLOCK_H_
+#define DNS_CACHE_SLOT_COUNT  2
 
+typedef void (*dns_cache_handler)(int slot);
 
+void dns_cache_set_slot(int slot, const char* host, dns_cache_handler callback);
+int dns_cache_get_address(int slot, uint8_t* address);
 
-#define RTCLOCK_INCR_TICK
+void dns_cache_init();
 
-
-void vApplicationTickHook( void );
-
-
-void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
-unsigned long rtclock_get_ticks( void );
-
-extern unsigned long volatile the_clock;
-void rtclock_set_time(unsigned long time);
-
-#endif /* RTCLOCK_H_ */
+#endif
