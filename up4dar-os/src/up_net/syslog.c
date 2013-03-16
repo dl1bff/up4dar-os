@@ -37,12 +37,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define PRIORITY_POSITION        1
 #define ADDRESS_POSITION         9
+#define TEMPLATE_LENGTH          (sizeof(template) - 1)
 
-typedef union _IPAddress IPAddress;
+const char template[] = "<000>1 - 000.000.000.000 UP4DAR - - - - ";
 
-const char* const template = "<000>1 - 000.000.000.000 UP4DAR - - - - ";
-
-void syslog(char facility, char severity, const char* message, int length)
+void syslog(char facility, char severity, const char* message)
 {
   if ((facility == LOG_DEBUG) && ((software_version[0] & 0xc0) == 0))
     return;
@@ -53,7 +52,8 @@ void syslog(char facility, char severity, const char* message, int length)
   if (memcmp(ipv4_syslog, ipv4_zero_addr, sizeof(ipv4_zero_addr)) == 0)
     return;
 
-  size_t size = length + sizeof(template);
+  size_t length = strlen(message);
+  size_t size = length + TEMPLATE_LENGTH;
 
   short port = udp_get_new_srcport();
   eth_txmem_t* packet = udp4_get_packet_mem(size, port, SYSLOG_UDP_PORT, ipv4_syslog);
@@ -63,13 +63,18 @@ void syslog(char facility, char severity, const char* message, int length)
 
   uint8_t* buffer = packet->data + ETHERNET_PAYLOAD_OFFSET;
   memcpy(buffer, template, sizeof(template));
-  memcpy(buffer + sizeof(template), message, length);
+  memcpy(buffer + TEMPLATE_LENGTH, message, length);
 
   unsigned int priority = (facility << 3) | (severity & 7);
   vdisp_i2s(buffer + PRIORITY_POSITION, 3, 10, 1, priority);
+  buffer[PRIORITY_POSITION + 3] = '>';
 
   for (size_t index = 0; index < sizeof(ipv4_addr); index ++)
+  {
     vdisp_i2s(buffer + ADDRESS_POSITION + index * 4, 3, 10, 1, ipv4_addr[index]);
+    buffer[ADDRESS_POSITION + index * 4 + 3] = '.';
+  }
+  buffer[ADDRESS_POSITION + 16] = ' ';
 
   udp4_calc_chksum_and_send(packet, ipv4_syslog);
 };

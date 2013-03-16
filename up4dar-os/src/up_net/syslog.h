@@ -57,6 +57,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define LOG_LOCAL6    22
 #define LOG_LOCAL7    23
 
-void syslog(char facility, char severity, const char* message, int length);
+void syslog(char facility, char severity, const char* message);
 
 #endif
