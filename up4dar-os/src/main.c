@@ -83,7 +83,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/sw_update.h"
 #include "up_crypto/up_crypto.h"
 
-
+#include "up_dstar/slow_data.h"
 
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
@@ -283,6 +283,8 @@ static void send_phy ( const unsigned char * d, char phy_frame_counter )
 	if (phy_frame_counter > 0)
 	{
 		send_data[0] = 0x22;
+		// Next code should be replaced with this line:
+		// build_slow_data(send_data + 1, 0, phy_frame_counter, tx_counter)
 		
 		if ((txmsg_counter == 0) && (phy_frame_counter >= 1) && (phy_frame_counter <= 8))
 		{
@@ -304,7 +306,7 @@ static void send_phy ( const unsigned char * d, char phy_frame_counter )
 		{
 				if (phy_frame_counter & 1)
 				{
-					slow_data_count = gps_get_slow_data(slow_data);
+					slow_data_count = get_slow_data_chunk(slow_data);
 					
 					if (slow_data_count == 0)
 					{

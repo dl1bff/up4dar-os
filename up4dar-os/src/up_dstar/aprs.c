@@ -51,22 +51,32 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #pragma mark APRS and D-PRS packet building functions
 
-xSemaphoreHandle lock;
+static xSemaphoreHandle lock;
 
-unsigned long validity1 = 0;  // Position data validity time
-unsigned long validity2 = 0;  // Altitude data validity time
+static unsigned long validity1 = 0;  // Position data validity time
+static unsigned long validity2 = 0;  // Altitude data validity time
 
-int64_t altitude = UNDEFINED_ALTITUDE;
-char buffer[APRS_BUFFER_SIZE];
+static int64_t altitude = UNDEFINED_ALTITUDE;
+static char buffer[APRS_BUFFER_SIZE];
 
-char* pointer1 = NULL;  // Pointer to TNC-2 packet header
-char* pointer2 = NULL;  // Pointer to APRS packet data
-char* terminator = NULL;
+static char* pointer1 = NULL;  // Pointer to TNC-2 packet header
+static char* pointer2 = NULL;  // Pointer to APRS packet data
+static char* terminator = NULL;
 
-char* reader = NULL;
+static char* reader = NULL;
 
-int port;
-char password[6];
+static int port;
+static char password[6];
+
+static const char* const symbols[] =
+  {
+    "/[", // Jogger
+    "/>", // Car
+    "/e", // House
+    "/s", // Boat
+    "/b", // Bicycle
+    "/v"  // Van
+  };
 
 #pragma mark APRS packet building
 
@@ -92,6 +102,8 @@ size_t build_alitude_extension(char* buffer)
 size_t build_position_report(char* buffer, const char** parameters)
 {
   size_t length = APRS_POSITION_LENGTH;
+  const char* symbol = symbols[SETTING_CHAR(C_DPRS_SYMBOL)];
+  const char* undined = "   ";
   // Position report with time (no messaging capability)
   buffer[0] = '/';
   // Time
@@ -101,17 +113,17 @@ size_t build_position_report(char* buffer, const char** parameters)
   memcpy(buffer + 8, parameters[3], 7);
   buffer[15] = *parameters[4];
   // Symbol table / Overlay
-  buffer[16] = settings.s.aprs_symbol[0];
+  buffer[16] = symbol[0];
   // Longitude
   memcpy(buffer + 17, parameters[5], 8);
   buffer[25] = *parameters[6];
   // Symbol code
-  buffer[26] = settings.s.aprs_symbol[1];
+  buffer[26] = symbol[1];
   // Course
   memcpy(buffer + 27, parameters[8], 3);
   buffer[30] = '/';
   // Speed
-  memcpy(buffer + 27, parameters[7], 3);
+  memcpy(buffer + 31, parameters[7], 3);
   // Alittude (optional)
   length += build_alitude_extension(buffer + 34);
   // Comment
@@ -126,17 +138,17 @@ size_t build_aprs_call(char* buffer)
   size_t number;
   for (number = 0; (number < CALLSIGN_LENGTH) && (settings.s.my_callsign[number] > ' '); number ++)
     buffer[number] = settings.s.my_callsign[number];
-  if ((settings.s.aprs_ssid > 0) && (settings.s.aprs_ssid < 10))
+  if ((SETTING_CHAR(C_APRS_SSID) > 0) && (SETTING_CHAR(C_APRS_SSID) < 10))
   {
     buffer[number] = '-';
-    buffer[number + 1] = settings.s.aprs_ssid + 0x30;
+    buffer[number + 1] = SETTING_CHAR(C_APRS_SSID) + 0x30;
     number += 2;
   }
-  if ((settings.s.aprs_ssid >= 10) && (settings.s.aprs_ssid <= 15))
+  if ((SETTING_CHAR(C_APRS_SSID) >= 10) && (SETTING_CHAR(C_APRS_SSID) <= 15))
   {
     buffer[number] = '-';
     buffer[number + 1] = '1';
-    buffer[number + 2] = settings.s.aprs_ssid + 0x26;
+    buffer[number + 2] = SETTING_CHAR(C_APRS_SSID) + 0x26;
     number += 3;
   }
   return number;
@@ -153,8 +165,8 @@ void prepare_packet()
   pointer2 = pointer1;
   pointer2 += build_aprs_call(pointer2);
   memcpy(pointer2, ">APD4XX,DSTAR*:", 15);
-  pointer2[5] = '0' + software_version[1] & 0x0f;
-  pointer2[6] = 'A' + (software_version[2] / 10) & 0x0f;
+  pointer2[5] = (software_version[1] % 10) + '0';
+  pointer2[6] = (software_version[2] % 24) + 'A';
   pointer2 += 15;
   terminator = pointer2;
 }
@@ -162,14 +174,17 @@ void prepare_packet()
 void update_packet(const char** parameters)
 {
   size_t length = build_position_report(pointer2, parameters);
-  // Update CRC at D-PRS header
-  uint16_t sum = rx_dstar_crc_data(buffer + DPRS_SIGN_LENGTH, length);
-  vdisp_i2s(buffer + 5, 4, 16, 1, sum);
-  // Fill packet terminator
+  // Fill D-PRS terminator and Slow Data filler
   terminator = pointer2 + length;
   memcpy(terminator, "\r\n", 2);
   terminator += 2;
   memset(terminator, 0x66, 5);
+  // Update CRC in D-PRS header
+  length = terminator - pointer1 - 1; // From TNC-2 header to CR
+  uint16_t sum = rx_dstar_crc_data(pointer1, length);
+  vdisp_i2s(buffer + 5, 4, 16, 1, sum);
+  buffer[DPRS_SIGN_LENGTH - 1] = ',';
+  // Reset D-PORS reader position
   reader = buffer;
 }
 
@@ -211,9 +226,10 @@ void process_position_fix_data(const char** parameters)
     rtclock_set_time(time);
 }
 
-void aprs_process_gps_data(const char** parameters)
+void aprs_process_gps_data(const char** parameters, size_t count)
 {
-  if ((memcmp(parameters[0], "GPRMC", 6) == 0) &&
+  if ((count >= 12) &&
+      (memcmp(parameters[0], "GPRMC", 6) == 0) &&
       (*parameters[2] == 'A') &&
       (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
@@ -222,7 +238,8 @@ void aprs_process_gps_data(const char** parameters)
     xSemaphoreGive(lock);
     return;
   }
-  if ((memcmp(parameters[0], "GPGGA", 6) == 0) &&
+  if ((count >= 15) &&
+      (memcmp(parameters[0], "GPGGA", 6) == 0) &&
       (*parameters[4] != '0') &&
       (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
@@ -235,7 +252,7 @@ void aprs_process_gps_data(const char** parameters)
 
 #pragma mark DV-A reporting
 
-size_t aprs_get_slow_data(uint8_t* data)
+uint8_t aprs_get_slow_data(uint8_t* data)
 {
   size_t count = 0;
   if (xSemaphoreTake(lock, portTICK_RATE_MS * 2) == pdTRUE)
@@ -256,7 +273,7 @@ size_t aprs_get_slow_data(uint8_t* data)
     if (reader >= terminator)
       reader = buffer;
 
-    xSemaphoreGiveFromISR(lock, NULL);
+    xSemaphoreGive(lock);
   }
   return count;
 }
@@ -266,17 +283,21 @@ size_t aprs_get_slow_data(uint8_t* data)
 void calculate_aprs_password()
 {
   uint16_t hash = 0x73e2;
-  for (size_t index = 0; (index < CALLSIGN_LENGTH) && (settings.s.my_callsign[index] > ' ') && (settings.s.my_callsign[index + 1] > ' '); index += 2)
-    hash ^= (settings.s.my_callsign[index] << 8) | settings.s.my_callsign[index + 1];
+  for (size_t index = 0; (index < CALLSIGN_LENGTH) && (settings.s.my_callsign[index] > ' '); index += 2)
+  {
+    hash ^= settings.s.my_callsign[index] << 8;
+    if (settings.s.my_callsign[index + 1] != ' ')
+      hash ^= settings.s.my_callsign[index + 1];
+  }
   hash &= 0x7fff;
-  vdisp_i2s(password, 6, 10, 0, hash);
+  vdisp_i2s(password, 5, 10, 0, hash);
 }
 
 void send_network_report()
 {
-  ip_addr_t address;
+  uint8_t address[4];
   if ((dhcp_is_ready() != 0) && 
-      (dns_cache_get_address(DNS_CACHE_SLOT_APRS, &address) != 0) &&
+      (dns_cache_get_address(DNS_CACHE_SLOT_APRS, address) != 0) &&
       (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
     if (has_packet_data() == 0)
@@ -285,7 +306,7 @@ void send_network_report()
       return;
     }
 
-    eth_txmem_t * packet = udp4_get_packet_mem(APRS_BUFFER_SIZE, port, APRS_SEND_ONLY_PORT, address.ipv4.addr);
+    eth_txmem_t * packet = udp4_get_packet_mem(APRS_BUFFER_SIZE, port, APRS_SEND_ONLY_PORT, address);
 
     if (packet == NULL)
     {
@@ -296,13 +317,17 @@ void send_network_report()
     uint8_t* pointer = packet->data + ETHERNET_PAYLOAD_OFFSET;
 
     memcpy(pointer, "user ", 5);
-    pointer += build_aprs_call(pointer + 5);
+    pointer += 5;
+    pointer += build_aprs_call(pointer);
+
     memcpy(pointer, " pass ", 6);
-    memcpy(pointer + 6, password, 6);
-    memcpy(pointer + 12, " vers UP4DAR X.0.00.00  \r\n", 26);
-    version2string(pointer + 25, software_version);
-    pointer[35] = ' ';
-    pointer += 38;
+    memcpy(pointer + 6, password, 5);
+    pointer += 11;
+
+    memcpy(pointer, " vers UP4DAR X.0.00.00  \r\n", 26);
+    version2string(pointer + 13, software_version);
+    pointer[23] = ' ';
+    pointer += 26;
 
     size_t length = terminator - pointer1;
     memcpy(pointer, pointer1, length);
@@ -310,7 +335,7 @@ void send_network_report()
 
     packet->tx_size = pointer - packet->data; // Is it correct?
 
-    udp4_calc_chksum_and_send(packet, address.ipv4.addr);
+    udp4_calc_chksum_and_send(packet, address);
     xSemaphoreGive(lock);
   }
 }
@@ -320,13 +345,17 @@ void send_network_report()
 void aprs_reset()
 {
   reader = buffer;
-  send_network_report();
+  if (SETTING_CHAR(C_DPRS_ENABLED) > 0)
+    send_network_report();
 }
 
 void handle_dns_cache_event()
 {
-  int interval = settings.s.aprs_beacon * 60 * 1000;
-  timer_set_slot(TIMER_SLOT_APRS_BEACON, interval, send_network_report);
+  if (SETTING_CHAR(C_APRS_BEACON) > 0)
+  {
+    int interval = SETTING_CHAR(C_APRS_BEACON) * 60 * 1000;
+    timer_set_slot(TIMER_SLOT_APRS_BEACON, interval, send_network_report);
+  }
 }
 
 void aprs_init()
@@ -335,6 +364,5 @@ void aprs_init()
   calculate_aprs_password();
   port = udp_get_new_srcport();
   lock = xSemaphoreCreateMutex();
-  if (settings.s.aprs_beacon > 0)
-    dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
+  dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
 }

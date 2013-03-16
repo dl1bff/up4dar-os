@@ -63,11 +63,6 @@ typedef union settings_union
 		char txmsg[TXMSG_LENGTH];
 		char dprs_msg[DPRS_MSG_LENGTH];
 		char snmp_cmnty[SNMP_CMNTY_LENGTH];
-    // APRS / D-PRS
-    char dprs_source;
-    char aprs_ssid;
-    char aprs_symbol[2];
-    char aprs_beacon;
 	} s;
 	
 } settings_t;
@@ -126,6 +121,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DCS_MODE					16
 #define C_DCS_CONNECT_AFTER_BOOT	17
 #define C_REF_TYPE					18
+#define C_APRS_SSID					19
+#define C_APRS_BEACON				20
 
 
 #define SETTING_LONG(a) (settings.s.long_values[a])

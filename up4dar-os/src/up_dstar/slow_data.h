@@ -23,8 +23,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef SLOW_DATA_H
 #define SLOW_DATA_H
 
-#include <stdint.h>
+#include "FreeRTOS.h"
 
+uint8_t get_slow_data_chunk(uint8_t* data);
 void build_slow_data(uint8_t* buffer, char last, char frame, int duration);
 
 #endif

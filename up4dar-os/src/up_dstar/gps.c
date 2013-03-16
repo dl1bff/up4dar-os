@@ -511,6 +511,8 @@ static void gps_parse_nmea(void)
 	rcvd_chksum2 = input_line[ptr + 2];
 	
 	/*
+	int pos = 0;
+
 	vd_prints_xy(VDISP_GPS_LAYER, 0, pos, VDISP_FONT_4x6, 0, nmea_params[0]);
 	
 	char buf[4];
@@ -563,7 +565,7 @@ static void gps_parse_nmea(void)
 	}
 	else if (memcmp(nmea_params[0], "GPRMC", 6) == 0)
 	{
-		if (num_params == 13)
+		if (num_params == 13) // ?? R3ABM: SHould be 12 ps. Is it mistake?
 		{
 			gprmc_fix_mode = nmea_params[12][0];
 			gprmc_status = nmea_params[2][0];
@@ -586,9 +588,8 @@ static void gps_parse_nmea(void)
 					slow_data_state = 1;
 				}
 			}				
-
-			aprs_process_gps_data(nmea_params);
 		}			
+		aprs_process_gps_data(nmea_params, num_params);
 	}
 	else if (memcmp(nmea_params[0], "GPGGA", 6) == 0)
 	{
@@ -612,9 +613,8 @@ static void gps_parse_nmea(void)
 					slow_data_state = 1;
 				}
 			}
-
-			aprs_process_gps_data(nmea_params);
 		}			
+		aprs_process_gps_data(nmea_params, num_params);
 	}
 	/*
 	else if (memcmp(nmea_params[0], "GPZDA", 6) == 0)
@@ -870,7 +870,17 @@ static void vGPSTask( void *pvParameters )
 	 // vSerialPutString(gpsSerialHandle, "$PMTK313,0*2F\r\n"); // disable SBAS satellite search
 	 // vSerialPutString(gpsSerialHandle, "$PMTK397,0*23\r\n"); // disable speed threshold
 	 
-	 
+/*
+#pragma mark Testing Begin
+				vTaskDelay(10000 * portTICK_RATE_MS);
+				const char example1[] = "$GPGGA,160023.69,1130.832,N,04344.045,E,1,04,2.6,100.00,M,-33.9,M,,0000*7C";
+				memcpy(input_line, example1, sizeof(example1));
+				gps_parse_nmea();
+				const char example2[] = "$GPRMC,225446,A,4916.45,N,12311.12,W,000.5,054.7,191194,020.3,E*68";
+				memcpy(input_line, example2, sizeof(example2));
+				gps_parse_nmea();
+#pragma mark Testing End
+*/	 
 	
 	short timeout_counter = 0;
 	

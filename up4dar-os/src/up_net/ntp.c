@@ -28,7 +28,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "dns_cache.h"
 
-
 #define NTP_PORT                 123
 #define NTP_PACKET_LENGTH        48
 
@@ -60,7 +59,7 @@ void query_time(uint8_t* address)
   udp4_calc_chksum_and_send(packet, address);
 }
 
-void make_shot()
+void update_time()
 {
   uint8_t address[4];
   if (!dns_cache_get_address(DNS_CACHE_SLOT_NTP, address))
@@ -73,5 +72,5 @@ void make_shot()
 
 void ntp_init()
 {
-  dns_cache_set_slot(DNS_CACHE_SLOT_NTP, "0.up4dar.pool.ntp.org", make_shot);
+  dns_cache_set_slot(DNS_CACHE_SLOT_NTP, "0.up4dar.pool.ntp.org", update_time);
 }

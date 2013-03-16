@@ -34,9 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 struct dns_cache_slot
 {
+  int expire;
   const char* host;
   uint8_t address[4];
-  int expire;
   dns_cache_handler callback;
 };
 

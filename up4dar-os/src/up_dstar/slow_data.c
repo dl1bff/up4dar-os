@@ -25,16 +25,20 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gps.h"
 #include "aprs.h"
 
-uint8_t slow_data[5];
-int slow_data_count = 0;
+static uint8_t slow_data[5];
+static uint8_t slow_data_count = 0;
 
-
-size_t get_slow_data_chunk(uint8_t* data)
+uint8_t get_slow_data_chunk(uint8_t* data)
 {
-  if (settings.s.dprs_source == 'A')
-    return aprs_get_slow_data(data);
-  else
-    return gps_get_slow_data(data);
+  switch (SETTING_CHAR(C_DPRS_ENABLED))
+  {
+    case 1:
+      // return gps_get_slow_data(data);
+    case 2:
+      return aprs_get_slow_data(data);
+    default:
+      return 0;
+  }
 }
 
 void build_slow_data(uint8_t* buffer, char last, char frame, int duration)
@@ -55,7 +59,7 @@ void build_slow_data(uint8_t* buffer, char last, char frame, int duration)
     return;
   }
 
-  if ((frame <= 8) && (duration < 20))  // send tx_msg only in first frame
+  if ((frame <= 8) && ((duration % 1200) < 20))  // send tx_msg every 30 sec
   {
     int index = (frame - 1) >> 1;
     if (frame & 1)
