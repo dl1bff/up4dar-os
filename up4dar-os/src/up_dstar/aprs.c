@@ -45,7 +45,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define SLOW_DATA_CHUNK_SIZE     5
 
-#define DNS_CACHE_SLOT_APRS      1
 #define APRS_SEND_ONLY_PORT      8080
 #define ETHERNET_PAYLOAD_OFFSET  42
 
@@ -80,9 +79,9 @@ static const char* const symbols[] =
 
 #pragma mark APRS packet building
 
-size_t build_alitude_extension(char* buffer)
+size_t build_altitude_extension(char* buffer)
 {
-  if ((altitude != UNDEFINED_ALTITUDE)  && (validity2 > the_clock))
+  if ((altitude != UNDEFINED_ALTITUDE) && (validity2 > the_clock))
   {
     if (altitude >= 0)
     {
@@ -123,9 +122,9 @@ size_t build_position_report(char* buffer, const char** parameters)
   buffer[30] = '/';
   // Speed
   memcpy(buffer + 31, parameters[7], 3);
-  // Alittude (optional)
-  length += build_alitude_extension(buffer + 34);
-  // Comment
+  // Altitude (optional)
+  length += build_altitude_extension(buffer + 34);
+  // Commentary
   memcpy(buffer + length, settings.s.dprs_msg, DPRS_MSG_LENGTH);
   length += DPRS_MSG_LENGTH;
   
@@ -173,7 +172,7 @@ void prepare_packet()
 void update_packet(const char** parameters)
 {
   size_t length = build_position_report(pointer2, parameters);
-  // Fill D-PRS terminator and Slow Data filler
+  // Fill D-PRS/APRS-IS terminator and Slow Data filler
   terminator = pointer2 + length;
   memcpy(terminator, "\r\n", 2);
   terminator += 2;
@@ -183,7 +182,7 @@ void update_packet(const char** parameters)
   uint16_t sum = rx_dstar_crc_data(pointer1, length);
   vdisp_i2s(buffer + 5, 4, 16, 1, sum);
   buffer[DPRS_SIGN_LENGTH - 1] = ',';
-  // Reset D-PORS reader position
+  // Reset D-PRS reader position
   reader = buffer;
 }
 
@@ -281,15 +280,13 @@ uint8_t aprs_get_slow_data(uint8_t* data)
 
 void calculate_aprs_password()
 {
-  uint16_t hash = 0x73e2;
-  for (size_t index = 0; (index < CALLSIGN_LENGTH) && (settings.s.my_callsign[index] > ' '); index += 2)
-  {
-    hash ^= settings.s.my_callsign[index] << 8;
-    if (settings.s.my_callsign[index + 1] != ' ')
-      hash ^= settings.s.my_callsign[index + 1];
-  }
-  hash &= 0x7fff;
-  vdisp_i2s(password, 5, 10, 0, hash);
+  uint8_t hash[] = { 0x73, 0xe2 };
+
+  for (size_t index = 0; (index < CALLSIGN_LENGTH) && (settings.s.my_callsign[index] > ' '); index ++)
+    hash[index & 1] ^= settings.s.my_callsign[index];
+
+  uint16_t code = ((hash[0] << 8) | hash[1]) & 0x7fff;
+  vdisp_i2s(password, 5, 10, 0, code);
 }
 
 void send_network_report()
