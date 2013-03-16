@@ -103,7 +103,6 @@ size_t build_position_report(char* buffer, const char** parameters)
 {
   size_t length = APRS_POSITION_LENGTH;
   const char* symbol = symbols[SETTING_CHAR(C_DPRS_SYMBOL)];
-  const char* undined = "   ";
   // Position report with time (no messaging capability)
   buffer[0] = '/';
   // Time
