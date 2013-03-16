@@ -24,9 +24,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gcc_builtin.h"
 
 void aprs_process_gps_data(const char** parameters, size_t count);
+
 uint8_t aprs_get_slow_data(uint8_t* data);
 void aprs_reset();
 
+void aprs_activate_beacon();
 void aprs_init();
 
 #endif

@@ -40,6 +40,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DATA_VALIDITY_INTERVAL   600
 
 #define APRS_BUFFER_SIZE         (100 + DPRS_MSG_LENGTH)
+#define APRS_IS_BUFFER_SIZE      (64 + APRS_BUFFER_SIZE)
 #define APRS_POSITION_LENGTH     34
 #define DPRS_SIGN_LENGTH         10
 
@@ -65,13 +66,12 @@ static char* terminator = NULL;
 static char* reader = NULL;
 
 static int port;
-static char password[6];
 
 static const char* const symbols[] =
   {
     "/[", // Jogger
     "/>", // Car
-    "/e", // House
+    "/-", // House
     "/s", // Boat
     "/b", // Bicycle
     "/v"  // Van
@@ -98,6 +98,24 @@ size_t build_altitude_extension(char* buffer)
   return 0;
 }
 
+void copy_extension(char* buffer, const char* parameter)
+{
+  memset(buffer, '0', 3);
+  char* delimiter = strstr(parameter, ".");
+  if ((delimiter != NULL) && (delimiter <= (parameter + 3)))
+  {
+    char* position1 = buffer + 2;
+    char* position2 = delimiter - 1;
+    do
+    {
+      *position1 = *position2;
+      position1 --;
+      position2 --;
+    }
+    while ((position1 >= buffer) && (position2 >= parameter));
+  }
+}
+
 size_t build_position_report(char* buffer, const char** parameters)
 {
   size_t length = APRS_POSITION_LENGTH;
@@ -118,10 +136,10 @@ size_t build_position_report(char* buffer, const char** parameters)
   // Symbol code
   buffer[26] = symbol[1];
   // Course
-  memcpy(buffer + 27, parameters[8], 3);
+  copy_extension(buffer + 27, parameters[8]);
   buffer[30] = '/';
   // Speed
-  memcpy(buffer + 31, parameters[7], 3);
+  copy_extension(buffer + 31, parameters[7]);
   // Altitude (optional)
   length += build_altitude_extension(buffer + 34);
   // Commentary
@@ -231,18 +249,18 @@ void aprs_process_gps_data(const char** parameters, size_t count)
       (*parameters[2] == 'A') &&
       (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
-    validity1 = the_clock + DATA_VALIDITY_INTERVAL;
     update_packet(parameters);
+    validity1 = the_clock + DATA_VALIDITY_INTERVAL;
     xSemaphoreGive(lock);
     return;
   }
   if ((count >= 15) &&
       (memcmp(parameters[0], "GPGGA", 6) == 0) &&
-      (*parameters[4] != '0') &&
+      (*parameters[6] != '0') &&
       (xSemaphoreTake(lock, portMAX_DELAY) == pdTRUE))
   {
-    validity2 = the_clock + DATA_VALIDITY_INTERVAL;
     process_position_fix_data(parameters);
+    validity2 = the_clock + DATA_VALIDITY_INTERVAL;
     xSemaphoreGive(lock);
     return;
   }
@@ -278,7 +296,7 @@ uint8_t aprs_get_slow_data(uint8_t* data)
 
 #pragma mark APRS-IS reporting
 
-void calculate_aprs_password()
+void calculate_aprs_password(char* buffer)
 {
   uint8_t hash[] = { 0x73, 0xe2 };
 
@@ -286,7 +304,7 @@ void calculate_aprs_password()
     hash[index & 1] ^= settings.s.my_callsign[index];
 
   uint16_t code = ((hash[0] << 8) | hash[1]) & 0x7fff;
-  vdisp_i2s(password, 5, 10, 0, code);
+  vdisp_i2s(buffer, 5, 10, 0, code);
 }
 
 void send_network_report()
@@ -302,7 +320,7 @@ void send_network_report()
       return;
     }
 
-    eth_txmem_t * packet = udp4_get_packet_mem(APRS_BUFFER_SIZE, port, APRS_SEND_ONLY_PORT, address);
+    eth_txmem_t * packet = udp4_get_packet_mem(APRS_IS_BUFFER_SIZE, port, APRS_SEND_ONLY_PORT, address);
 
     if (packet == NULL)
     {
@@ -312,12 +330,14 @@ void send_network_report()
 
     uint8_t* pointer = packet->data + ETHERNET_PAYLOAD_OFFSET;
 
+    memset(pointer, 0, APRS_IS_BUFFER_SIZE);
+
     memcpy(pointer, "user ", 5);
     pointer += 5;
     pointer += build_aprs_call(pointer);
 
     memcpy(pointer, " pass ", 6);
-    memcpy(pointer + 6, password, 5);
+    calculate_aprs_password(pointer + 6);
     pointer += 11;
 
     memcpy(pointer, " vers UP4DAR X.0.00.00  \r\n", 26);
@@ -328,8 +348,6 @@ void send_network_report()
     size_t length = terminator - pointer1;
     memcpy(pointer, pointer1, length);
     pointer += length;
-
-    packet->tx_size = pointer - packet->data; // Is it correct?
 
     udp4_calc_chksum_and_send(packet, address);
     xSemaphoreGive(lock);
@@ -345,20 +363,23 @@ void aprs_reset()
     send_network_report();
 }
 
-void handle_dns_cache_event()
+void aprs_activate_beacon()
 {
-  if (SETTING_CHAR(C_APRS_BEACON) > 0)
+  if (SETTING_CHAR(C_APRS_BEACON) == 0)
   {
-    int interval = SETTING_CHAR(C_APRS_BEACON) * 60 * 1000;
-    timer_set_slot(TIMER_SLOT_APRS_BEACON, interval, send_network_report);
+    timer_set_slot(TIMER_SLOT_APRS_BEACON, 0, NULL);
+    return;
   }
+
+  int interval = SETTING_CHAR(C_APRS_BEACON) * 60 * 1000;
+  timer_set_slot(TIMER_SLOT_APRS_BEACON, interval, send_network_report);
+  send_network_report();
 }
 
 void aprs_init()
 {
   prepare_packet();
-  calculate_aprs_password();
   port = udp_get_new_srcport();
   lock = xSemaphoreCreateMutex();
-  dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "rotate.aprs.net", handle_dns_cache_event);
+  dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "aprs.dstar.su", aprs_activate_beacon);
 }
