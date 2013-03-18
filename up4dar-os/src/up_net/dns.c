@@ -58,20 +58,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DNS_REQ_RETRY		4
 #define DNS_REQ_TIMEOUT		100
 
-static int dns_state = DNS_STATE_READY;
+static int volatile dns_state = DNS_STATE_READY;
 static int dns_timeout = 0;
 static int dns_retry = 0;
 static int dns_current_server = 0;
 
 int dns_get_lock(void)
 {
-	if (dns_state == DNS_STATE_READY)
-	{
-		dns_state = DNS_STATE_LOCKED;
-		return 1;
-	}
-	
-	return 0;
+  taskENTER_CRITICAL();
+  if (dns_state == DNS_STATE_READY)
+  {
+    dns_state = DNS_STATE_LOCKED;
+    taskEXIT_CRITICAL();
+    return 1;
+  }
+  taskEXIT_CRITICAL();
+  return 0;
 }
 
 void dns_release_lock(void)
