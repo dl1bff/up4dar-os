@@ -33,7 +33,7 @@ uint8_t get_slow_data_chunk(uint8_t* data)
   switch (SETTING_CHAR(C_DPRS_ENABLED))
   {
     case 1:
-      // return gps_get_slow_data(data);
+      return gps_get_slow_data(data);
     case 2:
       return aprs_get_slow_data(data);
     default:

@@ -40,6 +40,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io\wm8510.h"
 #include "up_dstar\ambe.h"
 
+#include "up_dstar/aprs.h"
 
 char software_ptt = 0;
 
@@ -352,6 +353,7 @@ void a_dispatch_key_event( int key_num, int key_event )
 				SETTING_CHAR(C_DISABLE_UDP_BEACON) = 1; // // beacon is now off
 				wm8510_beep(800, 300, 100);
 			}
+      aprs_activate_beacon();
 		}
 		
 		if (key_event == A_KEY_HOLD_10S)

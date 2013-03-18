@@ -429,6 +429,8 @@ static const struct snmp_table_struct {
 	{ "810", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_DPRS_ENABLED },
 	{ "820", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_DPRS_SYMBOL },
 	{ "830", BER_OCTETSTRING, get_callsign, set_callsign,  0x5000 },
+	{ "840", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_APRS_SSID },
+	{ "850", BER_INTEGER, snmp_get_setting_char, snmp_set_setting_char,  C_APRS_BEACON },
 		
 	// Display
 	
