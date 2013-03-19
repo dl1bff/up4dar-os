@@ -360,13 +360,14 @@ void send_network_report()
 void aprs_reset()
 {
   reader = buffer;
-  if (SETTING_CHAR(C_DPRS_ENABLED) > 0)
+  if (SETTING_CHAR(C_DISABLE_UDP_BEACON) == 0)
     send_network_report();
 }
 
 void aprs_activate_beacon()
 {
-  if (SETTING_CHAR(C_APRS_BEACON) == 0)
+  if ((SETTING_CHAR(C_APRS_BEACON) == 0) ||
+      (SETTING_CHAR(C_DISABLE_UDP_BEACON) != 0))
   {
     timer_set_slot(TIMER_SLOT_APRS_BEACON, 0, NULL);
     return;
