@@ -390,6 +390,12 @@ void aprs_activate_beacon()
   send_network_report();
 }
 
+void aprs_handle_cache_event()
+{
+  if (timer_get_timeout(TIMER_SLOT_APRS_BEACON) != 0)
+    aprs_activate_beacon();
+}
+
 void aprs_init()
 {
   port = udp_get_new_srcport();
@@ -401,5 +407,5 @@ void aprs_init()
     buffers[index].length = 0;
   }
 
-  dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "aprs.dstar.su", aprs_activate_beacon);
+  dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "aprs.dstar.su", aprs_handle_cache_event);
 }
