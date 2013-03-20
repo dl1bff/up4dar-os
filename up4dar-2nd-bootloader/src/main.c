@@ -30,6 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "flashc.h"
 
+#include "software_version.h"
+
 extern int memcmp(const void *, const void *, size_t );
 extern int memcpy(void *, const void *, size_t );
 extern int memset(void *, int, size_t );
@@ -65,25 +67,25 @@ static void version2string (char * buf, const unsigned char * version_info)
 		char image = '?';
 		char maturity = 0;
 		
-		switch(version_info[0] & 0x0F)
+		switch(version_info[0] & 0x03)
 		{
-			case 1:
+			case SOFTWARE_IMAGE_PHY:
 			image = 'P'; // PHY image
 			break;
-			case 2:
+			case SOFTWARE_IMAGE_UPDATER:
 			image = 'U'; // Updater image
 			break;
-			case 3:
-			image = 'S'; // System image
+			case SOFTWARE_IMAGE_SYSTEM: // System image
+			image = SOFTWARE_IMAGE_SYSTEM_LETTERS[ (version_info[0] & 0x3C) >> 2 ]; 
 			break;
 		}
 		
 		switch(version_info[0] & 0xC0)
 		{
-			case 0x80:
+			case SOFTWARE_MATURITY_BETA:
 			maturity = 'b'; // beta
 			break;
-			case 0x40:
+			case SOFTWARE_MATURITY_EXPERIMENTAL:
 			maturity = 'e'; // experimental
 			break;
 		}
@@ -502,7 +504,7 @@ static int check_pending_system_update(void)
 	
 	version2string(buf, info->version_info);
 	
-	if (buf[0] != 'S') // not a system image in the staging area
+	if ((buf[0] == 'U') || (buf[0] == 'P') || (buf[0] == '?')) // not a system image in the staging area
 	{
 		return 0;
 	}
@@ -569,7 +571,7 @@ int main (void)
 	
 	version2string(buf, SYSTEM_PROGRAM_START_ADDRESS + SOFTWARE_VERSION_IMAGE_OFFSET);
 	
-	if (buf[0] == 'S')
+	if ((buf[0] != 'U') && (buf[0] != 'P'))
 	{
 		disp_prints_xy(0, 0, 8, DISP_FONT_6x8, 0, buf);
 	}		

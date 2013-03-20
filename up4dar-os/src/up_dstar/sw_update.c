@@ -50,7 +50,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dstar.h"
 
 
-
+#include "software_version.h"
 
 
 #define FLASH_BLOCK_SIZE	512
@@ -61,8 +61,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SOFTWARE_VERSION_IMAGE_OFFSET	4
 #define STAGING_AREA_INFO_ADDRESS		((struct staging_area_info *) (STAGING_AREA_ADDRESS + (STAGING_AREA_MAX_BLOCKS * FLASH_BLOCK_SIZE)))
 
-
-#define SOFTWARE_IMAGE_PHY	1
 
 #define SHA1SUM_SIZE		20
 
@@ -366,25 +364,25 @@ void version2string (char * buf, const unsigned char * version_info)
 	char image = '?';
 	char maturity = 0;
 	
-	switch(version_info[0] & 0x0F)
+	switch(version_info[0] & 0x03)
 	{
 		case SOFTWARE_IMAGE_PHY:
 			image = 'P'; // PHY image
 			break;
-		case 2:
+		case SOFTWARE_IMAGE_UPDATER:
 			image = 'U'; // Updater image
 			break;
-		case 3:
-			image = 'S'; // System image
+		case SOFTWARE_IMAGE_SYSTEM(0):
+			image = SOFTWARE_IMAGE_SYSTEM_LETTERS[ (version_info[0] & 0x3C) >> 2 ];
 			break;
 	}
 	
 	switch(version_info[0] & 0xC0)
 	{
-		case 0x80:
+		case SOFTWARE_MATURITY_BETA:
 			maturity = 'b'; // beta
 			break;
-		case 0x40:
+		case SOFTWARE_MATURITY_EXPERIMENTAL:
 			maturity = 'e'; // experimental
 			break;
 	}
