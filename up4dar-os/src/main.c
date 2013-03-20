@@ -74,12 +74,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto_init.h"
 #include "up_net/dns.h"
 
+#include "up_sys/timer.h"
+#include "up_net/dns_cache.h"
+#include "up_net/ntp.h"
+#include "up_dstar/aprs.h"
 
 #include "software_version.h"
 #include "up_dstar/sw_update.h"
 #include "up_crypto/up_crypto.h"
 
-
+#include "up_dstar/slow_data.h"
 
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
@@ -250,7 +254,7 @@ static void phy_start_tx(void)
 	}
 	
 	// Bis zu 70ms kann man sich Zeit lassen, bevor die Header-Daten uebergeben werden.
-	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhängig.
+	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhâ€°ngig.
 	//usleep(70000);
 	
 	// vTaskDelay (50); // 50ms
@@ -279,6 +283,8 @@ static void send_phy ( const unsigned char * d, char phy_frame_counter )
 	if (phy_frame_counter > 0)
 	{
 		send_data[0] = 0x22;
+		// Next code should be replaced with this line:
+		// build_slow_data(send_data + 1, 0, phy_frame_counter, tx_counter)
 		
 		if ((txmsg_counter == 0) && (phy_frame_counter >= 1) && (phy_frame_counter <= 8))
 		{
@@ -300,7 +306,7 @@ static void send_phy ( const unsigned char * d, char phy_frame_counter )
 		{
 				if (phy_frame_counter & 1)
 				{
-					slow_data_count = gps_get_slow_data(slow_data);
+					slow_data_count = get_slow_data_chunk(slow_data);
 					
 					if (slow_data_count == 0)
 					{
@@ -791,6 +797,8 @@ static void vTXTask( void *pvParameters )
 				tx_min_count = 8; // send at least 8 AMBE frames+data (full TX Message)
 				
 				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " TX " );
+				
+				aprs_reset();
 			}
 			else
 			{
@@ -1060,6 +1068,11 @@ int main (void)
 	{
 		vdisp_prints_xy( 0, 56, VDISP_FONT_6x8, 0, "MEM failed!!!" );
 	}
+
+	timer_init();
+	dns_cache_init();
+	aprs_init();
+	ntp_init();
 	
 	a_app_manager_init();
 

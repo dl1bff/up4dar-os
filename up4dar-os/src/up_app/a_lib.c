@@ -40,6 +40,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io\wm8510.h"
 #include "up_dstar\ambe.h"
 
+#include "up_dstar/aprs.h"
 
 char software_ptt = 0;
 
@@ -352,6 +353,7 @@ void a_dispatch_key_event( int key_num, int key_event )
 				SETTING_CHAR(C_DISABLE_UDP_BEACON) = 1; // // beacon is now off
 				wm8510_beep(800, 300, 100);
 			}
+      aprs_activate_beacon();
 		}
 		
 		if (key_event == A_KEY_HOLD_10S)
@@ -408,8 +410,8 @@ void a_dispatch_key_event( int key_num, int key_event )
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
 static const char ref_item_max_val[REF_NUM_ITEMS] = { 1, 2, 9, 9, 9, 25 };
-static const char * const ref_modes[2] = { "DSTAR Modem ",
-										   "DCS Internet"};
+static const char * const ref_modes[2] = { "D-STAR Modem",
+										   "IP Reflector"};
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
 
 

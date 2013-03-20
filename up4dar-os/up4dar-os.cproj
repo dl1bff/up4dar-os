@@ -11,7 +11,7 @@
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <Name>$(MSBuildProjectName)</Name>
     <RootNamespace>$(MSBuildProjectName)</RootNamespace>
-    <avrtool />
+    <avrtool>com.atmel.avrdbg.tool.simulator</avrtool>
     <OutputType>Executable</OutputType>
     <Language>C</Language>
     <ToolchainName>com.Atmel.AVRGCC32</ToolchainName>
@@ -70,6 +70,22 @@
     <OverrideVtor>false</OverrideVtor>
     <OverrideVtorValue />
     <eraseonlaunchrule>0</eraseonlaunchrule>
+    <avrtoolinterface />
+    <com_atmel_avrdbg_tool_simulator>
+      <ToolType xmlns="">com.atmel.avrdbg.tool.simulator</ToolType>
+      <ToolName xmlns="">AVR Simulator</ToolName>
+      <ToolNumber xmlns="">
+      </ToolNumber>
+      <KeepTimersRunning xmlns="">true</KeepTimersRunning>
+      <OverrideVtor xmlns="">false</OverrideVtor>
+      <OverrideVtorValue xmlns="">
+      </OverrideVtorValue>
+      <Channel xmlns="">
+        <host>127.0.0.1</host>
+        <port>49171</port>
+        <ssl>False</ssl>
+      </Channel>
+    </com_atmel_avrdbg_tool_simulator>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <OutputFileName>up4dar-os</OutputFileName>
@@ -379,6 +395,12 @@
     <Compile Include="src\up_dstar\ambe_q.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\aprs.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\aprs.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\audio_q.c">
       <SubType>compile</SubType>
     </Compile>
@@ -431,6 +453,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\settings.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\slow_data.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\slow_data.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\sw_update.c">
@@ -508,6 +536,12 @@
     <Compile Include="src\up_net\dns.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\dns_cache.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\dns_cache.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_net\ipneigh.c">
       <SubType>compile</SubType>
     </Compile>
@@ -524,6 +558,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_net\lldp.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\ntp.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\ntp.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_net\snmp.c">
@@ -613,6 +653,18 @@
     <Compile Include="src\main.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\syslog.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\syslog.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_sys\timer.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_sys\timer.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="src\" />
@@ -641,6 +693,7 @@
     <Folder Include="src\FreeRTOSV6.1.1\portable\GCC" />
     <Folder Include="src\FreeRTOSV6.1.1\portable\GCC\AVR32_UC3" />
     <Folder Include="src\FreeRTOSV6.1.1\portable\MemMang" />
+    <Folder Include="src\up_sys" />
     <Folder Include="src\up_crypto" />
     <Folder Include="src\up_app" />
     <Folder Include="src\up_dstar" />

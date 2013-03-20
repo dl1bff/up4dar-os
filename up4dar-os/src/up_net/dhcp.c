@@ -263,7 +263,7 @@ static uint8_t dhcp_request_packet[] =
 		53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 		50, 0x04, 0,0,0,0,  // requested IP address
 		54, 0x04, 0,0,0,0,  // server identifier
-		55, 0x04, 0x01, 0x03, 0x06, 42, // Request Parameter List: netmask, router, DNS, NTP
+		55, 0x05, 0x01, 0x03, 0x06, 42, 7, // Request Parameter List: netmask, router, DNS, NTP, syslog
 		0xFF  // END
 	};
 	
@@ -271,7 +271,7 @@ static uint8_t dhcp_rebind_packet[] =
 {
 	53, 0x01, 0x03, // DHCP Message Type DHCPREQUEST
 	54, 0x04, 0,0,0,0,  // server identifier
-	55, 0x04, 0x01, 0x03, 0x06, 42, // Request Parameter List: netmask, router, DNS, NTP
+	55, 0x05, 0x01, 0x03, 0x06, 42, 7, // Request Parameter List: netmask, router, DNS, NTP, syslog
 	0xFF  // END
 };
 
@@ -512,6 +512,17 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 						// use only first entry
 						memcpy(ipv4_ntp, p+2, 4);
 						ipv4_print_ip_addr(42, "NTP", p+2);
+					}
+				}
+				break;
+			case 7: // NTP server
+				if (res == RECEIVED_ACK) // assumption: message type comes first!
+				{
+					if (option_len >= 4)
+					{
+						// use only first entry
+						memcpy(ipv4_syslog, p + 2, 4);
+						ipv4_print_ip_addr(42, "syslog", p + 2);
 					}
 				}
 				break;
