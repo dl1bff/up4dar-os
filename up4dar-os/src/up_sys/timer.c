@@ -35,6 +35,11 @@ struct timer_slot
 static xSemaphoreHandle lock;
 static struct timer_slot slots[TIMER_SLOT_COUNT];
 
+int timer_get_timeout(int slot)
+{
+  return slots[slot].timeout;
+}
+
 void timer_set_slot(int slot, int interval, timer_handler callback)
 {
   if (xSemaphoreTakeRecursive(lock, portMAX_DELAY) == pdTRUE)

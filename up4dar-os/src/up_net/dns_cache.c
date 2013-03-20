@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define TRUE           1
 
 #define POLL_INTERVAL  200
-#define CACHE_EXPIRE   (300 * 1000 / POLL_INTERVAL)
+#define CACHE_EXPIRE   (1200 * 1000 / POLL_INTERVAL)
 
 struct dns_cache_slot
 {

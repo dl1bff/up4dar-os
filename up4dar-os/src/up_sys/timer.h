@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 typedef void (*timer_handler)(int slot);
 
+int timer_get_timeout(int slot);
 void timer_set_slot(int slot, int interval, timer_handler callback);
 
 void timer_init();
