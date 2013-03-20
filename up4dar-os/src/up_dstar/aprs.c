@@ -392,7 +392,7 @@ void aprs_activate_beacon()
 
 void aprs_handle_cache_event()
 {
-  if (timer_get_timeout(TIMER_SLOT_APRS_BEACON) != 0)
+  if (timer_get_timeout(TIMER_SLOT_APRS_BEACON) == 0)
     aprs_activate_beacon();
 }
 
