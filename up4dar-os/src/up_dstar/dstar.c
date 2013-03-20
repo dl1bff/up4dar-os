@@ -667,6 +667,23 @@ static void processPacket(void)
 				
 				if ( (dp.data[0] == 0x20) && (dp.dataLen >= 37) )
 				{
+					if (voicePackets == 1)
+					{
+						int i;
+						for (i=0; i < 9; i++)
+						{
+							char buf[3];
+							uint8_t * sd_data = dp.data + 1;
+							
+							uint8_t v =
+							(sd_data[(i << 2) + 0] & 0x80)       |  ((sd_data[(i << 2) + 0] & 0x08) << 3) |
+							((sd_data[(i << 2) + 1] & 0x80) >> 2) |  ((sd_data[(i << 2) + 1] & 0x08) << 1) |
+							((sd_data[(i << 2) + 2] & 0x80) >> 4) |  ((sd_data[(i << 2) + 2] & 0x08) >> 1) |
+							((sd_data[(i << 2) + 3] & 0x80) >> 6) |  ((sd_data[(i << 2) + 3] & 0x08) >> 3);
+							vdisp_i2s(buf, 2, 16, 1, v);
+							vd_prints_xy( VDISP_DEBUG_LAYER, i*8, 6, VDISP_FONT_4x6, 0, buf);
+						}
+					}
 					ambe_input_data_sd( dp.data + 1 );
 				}				
 			}				
