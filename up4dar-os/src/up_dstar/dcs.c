@@ -125,7 +125,7 @@ static char current_server_type;
 static short current_server;
 
 static uint8_t dcs_server_ipaddr[4];
-static char dcs_server_dns_name[25]; // dns name of reflector e.g. "dcs001.xreflector.net"
+static char dcs_server_dns_name[30]; // dns name of reflector e.g. "dcs001.xreflector.net"
 
 static int dcs_udp_local_port;
 
