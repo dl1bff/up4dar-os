@@ -81,15 +81,11 @@ int serial_rx_error = 0;
 int serial_rx_ok = 0;
 
 
-static void vUSART0_ISR( void );
-static void vUSART1_ISR( void );
-// static void vUSART2_ISR( void );
-
-
-// #define NUM_USART 3
 #define NUM_USART 2
 
-#define USART_BUFLEN	100
+#define USART_BUFLEN	200
+
+
 
 struct usartBuffer
 {
@@ -149,186 +145,20 @@ static int get_q( struct usartBuffer * q, char * c)
 static struct usartParams
 {
 	volatile avr32_usart_t * usart;
-	int irq;
-	void (* intrHandler) (void);
+	uint8_t dma_pid_rx;
+	uint8_t dma_pid_tx;
+	uint8_t dma_channel_rx;
+	uint8_t dma_channel_tx;
+	int tx_ptr_sent;
 	struct usartBuffer rx;
 	struct usartBuffer tx;
 } usarts[NUM_USART] =
 {
-	{ &AVR32_USART0,  AVR32_USART0_IRQ,  vUSART0_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
-	,{ &AVR32_USART1,  AVR32_USART1_IRQ,  vUSART1_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
-	// ,{ &AVR32_USART2,  AVR32_USART2_IRQ,  vUSART2_ISR,  {0, 0, { 0 }},  {0, 0, { 0 }} }
+	  { &AVR32_USART0, AVR32_PDCA_PID_USART0_RX, AVR32_PDCA_PID_USART0_TX, 6, 7, 0,
+		   {0, 0, { 0 }},  {0, 0, { 0 }} }
+	 ,{ &AVR32_USART1, AVR32_PDCA_PID_USART1_RX, AVR32_PDCA_PID_USART1_TX, 8, 9, 0,
+		   {0, 0, { 0 }},  {0, 0, { 0 }} }
 };
-
-
-
-// -------------
-
-#if __GNUC__
-	__attribute__((noinline))
-#elif __ICCAVR32__
-	#pragma optimize = no_inline
-#endif
-
-static portBASE_TYPE prvUSART_ISR_NonNakedBehaviour( int usartNum )
-{
-	/* Now we can declare the local variables. */
-	portCHAR     cChar;
-	// portBASE_TYPE     xHigherPriorityTaskWoken = pdFALSE;
-	unsigned portLONG     ulStatus;
-	unsigned portLONG     ulMaskReg;
-	volatile avr32_usart_t  *usart = usarts[usartNum].usart;
-	portBASE_TYPE retstatus;
-
-	/* What caused the interrupt? */
-	ulStatus = usart->csr; 
-	ulMaskReg = usart->imr;
-
-	if (ulStatus & ulMaskReg & AVR32_USART_CSR_TXRDY_MASK)
-	{
-		/* The interrupt was caused by the THR becoming empty.  Are there any
-		more characters to transmit?
-		Because FreeRTOS is not supposed to run with nested interrupts, put all OS
-		calls in a critical section . */
-		// portENTER_CRITICAL();
-		//	retstatus = xQueueReceiveFromISR( usarts[usartNum].xCharsForTx, &cChar, &xHigherPriorityTaskWoken );
-		// portEXIT_CRITICAL();
-		
-		
-		retstatus = get_q (& usarts[usartNum].tx, &cChar);
-
-		if (retstatus == 1)
-		{
-			/* A character was retrieved from the queue so can be sent to the
-			 THR now. */
-			usart->thr = cChar;
-		}
-		else
-		{
-			/* Queue empty, nothing to send so turn off the Tx interrupt. */
-			usart->idr = AVR32_USART_IDR_TXRDY_MASK;
-		}
-	}
-
-	if (ulStatus & AVR32_USART_CSR_RXRDY_MASK)
-	{
-		/* The interrupt was caused by the receiver getting data. */
-		cChar = usart->rhr; //TODO
-
-		/* Because FreeRTOS is not supposed to run with nested interrupts, put all OS
-		calls in a critical section . */
-		/*
-		portENTER_CRITICAL();
-			retstatus = xQueueSendFromISR(usarts[usartNum].xRxedChars, &cChar, &xHigherPriorityTaskWoken);
-		portEXIT_CRITICAL();
-		*/
-	
-		retstatus = put_q(& usarts[usartNum].rx, cChar);
-		
-		
-		if (retstatus == 1)
-		{
-			serial_rx_ok ++;
-		}
-		else
-		{
-			serial_rx_error ++;
-		}
-	}
-	
-	
-	if (ulStatus & (AVR32_USART_CSR_OVRE_MASK | AVR32_USART_CSR_FRAME_MASK ))
-	{
-			serial_rx_error ++;	
-			usart->cr = AVR32_USART_CR_RSTSTA_MASK;
-	}
-	
-	
-	// xSerialRXError += usart->NER.nb_errors;
-
-	/* The return value will be used by portEXIT_SWITCHING_ISR() to know if it
-	should perform a vTaskSwitchContext(). */
-	// return ( xHigherPriorityTaskWoken );
-	
-	return pdFALSE; // do not switch context
-}
-
-/*-----------------------------------------------------------*/
-
-/*
- * USART interrupt service routine.
- */
-#if __GNUC__
-	__attribute__((__naked__))
-#elif __ICCAVR32__
-	#pragma shadow_registers = full   // Naked.
-#endif
-
-static void vUSART0_ISR( void )
-{
-	/* This ISR can cause a context switch, so the first statement must be a
-	call to the portENTER_SWITCHING_ISR() macro.  This must be BEFORE any
-	variable declarations. */
-	portENTER_SWITCHING_ISR();
-
-	prvUSART_ISR_NonNakedBehaviour(0);
-
-	/* Exit the ISR.  If a task was woken by either a character being received
-	or transmitted then a context switch will occur. */
-	portEXIT_SWITCHING_ISR();
-}
-
-
-
-/*-----------------------------------------------------------*/
-
-
-/*
- * USART interrupt service routine.
- */
-#if __GNUC__
-	__attribute__((__naked__))
-#elif __ICCAVR32__
-	#pragma shadow_registers = full   // Naked.
-#endif
-
-static void vUSART1_ISR( void )
-{
-	/* This ISR can cause a context switch, so the first statement must be a
-	call to the portENTER_SWITCHING_ISR() macro.  This must be BEFORE any
-	variable declarations. */
-	portENTER_SWITCHING_ISR();
-
-	prvUSART_ISR_NonNakedBehaviour(1);
-
-	/* Exit the ISR.  If a task was woken by either a character being received
-	or transmitted then a context switch will occur. */
-	portEXIT_SWITCHING_ISR();
-}
-/*-----------------------------------------------------------*/
-
-/* USART2 not used
-#if __GNUC__
-	__attribute__((__naked__))
-#elif __ICCAVR32__
-	#pragma shadow_registers = full   // Naked.
-#endif
-
-static void vUSART2_ISR( void )
-{
-	
-	portENTER_SWITCHING_ISR();
-
-	prvUSART_ISR_NonNakedBehaviour(2);
-
-	portEXIT_SWITCHING_ISR();
-}
-*/
-/*-----------------------------------------------------------*/
-
-
-
-// -------------
 
 
 
@@ -348,7 +178,7 @@ int serial_init ( int usartNum, int baudrate )
 	/* Configure USART. */
 	if(   ( baudrate > 0 ) )
 	{
-		portENTER_CRITICAL();
+		// portENTER_CRITICAL();
 		{
 			/**
 			** Reset USART.
@@ -425,20 +255,33 @@ int serial_init ( int usartNum, int baudrate )
 			/* Write the Transmit Timeguard Register */
 			usart->ttgr = 0;
 
-
-			/* Register the USART interrupt handler to the interrupt controller and
-			 enable the USART interrupt. */
-			INTC_register_interrupt((__int_handler) usarts[usartNum].intrHandler, 
-					usarts[usartNum].irq, AVR32_INTC_INT1);
-
-			/* Enable USART interrupt sources (but not Tx for now)... */
-			usart->ier = AVR32_USART_IER_RXRDY_MASK;
+			
+			uint8_t dma_channel = usarts[usartNum].dma_channel_rx;
+			
+			AVR32_PDCA.channel[dma_channel].psr   =  usarts[usartNum].dma_pid_rx    << AVR32_PDCA_PID_OFFSET;
+			AVR32_PDCA.channel[dma_channel].mr    = AVR32_PDCA_MR_SIZE_BYTE  << AVR32_PDCA_MR_SIZE_OFFSET;
+			
+			AVR32_PDCA.channel[dma_channel].mar   = (unsigned long) usarts[usartNum].rx.buf;
+			AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) usarts[usartNum].rx.buf;
+			
+			AVR32_PDCA.channel[dma_channel].tcr   = (USART_BUFLEN & AVR32_PDCA_TCR_TCV_MASK)   << AVR32_PDCA_TCR_TCV_OFFSET;
+			AVR32_PDCA.channel[dma_channel].tcrr  = (USART_BUFLEN & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
+			
+			
+			dma_channel = usarts[usartNum].dma_channel_tx;
+			
+			AVR32_PDCA.channel[dma_channel].psr   =  usarts[usartNum].dma_pid_tx    << AVR32_PDCA_PID_OFFSET;
+			AVR32_PDCA.channel[dma_channel].mr    = AVR32_PDCA_MR_SIZE_BYTE  << AVR32_PDCA_MR_SIZE_OFFSET;
+			
 
 			/* Enable receiver and transmitter... */
 			usart->cr = AVR32_USART_CR_TXEN_MASK | AVR32_USART_CR_RXEN_MASK;
 			
+			// enable DMA
+			AVR32_PDCA.channel[usarts[usartNum].dma_channel_rx].cr    = AVR32_PDCA_CR_TEN_MASK;
+			AVR32_PDCA.channel[usarts[usartNum].dma_channel_tx].cr    = AVR32_PDCA_CR_TEN_MASK;
 		}
-		portEXIT_CRITICAL();
+		// portEXIT_CRITICAL();
 		
 	}
 	else
@@ -460,14 +303,7 @@ int serial_stop ( int usartNum )
 	
 	volatile avr32_usart_t  *usart = usarts[usartNum].usart;
 	
-	portENTER_CRITICAL();
-	
-	{
-		usart->idr = AVR32_USART_IDR_RXRDY_MASK | AVR32_USART_IDR_TXRDY_MASK;
-		usart->cr = AVR32_USART_CR_TXDIS_MASK | AVR32_USART_CR_RXDIS_MASK;
-	}
-	
-	portEXIT_CRITICAL();
+	usart->cr = AVR32_USART_CR_TXDIS_MASK | AVR32_USART_CR_RXDIS_MASK;
 	
 	return 0;
 }
@@ -479,27 +315,85 @@ int serial_putc_q_full = 0;
 
 int serial_putc ( int usartNum, char cOutChar )
 {
-	volatile avr32_usart_t  *usart = usarts[usartNum].usart;
-
 	struct usartBuffer * q = & usarts[usartNum].tx;
-	int returnval;
-	
-	returnval = put_q(q, cOutChar);
-	
-	
-	/* Turn on the Tx interrupt so the ISR will remove the character from the
-	queue and send it.   This does not need to be in a critical section as
-	if the interrupt has already removed the character the next interrupt
-	will simply turn off the Tx interrupt again. */
-	usart->ier = (1 << AVR32_USART_IER_TXRDY_OFFSET);
 
-	if (returnval != 1)
+	if (put_q(q, cOutChar) != 1)
 	{
 		serial_putc_q_full++;
 		return 0; // queue is full
 	}
 
 	return 1;
+}
+
+
+
+
+
+int serial_rx_char_available (int usartNum)
+{
+	struct usartBuffer * rx_q = & usarts[usartNum].rx;
+	uint8_t dma_channel = usarts[usartNum].dma_channel_rx;
+	
+	rx_q->input_ptr = AVR32_PDCA.channel[dma_channel].mar 
+						- (unsigned long) usarts[usartNum].rx.buf;
+	
+	if (AVR32_PDCA.channel[dma_channel].ISR.trc != 0) // transfer complete -> should not happen
+	{
+		// start again
+		
+		rx_q->input_ptr = 0;
+		rx_q->output_ptr = 0;
+		
+		AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) rx_q->buf;
+		AVR32_PDCA.channel[dma_channel].mar  = (unsigned long) rx_q->buf;
+		AVR32_PDCA.channel[dma_channel].tcrr  = (USART_BUFLEN & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
+		AVR32_PDCA.channel[dma_channel].tcr  = (USART_BUFLEN & AVR32_PDCA_TCR_TCV_MASK) << AVR32_PDCA_TCR_TCV_OFFSET;
+		
+		serial_rx_error ++;
+	}								
+	else if (AVR32_PDCA.channel[dma_channel].ISR.rcz != 0)
+	{
+		AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) rx_q->buf;
+		AVR32_PDCA.channel[dma_channel].tcrr  = (USART_BUFLEN & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
+		
+		serial_rx_ok ++;
+	}
+	
+	struct usartBuffer * tx_q = & usarts[usartNum].tx;
+	dma_channel = usarts[usartNum].dma_channel_tx;
+	
+	if (usarts[usartNum].tx_ptr_sent != tx_q->output_ptr) // transmission in progress
+	{
+		if (AVR32_PDCA.channel[dma_channel].ISR.trc != 0) // tx inactive
+		{
+			tx_q->output_ptr = usarts[usartNum].tx_ptr_sent; // everything transmitted
+		}			
+	}
+	
+	if (usarts[usartNum].tx_ptr_sent == tx_q->output_ptr) // transmission not in progress
+	{
+		if (tx_q->input_ptr > tx_q->output_ptr)
+		{
+			int len = tx_q->input_ptr - tx_q->output_ptr;
+		
+			AVR32_PDCA.channel[dma_channel].mar  = (unsigned long) (tx_q->buf + tx_q->output_ptr);
+			AVR32_PDCA.channel[dma_channel].tcr  = (len & AVR32_PDCA_TCR_TCV_MASK) << AVR32_PDCA_TCR_TCV_OFFSET;
+			usarts[usartNum].tx_ptr_sent = tx_q->input_ptr;
+		}
+		else if (tx_q->input_ptr < tx_q->output_ptr)
+		{
+			int len = USART_BUFLEN - tx_q->output_ptr;
+		
+			AVR32_PDCA.channel[dma_channel].mar  = (unsigned long) (tx_q->buf + tx_q->output_ptr);
+			AVR32_PDCA.channel[dma_channel].tcr  = (len & AVR32_PDCA_TCR_TCV_MASK) << AVR32_PDCA_TCR_TCV_OFFSET;
+			AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) tx_q->buf;
+			AVR32_PDCA.channel[dma_channel].tcrr  = (tx_q->input_ptr & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
+			usarts[usartNum].tx_ptr_sent = tx_q->input_ptr;
+		}
+	}
+
+	return rx_q->input_ptr != rx_q->output_ptr;
 }
 
 
@@ -511,8 +405,9 @@ void serial_putc_tmo (int comPort, char c, short timeout)
 	while (i > 0)
 	{
 		if (serial_putc(comPort, c) == 1)
-		break;
+			break;
 		i--;
+		serial_rx_char_available(comPort); // fill the TX buffer
 		vTaskDelay(1);
 	}
 	
@@ -525,45 +420,8 @@ void serial_putc_tmo (int comPort, char c, short timeout)
 int serial_getc ( int usartNum, char * cOutChar )
 {
 	struct usartBuffer * q = & usarts[usartNum].rx;
-	int returnval;
 	
-	returnval = get_q(q, cOutChar);
-	
-	if (returnval != 1)
-	{
-		return 0; // queue is empty
-	}
-	
-	return 1;
+	return get_q(q, cOutChar);
 }
 
 
-
-int serial_rx_char_available (int usartNum)
-{
-	struct usartBuffer * q = & usarts[usartNum].rx;
-
-	return q->input_ptr != q->output_ptr;
-}
-
-
-
-/*
-
-int serial_puts (int usartNum, const char * s)
-{
-	const char * p = s;
-	while (*p != 0)
-	{
-		int res = serial_putc(usartNum, *p);
-		
-		if (res != 1) // queue is full
-		{
-			return -1;
-		}
-		p++;
-	}
-	return 0;
-}
-
-*/
