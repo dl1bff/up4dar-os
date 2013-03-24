@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -763,6 +763,7 @@ static void vTXTask( void *pvParameters )
 	short secs = 0;
 	short tx_counter = 0;
 	char buf[4];
+	long curr_tx_ticks = 0;
 	
 	for(;;)
 	{
@@ -797,6 +798,9 @@ static void vTXTask( void *pvParameters )
 				tx_min_count = 8; // send at least 8 AMBE frames+data (full TX Message)
 				
 				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " TX " );
+				
+				rtclock_reset_tx_ticks();
+				curr_tx_ticks = 0;
 				
 				aprs_reset();
 			}
@@ -844,7 +848,15 @@ static void vTXTask( void *pvParameters )
 						send_phy ( dcs_ambe_data, frame_counter );
 					}						
 					
-					vTaskDelay(20); // wait 20ms
+					curr_tx_ticks += 20; // send AMBE data every 20ms
+					
+					long tdiff = curr_tx_ticks - rtclock_get_tx_ticks();
+					
+					if (tdiff > 0)
+					{
+						vTaskDelay(tdiff);
+					}
+					
 				}
 			}
 			break;
