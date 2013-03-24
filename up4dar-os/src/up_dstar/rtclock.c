@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,10 +35,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 static unsigned long the_clock;
 static unsigned short rtclock_ticks;
 
+static long tx_ticks;
 
 void vApplicationTickHook( void )
 {
 	rtclock_ticks ++;
+	tx_ticks ++;
 	
 	if (rtclock_ticks >= configTICK_RATE_HZ)
 	{
@@ -50,6 +52,17 @@ void vApplicationTickHook( void )
 unsigned long rtclock_get_ticks( void )
 {
 	return (the_clock * configTICK_RATE_HZ) + rtclock_ticks;
+}
+
+
+long rtclock_get_tx_ticks( void )
+{
+	return tx_ticks;
+}
+
+void rtclock_reset_tx_ticks( void )
+{
+	tx_ticks = 0;
 }
 
 void rtclock_disp_xy(int x, int y, int dots, int display_seconds)

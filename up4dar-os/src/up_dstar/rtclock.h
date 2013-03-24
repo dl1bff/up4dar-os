@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -39,5 +39,6 @@ void vApplicationTickHook( void );
 
 void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
 unsigned long rtclock_get_ticks( void );
-
+long rtclock_get_tx_ticks( void );
+void rtclock_reset_tx_ticks( void );
 #endif /* RTCLOCK_H_ */

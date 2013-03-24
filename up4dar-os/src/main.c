@@ -250,7 +250,7 @@ static void phy_start_tx(void)
 	}
 	
 	// Bis zu 70ms kann man sich Zeit lassen, bevor die Header-Daten uebergeben werden.
-	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhängig.
+	// Die genaue Wartezeit ist natruerlich von TX-DELAY abhaengig.
 	//usleep(70000);
 	
 	// vTaskDelay (50); // 50ms
@@ -272,8 +272,12 @@ static void send_phy ( const unsigned char * d, char phy_frame_counter )
 {
 	send_voice[0] = 0x21;
 	send_voice[1] = 0x01;
+	
 	for (short k=0; k<9; ++k)
+	{
 		send_voice[2+k] = d[k];
+	}
+			
 	send_cmd(send_voice, 11);
 
 	if (phy_frame_counter > 0)
@@ -757,6 +761,7 @@ static void vTXTask( void *pvParameters )
 	short secs = 0;
 	short tx_counter = 0;
 	char buf[4];
+	long curr_tx_ticks = 0;
 	
 	for(;;)
 	{
@@ -791,6 +796,9 @@ static void vTXTask( void *pvParameters )
 				tx_min_count = 8; // send at least 8 AMBE frames+data (full TX Message)
 				
 				vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 1, " TX " );
+				
+				rtclock_reset_tx_ticks();
+				curr_tx_ticks = 0;
 			}
 			else
 			{
@@ -834,9 +842,17 @@ static void vTXTask( void *pvParameters )
 					else
 					{
 						send_phy ( dcs_ambe_data, frame_counter );
-					}						
+					}		
 					
-					vTaskDelay(20); // wait 20ms
+					curr_tx_ticks += 20; // send AMBE data every 20ms			
+					
+					long tdiff = curr_tx_ticks - rtclock_get_tx_ticks();
+					
+					if (tdiff > 0)
+					{
+						vTaskDelay(tdiff); 
+					}
+					
 				}
 			}
 			break;
