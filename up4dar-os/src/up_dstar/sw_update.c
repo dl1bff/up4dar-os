@@ -521,6 +521,10 @@ static int processPacket(void)
 				if (dp.data[0] != 1) // unexpected result
 				{
 					vdisp_prints_xy(0, 48, VDISP_FONT_6x8, 0, "ERROR 1");
+					vdisp_i2s(buf, 2, 16, 1, dp.data[0]);
+					vdisp_prints_xy(48, 48, VDISP_FONT_6x8, 0, buf);
+					vdisp_i2s(buf, 1, 10, 1, update_state);
+					vdisp_prints_xy(66, 48, VDISP_FONT_6x8, 0, buf);
 					// after this: wait for timeout
 					break;
 				}
@@ -583,11 +587,15 @@ static int processPacket(void)
 }
 
 
+const static char zeros[10] = { 0,0,0,0,0, 0,0,0,0,0 };
+
 static int do_phy_update (void)
 {
 	unsigned char qTimeout = 0;
 	
 	update_state = 0;
+	
+	phyCommSend(zeros, sizeof zeros);
 	
 	send_cmd_without_arg(0x01);
 	

@@ -254,7 +254,7 @@ static portTASK_FUNCTION( vComRxTask, pvParameters )
 
 
 
-void phyCommSend (char * buf, int len)
+void phyCommSend (const char * buf, int len)
 {
 	int i;
 	

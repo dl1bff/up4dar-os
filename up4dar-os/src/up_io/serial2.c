@@ -149,13 +149,14 @@ static struct usartParams
 	uint8_t dma_pid_tx;
 	uint8_t dma_channel_rx;
 	uint8_t dma_channel_tx;
+	int tx_ptr_sent;
 	struct usartBuffer rx;
 	struct usartBuffer tx;
 } usarts[NUM_USART] =
 {
-	  { &AVR32_USART0, AVR32_PDCA_PID_USART0_RX, AVR32_PDCA_PID_USART0_TX, 6, 7,
+	  { &AVR32_USART0, AVR32_PDCA_PID_USART0_RX, AVR32_PDCA_PID_USART0_TX, 6, 7, 0,
 		   {0, 0, { 0 }},  {0, 0, { 0 }} }
-	 ,{ &AVR32_USART1, AVR32_PDCA_PID_USART1_RX, AVR32_PDCA_PID_USART1_TX, 8, 9,
+	 ,{ &AVR32_USART1, AVR32_PDCA_PID_USART1_RX, AVR32_PDCA_PID_USART1_TX, 8, 9, 0,
 		   {0, 0, { 0 }},  {0, 0, { 0 }} }
 };
 
@@ -362,40 +363,33 @@ int serial_rx_char_available (int usartNum)
 	struct usartBuffer * tx_q = & usarts[usartNum].tx;
 	dma_channel = usarts[usartNum].dma_channel_tx;
 	
-	if (tx_q->input_ptr > tx_q->output_ptr)
+	if (usarts[usartNum].tx_ptr_sent != tx_q->output_ptr) // transmission in progress
 	{
-		int len = tx_q->input_ptr - tx_q->output_ptr;
-		
 		if (AVR32_PDCA.channel[dma_channel].ISR.trc != 0) // tx inactive
 		{
+			tx_q->output_ptr = usarts[usartNum].tx_ptr_sent; // everything transmitted
+		}			
+	}
+	
+	if (usarts[usartNum].tx_ptr_sent == tx_q->output_ptr) // transmission not in progress
+	{
+		if (tx_q->input_ptr > tx_q->output_ptr)
+		{
+			int len = tx_q->input_ptr - tx_q->output_ptr;
+		
 			AVR32_PDCA.channel[dma_channel].mar  = (unsigned long) (tx_q->buf + tx_q->output_ptr);
 			AVR32_PDCA.channel[dma_channel].tcr  = (len & AVR32_PDCA_TCR_TCV_MASK) << AVR32_PDCA_TCR_TCV_OFFSET;
-			tx_q->output_ptr = tx_q->input_ptr;
+			usarts[usartNum].tx_ptr_sent = tx_q->input_ptr;
 		}
-		else if (AVR32_PDCA.channel[dma_channel].ISR.rcz != 0) // tx active but second buffer empty
+		else if (tx_q->input_ptr < tx_q->output_ptr)
 		{
-			AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) (tx_q->buf + tx_q->output_ptr);
-			AVR32_PDCA.channel[dma_channel].tcrr  = (len & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
-			tx_q->output_ptr = tx_q->input_ptr;
-		}
-	}
-	else if (tx_q->input_ptr < tx_q->output_ptr)
-	{
-		int len = USART_BUFLEN - tx_q->output_ptr;
+			int len = USART_BUFLEN - tx_q->output_ptr;
 		
-		if (AVR32_PDCA.channel[dma_channel].ISR.trc != 0) // tx inactive
-		{
 			AVR32_PDCA.channel[dma_channel].mar  = (unsigned long) (tx_q->buf + tx_q->output_ptr);
 			AVR32_PDCA.channel[dma_channel].tcr  = (len & AVR32_PDCA_TCR_TCV_MASK) << AVR32_PDCA_TCR_TCV_OFFSET;
 			AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) tx_q->buf;
 			AVR32_PDCA.channel[dma_channel].tcrr  = (tx_q->input_ptr & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
-			tx_q->output_ptr = tx_q->input_ptr;
-		}
-		else if (AVR32_PDCA.channel[dma_channel].ISR.rcz != 0) // tx active but second buffer empty
-		{
-			AVR32_PDCA.channel[dma_channel].marr  = (unsigned long) (tx_q->buf + tx_q->output_ptr);
-			AVR32_PDCA.channel[dma_channel].tcrr  = (len & AVR32_PDCA_TCRR_TCRV_MASK) << AVR32_PDCA_TCRR_TCRV_OFFSET;
-			tx_q->output_ptr = 0;
+			usarts[usartNum].tx_ptr_sent = tx_q->input_ptr;
 		}
 	}
 
