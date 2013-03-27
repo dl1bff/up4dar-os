@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -182,6 +182,14 @@ int snmp_get_sw_update (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 	memcpy(res, STAGING_AREA_INFO_ADDRESS, sizeof (struct staging_area_info));
 	*res_len = sizeof (struct staging_area_info);
 	return 0;
+}
+
+int snmp_get_sw_version (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	return snmp_encode_int( 
+	  software_version[1] * 10000 + 
+	  software_version[2] * 100 + 
+	  software_version[3], res, res_len, maxlen );
 }
 
 

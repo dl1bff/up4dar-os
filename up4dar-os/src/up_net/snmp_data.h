@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -60,5 +60,7 @@ SNMP_SET_FUNC ( snmp_set_setting_char )
 
 SNMP_GET_FUNC ( snmp_get_sw_update )
 SNMP_SET_FUNC ( snmp_set_sw_update )
+
+SNMP_GET_FUNC ( snmp_get_sw_version )
 
 #endif /* SNMP_DATA_H_ */
