@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -331,6 +331,7 @@ static const struct snmp_table_struct {
 	{ "14143",	BER_INTEGER,		snmp_return_integer,		0		, 439462500},
 		
 	{ "150",  BER_OCTETSTRING, snmp_get_sw_update, snmp_set_sw_update, 0 },
+	{ "160",  BER_INTEGER, snmp_get_sw_version, 0, 0 },
 		
 	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
 	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
