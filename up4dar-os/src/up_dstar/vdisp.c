@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "vdisp.h"
 
 #include "vdispfont.h"
+#include "up_io\lcd.h"
 
 
 
@@ -113,6 +114,11 @@ void vdisp_set_pixel ( int x, int y, int disp_inverse, unsigned char data, int n
 void vd_set_pixel ( int layer, int x, int y, int disp_inverse, unsigned char data, int numbits )
 {
 	int i;
+	
+	if (layer == lcd_current_layer)
+	{
+		lcd_update_screen = 1;
+	}
 	
 	unsigned short b = data;
 	unsigned short m = 1;

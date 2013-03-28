@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -110,20 +110,23 @@ static void lcd_send(int linksrechts, int rs, int data)
 	taskYIELD();
 }
 
-static int current_layer = 0;
+char lcd_current_layer = 0;
+char lcd_update_screen = 1;
 
 static uint8_t display_layer[128];
 
 void lcd_show_layer (int layer)
 {
-	current_layer = layer;
+	lcd_current_layer = layer;
 	
 	int i;
 	
 	for (i=0; i < 128; i++)
 	{
-		display_layer[i] = current_layer;
+		display_layer[i] = lcd_current_layer;
 	}
+	
+	lcd_update_screen = 1;
 }
 
 // static const uint8_t help_lines[2] = { 1, 2 };
@@ -132,7 +135,7 @@ void lcd_show_help_layer(int help_layer)
 {
 	if (help_layer == 0) // turn off help_layer
 	{
-		lcd_show_layer(current_layer);
+		lcd_show_layer(lcd_current_layer);
 		return;
 	}
 	
@@ -156,6 +159,8 @@ void lcd_show_help_layer(int help_layer)
 	{
 		display_layer[i] = help_layer;
 	}
+	
+	lcd_update_screen = 1;
 }
 
 void lcd_set_backlight (int v)
@@ -196,6 +201,10 @@ static void vLCDTask( void *pvParameters )
 	{
 		int x,y,i;
 		
+		if (lcd_update_screen != 0)
+		{
+		lcd_update_screen = 0;	
+		
 		for (x=0; x < 16; x++)
 		{
 			for (y=0; y < 8; y++)
@@ -230,6 +239,7 @@ static void vLCDTask( void *pvParameters )
 				}
 			}
 		}
+		} // if (lcd_update_screen != 0)		
 		
 		vTaskDelay( 5 );
 	}
