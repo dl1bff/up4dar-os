@@ -446,7 +446,7 @@ void copy_html_info(char* buffer)
     {
       // replace  X.0.00.00  with current software version
       version2string(buffer + index, software_version);
-      buffer[index + 10] = ' ';
+      buffer[index + strlen(buffer + index)] = ' ';
       break;
     }
   }
