@@ -676,6 +676,7 @@ void ambe_input_data( const uint8_t * d)
 void ambe_input_data_sd( const uint8_t * d)
 {
 	ambe_q_put_sd ( & ambe_output_q, d );
+	ambe_output_q.state = 1; // "fast" option
 }
 
 void ambe_init( audio_q_t * decoded_audio, audio_q_t * input_audio,

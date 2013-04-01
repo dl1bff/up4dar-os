@@ -57,6 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "sw_update.h"
 #include "rx_dstar_crc_header.h"
 
+
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
@@ -72,6 +73,7 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
                               "</td>"
 
                               "</tr></table>";
+
 
 
 
@@ -748,7 +750,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	d[43] = (session_id >> 8) & 0xFF;
 	d[44] = session_id & 0xFF;
 	
-	d[45] = dcs_frame_counter | ((last_frame != 0) ? 0x40 : 0);
+	d[45] = dcs_frame_counter | ((last_frame == 1) ? 0x40 : 0);
 	
 	memcpy (d + 46, dcs_ambe_data, sizeof dcs_ambe_data);
 	
@@ -792,7 +794,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	*/
 }
 
-static void send_dextra_header(int session_id)
+static void send_dextra_header(int session_id, const char * mycall, const char * mycallext)
 {
   eth_txmem_t* packet = dcs_get_packet_mem(DEXTRA_RADIO_HEADER_SIZE);
 
@@ -831,8 +833,8 @@ static void send_dextra_header(int session_id)
   memcpy(d + 26, reflector, 8);
   d[33] = 'G';
   memcpy(d + 34, "CQCQCQ  ", 8); 
-  memcpy(d + 42, settings.s.my_callsign, 8);
-  memcpy(d + 50, settings.s.my_ext, 4);
+  memcpy(d + 42, mycall, 8);
+  memcpy(d + 50, mycallext, 4);
   
   unsigned short sum = rx_dstar_crc_header(d + 15);
   d[54] = sum & 0xFF;
@@ -880,10 +882,139 @@ void send_dcs(int session_id, int last_frame, char dcs_frame_counter)
       (dcs_state == DCS_CONNECTED))
   {
     if (dcs_frame_counter == 0)
-      send_dextra_header(session_id);
+	{
+      send_dextra_header(session_id, settings.s.my_callsign, settings.s.my_ext);
+	}	  
     send_dextra_frame(session_id, last_frame, dcs_frame_counter);
     return;
   }
   send_dcs_private(session_id, last_frame, dcs_frame_counter);
 }
 
+
+
+static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_counter,
+	const uint8_t * rx_data, const uint8_t * rx_voice, const uint8_t * rx_header)
+{
+	int frame_size = DCS_VOICE_FRAME_SIZE;
+	
+	eth_txmem_t * packet = dcs_get_packet_mem( frame_size );
+	
+	if (packet == NULL)
+	{
+		return;
+	}
+	
+	uint8_t * d = packet->data + 42; // skip ip+udp header
+	
+	memcpy(d, "0001", 4);
+	
+	d[4] = 0;  // flags
+	d[5] = 0;
+	d[6] = 0;
+	
+	char buf[8];
+	
+	dcs_get_current_reflector_name( buf );
+	
+	memcpy (d + 7, buf, 8);
+	//memcpy (d + 15, buf, 8);
+	memcpy (d + 15, settings.s.my_callsign, 7);
+	d[22] = DCS_REGISTER_MODULE;
+	memcpy(d + 23, "CQCQCQ  ", 8);
+	memcpy (d + 31, rx_header + 27, 8);
+	memcpy (d + 39, rx_header + 35, 4);
+	
+	d[43] = (session_id >> 8) & 0xFF;
+	d[44] = session_id & 0xFF;
+	
+	d[45] = frame_counter | ((last_frame != 0) ? 0x40 : 0);
+	
+	memcpy (d + 46, rx_voice, 9);
+	
+	d[58] = dcs_tx_counter & 0xFF;
+	d[59] = (dcs_tx_counter >> 8) & 0xFF;
+	d[60] = (dcs_tx_counter >> 16) & 0xFF;
+	
+	d[61] = 0x01; // Frame Format version low
+	// d[62] = 0x00; // Frame Format version high
+	d[63] = 0x21; // Language Set 0x21
+	
+	// memcpy (d + 64, settings.s.txmsg, 20);
+
+	//build_slow_data(d + 55, last_frame, dcs_frame_counter);
+	
+	d[55] = rx_data[ 0 ] ^ 0x70;
+	d[56] = rx_data[ 1 ] ^ 0x4F;
+	d[57] = rx_data[ 2 ] ^ 0x93;
+	
+	
+	dcs_calc_chksum_and_send( packet, frame_size );
+	
+}
+
+static void send_dcs_hotspot_dextra (int session_id, int last_frame, uint8_t frame_counter,
+	const uint8_t * rx_data, const uint8_t * rx_voice, const uint8_t * rx_header)
+{
+	eth_txmem_t * packet = dcs_get_packet_mem(DEXTRA_VOICE_FRAME_SIZE);
+
+	if (packet == NULL)
+	return;
+
+	uint8_t* d = packet->data + 42; // skip ip+udp header
+
+	memcpy(d, "DSVT", 4);
+
+	d[4] = 0x20;
+	d[5] = 0x00;
+	d[6] = 0x00;
+	d[7] = 0x00;
+	d[8] = 0x20;
+	d[9] = 0x00;
+	d[10] = 0x01;
+	d[11] = 0x00;
+
+	d[12] = (session_id >> 8) & 0xFF;
+	d[13] = session_id & 0xFF;
+
+	d[14] = frame_counter | ((last_frame == 1) ? 0x40 : 0);
+
+	//memcpy(d + 15, dcs_ambe_data, sizeof(dcs_ambe_data));
+	//build_slow_data(d + 24, last_frame, dcs_frame_counter);
+	
+	memcpy (d+15, rx_voice, 9);
+	
+	d[24] = rx_data[ 0 ] ^ 0x70;
+	d[25] = rx_data[ 1 ] ^ 0x4F;
+	d[26] = rx_data[ 2 ] ^ 0x93;
+
+	dcs_calc_chksum_and_send(packet, DEXTRA_VOICE_FRAME_SIZE);
+
+}
+
+// send_dcs_hotspot(  session_id, frame_counter, rx_data, rx_voice, rx_header );
+void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter,
+	const uint8_t * rx_data, const uint8_t * rx_voice, uint8_t crc_result, const uint8_t * rx_header)
+{
+	if ((dcs_state == DCS_CONNECTED) && // only send if connected
+			(crc_result == DSTAR_HEADER_OK) &&  // last received header was OK
+			(rx_header[0] == 0x00) &&   // no repeater flag in header
+			(memcmp("DIRECT  ", rx_header + 3, 8) == 0) &&  // RPT1 and RPT2 contain "DIRECT  "
+			(memcmp("DIRECT  ", rx_header + 11, 8) == 0) ) 
+	{	
+		if (current_server_type == SERVER_TYPE_DEXTRA)
+		{
+			if (frame_counter == 0)
+			{
+				send_dextra_header(session_id, (char *) rx_header + 27, (char * ) rx_header + 35);
+			}
+			send_dcs_hotspot_dextra(session_id, last_frame, frame_counter, rx_data, rx_voice, rx_header);
+		}
+		else
+		{
+			send_dcs_hotspot_dcs(session_id, last_frame, frame_counter, rx_data, rx_voice, rx_header);
+		}
+	}
+	
+	dcs_tx_counter ++;
+}

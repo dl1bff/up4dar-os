@@ -15,32 +15,23 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+
 */
 
 
 /*
- * rtclock.h
+ * txtask.h
  *
- * Created: 11.06.2011 12:53:12
+ * Created: 30.03.2013 06:52:56
  *  Author: mdirska
  */ 
 
 
-#ifndef RTCLOCK_H_
-#define RTCLOCK_H_
+#ifndef TXTASK_H_
+#define TXTASK_H_
 
 
-
-#define RTCLOCK_INCR_TICK
-
-
-void vApplicationTickHook( void );
+void txtask_init( ambe_q_t * mic );
 
 
-void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
-unsigned long rtclock_get_ticks( void );
-long rtclock_get_tx_ticks( void );
-void rtclock_reset_tx_ticks( void );
-long rtclock_get_rx_ticks( void );
-void rtclock_reset_rx_ticks( void );
-#endif /* RTCLOCK_H_ */
+#endif /* TXTASK_H_ */
