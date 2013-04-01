@@ -41,4 +41,6 @@ void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
 unsigned long rtclock_get_ticks( void );
 long rtclock_get_tx_ticks( void );
 void rtclock_reset_tx_ticks( void );
+long rtclock_get_rx_ticks( void );
+void rtclock_reset_rx_ticks( void );
 #endif /* RTCLOCK_H_ */

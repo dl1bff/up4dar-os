@@ -38,6 +38,18 @@ struct dstarPacket
 	unsigned char data[100];
 };
 
+#define SOURCE_PHY	1
+#define SOURCE_NET	2
+
+
+#define DSTAR_HEADER_OK		99
+
+struct rx_q_header_struct {
+	uint8_t crc_result;
+	uint8_t data[39];
+};
+
+extern int dstar_pos_not_correct;
 
 void dstarInit(xQueueHandle dstarQueue);
 
@@ -47,4 +59,7 @@ void dstarResetCounters(void);
 
 void dstarProcessDCSPacket( const uint8_t * data );
 void dstarProcessDExtraPacket(const uint8_t* data);
+int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice);
+
+void dstar_get_header(uint8_t rx_source, uint8_t * crc_result, uint8_t * header_data);
 #endif /* DSTAR_H_ */

@@ -37,11 +37,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-static const uint8_t silence_data[AMBE_Q_DATASIZE] =
+const uint8_t ambe_silence_data[AMBE_Q_DATASIZE] =
  { 0x9e, 0x8d, 0x32, 0x88, 0x26, 0x1a, 0x3f, 0x61, 0xe8 };
 
 
-static void expand_to_sd_data( uint8_t * sd_data, const uint8_t * inp_data)
+void ambe_expand_to_sd_data( uint8_t * sd_data, const uint8_t * inp_data)
 {
 	int i;
 	for (i=0; i < AMBE_Q_DATASIZE; i++)
@@ -54,7 +54,7 @@ static void expand_to_sd_data( uint8_t * sd_data, const uint8_t * inp_data)
 	}
 }
 
-static void reduce_sd_data( uint8_t * data, const uint8_t * sd_data)
+void ambe_reduce_sd_data( uint8_t * data, const uint8_t * sd_data)
 {
 	int i;
 	for (i=0; i < AMBE_Q_DATASIZE; i++)
@@ -141,7 +141,7 @@ int ambe_q_put_sd (ambe_q_t * a,  const uint8_t * data)
 int ambe_q_put (ambe_q_t * a,  const uint8_t * data)
 {
 	uint8_t buf[AMBE_Q_DATASIZE_SD];
-	expand_to_sd_data(buf, data);
+	ambe_expand_to_sd_data(buf, data);
 	return ambe_q_put_sd( a, buf );
 }
 
@@ -172,7 +172,7 @@ int ambe_q_get_sd (ambe_q_t * a,  uint8_t * data )
 		}		
 		else
 		{
-			expand_to_sd_data( data, silence_data );
+			ambe_expand_to_sd_data( data, ambe_silence_data );
 			ret = 1;
 		}				
         xSemaphoreGive( a->mutex );
@@ -181,7 +181,7 @@ int ambe_q_get_sd (ambe_q_t * a,  uint8_t * data )
 	{
 		// should not happen: could not get Mutex
 		
-		expand_to_sd_data( data, silence_data );
+		ambe_expand_to_sd_data( data, ambe_silence_data );
 		ret = 1;
 	}
 	
@@ -192,6 +192,6 @@ int ambe_q_get (ambe_q_t * a,  uint8_t * data)
 {
 	uint8_t buf[AMBE_Q_DATASIZE_SD];
 	int ret = ambe_q_get_sd( a, buf );
-	reduce_sd_data( data, buf );
+	ambe_reduce_sd_data( data, buf );
 	return ret;
 }

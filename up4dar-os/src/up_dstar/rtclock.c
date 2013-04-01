@@ -36,11 +36,13 @@ static unsigned long the_clock;
 static unsigned short rtclock_ticks;
 
 static long tx_ticks;
+static long rx_ticks;
 
 void vApplicationTickHook( void )
 {
 	rtclock_ticks ++;
 	tx_ticks ++;
+	rx_ticks ++;
 	
 	if (rtclock_ticks >= configTICK_RATE_HZ)
 	{
@@ -63,6 +65,16 @@ long rtclock_get_tx_ticks( void )
 void rtclock_reset_tx_ticks( void )
 {
 	tx_ticks = 0;
+}
+
+long rtclock_get_rx_ticks( void )
+{
+	return rx_ticks;
+}
+
+void rtclock_reset_rx_ticks( void )
+{
+	rx_ticks = 0;
 }
 
 void rtclock_disp_xy(int x, int y, int dots, int display_seconds)

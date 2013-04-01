@@ -41,6 +41,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define AMBE_Q_BUFLEN  (AMBE_Q_DATASIZE_SD * 50)
 
+extern const uint8_t ambe_silence_data[AMBE_Q_DATASIZE];
+
 struct ambe_q {
 	uint8_t buf[AMBE_Q_BUFLEN];
 	short in_ptr;
@@ -59,5 +61,6 @@ int ambe_q_get (ambe_q_t * a, uint8_t * data);
 int ambe_q_flush (ambe_q_t * a, int read_fast);
 int ambe_q_put_sd (ambe_q_t * a, const uint8_t * data);
 int ambe_q_get_sd (ambe_q_t * a, uint8_t * data );
-
+void ambe_expand_to_sd_data( uint8_t * sd_data, const uint8_t * inp_data);
+void ambe_reduce_sd_data( uint8_t * data, const uint8_t * sd_data);
 #endif /* AMBE_Q_H_ */

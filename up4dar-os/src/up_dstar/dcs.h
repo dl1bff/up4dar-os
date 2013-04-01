@@ -45,4 +45,7 @@ void dcs_reset_tx_counters(void);
 
 void dcs_select_reflector (short server_num, char module, char server_type);
 void dcs_on(void);
+
+
+void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter, const uint8_t * rx_data, const uint8_t * rx_voice, uint8_t crc_result, const uint8_t * rx_header);
 #endif /* DCS_H_ */

@@ -39,7 +39,8 @@ void a_app_manager_init(void);
 
 void a_app_manager_service(void);
 
-extern int dcs_mode;
+extern char dcs_mode;
+extern char hotspot_mode;
 
 
 #endif /* A_LIB_INTERNAL_H_ */
