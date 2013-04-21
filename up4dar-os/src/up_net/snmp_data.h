@@ -64,4 +64,6 @@ SNMP_SET_FUNC ( snmp_set_sw_update )
 
 SNMP_GET_FUNC ( snmp_get_sw_version )
 
+SNMP_GET_FUNC ( snmp_get_display )
+
 #endif /* SNMP_DATA_H_ */

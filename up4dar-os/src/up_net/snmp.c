@@ -340,6 +340,13 @@ static const struct snmp_table_struct {
 	{ "1750", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_DNS2 },
 	{ "1760", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_NTP },	
 		
+	{ "18110", BER_OCTETSTRING, snmp_get_display, 0, 0 },
+	{ "18120", BER_OCTETSTRING, snmp_get_display, 0, 1 },
+	{ "18130", BER_OCTETSTRING, snmp_get_display, 0, 2 },
+	{ "18140", BER_OCTETSTRING, snmp_get_display, 0, 3 },
+	{ "18150", BER_OCTETSTRING, snmp_get_display, 0, 4 },
+	{ "18160", BER_OCTETSTRING, snmp_get_display, 0, 5 },
+		
 	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
 	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
 	/*
@@ -454,8 +461,11 @@ static const uint8_t * parse_ptr;
 
 static uint8_t tmp_oid[15];
 
-#define MAX_RESULT_LEN	70
-#define MAX_REQ_PARAM		5
+// #define MAX_RESULT_LEN	70
+// #define MAX_REQ_PARAM		5
+
+#define MAX_RESULT_LEN	1024
+#define MAX_REQ_PARAM		1
 
 static struct snmp_result_struct {
 	int oid_index;
@@ -840,10 +850,20 @@ eth_txmem_t * snmp_process_request( const uint8_t * req, int req_len, int * resu
 		
 		
 		ber_skip();
+		
+		/*  old way:
 		param_pos ++;
 		
 		if (param_pos > MAX_REQ_PARAM)  // more parameters than we have memory for
 			return error_msg(0x01, param_pos, req, req_len, result_data_len); // "response message too large"
+		*/
+		
+		param_pos = 1; // there can only be one
+		if (parse_len > 0) // if there is more than one oid in this request
+		{
+			return error_msg(0x01, param_pos, req, req_len, result_data_len); // "response message too large"
+		}
+		break; // break here because we have only one memory slot
 	}
 	
 	

@@ -31,8 +31,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "vdispfont.h"
 #include "up_io\lcd.h"
+#include "up_net\snmp_data.h"
+#include "gcc_builtin.h"
 
 
+#define VSCREEN_SIZE 1024
 
 #define MAX_NUM_SCREEN 20
 
@@ -55,7 +58,7 @@ int vd_new_screen (void)
 		return -1;
 	}
 	
-	uint8_t * b = pvPortMalloc( 1024 );
+	uint8_t * b = pvPortMalloc( VSCREEN_SIZE );
 	
 	if (b == NULL)
 	{
@@ -71,6 +74,19 @@ int vd_new_screen (void)
 	return (num_screen - 1);
 }
 
+int snmp_get_display (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	if (maxlen < VSCREEN_SIZE)
+		return 1;
+		
+	if ((arg >= num_screen) || (arg < 0))
+		return 1;
+		
+	memcpy(res, pixelbuf[arg], VSCREEN_SIZE);
+	*res_len = VSCREEN_SIZE;
+	
+	return 0;
+}
 
 struct vdisp_font vdisp_fonts[4] =
   {
