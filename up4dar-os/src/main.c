@@ -432,11 +432,15 @@ static void vButtonTask( void *pvParameters )
 				
 		for (i=0; i < NUMBER_OF_KEYS; i++)
 		{
-			int button_pressed = (gpio_get_pin_value(button_pins[i]) == 0);
+			int button_pressed;
 			
 			if (i == A_KEY_BUTTON_APP_MANAGER) // analog pin SW3
 			{
 				button_pressed = sw3_pressed;
+			}
+			else
+			{
+				button_pressed = (gpio_get_pin_value(button_pins[i]) == 0);
 			}
 			
 			if (button_pressed)
@@ -1037,7 +1041,9 @@ int main (void)
 	eth_init();
 	
 	ipv4_init(); // includes ipneigh_init()
-	dhcp_init();
+	
+	dhcp_init( SETTING_CHAR(C_DISABLE_UDP_BEACON) == 1); 
+		// if beacon disabled -> used fixed ipv4 address
 	
 	
 	xTaskCreate( vServiceTask, (signed char *) "srv", configMINIMAL_STACK_SIZE, ( void * ) 0,

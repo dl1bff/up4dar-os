@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -84,7 +84,12 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 
 // LONG values
 
-
+#define L_MY_IPV4_ADDR			0
+#define L_IPV4_NETMASK			1
+#define L_IPV4_GW				2
+#define L_IPV4_DNS1				3
+#define L_IPV4_DNS2				4
+#define L_IPV4_NTP				5
 
 
 // SHORT values

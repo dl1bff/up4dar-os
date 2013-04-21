@@ -333,6 +333,13 @@ static const struct snmp_table_struct {
 	{ "150",  BER_OCTETSTRING, snmp_get_sw_update, snmp_set_sw_update, 0 },
 	{ "160",  BER_INTEGER, snmp_get_sw_version, 0, 0 },
 		
+	{ "1710", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_MY_IPV4_ADDR },
+	{ "1720", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_NETMASK },
+	{ "1730", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_GW },
+	{ "1740", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_DNS1 },
+	{ "1750", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_DNS2 },
+	{ "1760", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_NTP },	
+		
 	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
 	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
 	/*

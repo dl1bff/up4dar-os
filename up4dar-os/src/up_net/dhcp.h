@@ -35,7 +35,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 int dhcp_is_ready(void);
-void dhcp_init(void);
+
+void dhcp_init(int fixed_address);
 void dhcp_set_link_state (int link_up);
 void dhcp_service(void);
 void dhcp_input_packet (const uint8_t * data, int data_len);

@@ -51,6 +51,7 @@ SNMP_SET_FUNC ( snmp_set_flashstatus )
 
 SNMP_GET_FUNC ( snmp_get_setting_long )
 SNMP_SET_FUNC ( snmp_set_setting_long )
+SNMP_SET_FUNC ( snmp_set_ipv4_addr )
 
 SNMP_GET_FUNC ( snmp_get_setting_short )
 SNMP_SET_FUNC ( snmp_set_setting_short )

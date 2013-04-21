@@ -39,6 +39,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar\dcs.h"
 #include "up_io\wm8510.h"
 #include "up_dstar\ambe.h"
+#include "up_net\dhcp.h"
 
 
 char software_ptt = 0;
@@ -344,6 +345,7 @@ void a_dispatch_key_event( int key_num, int key_event )
 			if (SETTING_CHAR(C_DISABLE_UDP_BEACON) != 0)  // toggle UDP beacon
 			{
 				SETTING_CHAR(C_DISABLE_UDP_BEACON) = 0; // beacon is now on
+				dhcp_init(0); // switch on DHCP
 				wm8510_beep(50, 1200, 100);
 				
 				snmp_reset_cmnty = 1;

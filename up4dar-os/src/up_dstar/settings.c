@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -40,7 +40,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 settings_t settings;
 
 const limits_t long_values_limits[NUM_LONG_VALUES] = {
-	{  0,  0,  0  }	
+	{  0,  0,  0  },
+	{  0,  0,  0  },
+	{  0,  0,  0  },
+	{  0,  0,  0  },
+	{  0,  0,  0  },
+	{  0,  0,  0  }
 };
 
 const limits_t short_values_limits[NUM_SHORT_VALUES] = {
@@ -249,6 +254,17 @@ int snmp_set_setting_long (int32_t arg, const uint8_t * req, int req_len)
 	settings.s.long_values[arg] = value;
 	return 0;
 }	
+
+int snmp_set_ipv4_addr (int32_t arg, const uint8_t * req, int req_len)
+{
+	if (req_len != 4)
+	{
+		return 1;
+	}
+	
+	memcpy(settings.s.long_values + arg, req, 4);
+	return 0;
+}
 
 int snmp_set_setting_short (int32_t arg, const uint8_t * req, int req_len)
 {

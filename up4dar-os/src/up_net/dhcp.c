@@ -47,9 +47,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto.h"
 
 #include "up_dstar/vdisp.h"
+#include "up_dstar/settings.h"
 
-static int dhcp_state;
-
+static char dhcp_state;
+static char dhcp_fixed_address;
 
 #define DHCP_NO_LINK	1
 #define DHCP_DISCOVER	2
@@ -112,11 +113,48 @@ typedef struct bootp_header
 static const uint8_t dhcp_magic_cookie[4] = { 99, 130, 83, 99 };
 
 
-void dhcp_init(void)
+static void print_ipv4_config(void)
 {
-	dhcp_state = DHCP_NO_LINK;
+	ipv4_print_ip_addr(36, "MYIP", ipv4_addr);
+
+	ipv4_print_ip_addr(12, "GW", ipv4_gw);
+
+	ipv4_print_ip_addr(18, "MASK", ipv4_netmask);
+
+	ipv4_print_ip_addr(42, "NTP", ipv4_ntp);
+
+	ipv4_print_ip_addr(24, "DNS1", ipv4_dns_pri);
+
+	ipv4_print_ip_addr(30, "DNS2", ipv4_dns_sec);
+}
+
+
+
+void dhcp_init(int fixed_address)
+{
+	dhcp_fixed_address = fixed_address;
+	
+	if (fixed_address)
+	{
+		memcpy (ipv4_addr,		&SETTING_LONG(L_MY_IPV4_ADDR), 4);
+		memcpy (ipv4_netmask,	&SETTING_LONG(L_IPV4_NETMASK), 4);
+		memcpy (ipv4_gw,		&SETTING_LONG(L_IPV4_GW), 4);
+		memcpy (ipv4_dns_pri,	&SETTING_LONG(L_IPV4_DNS1), 4);
+		memcpy (ipv4_dns_sec,	&SETTING_LONG(L_IPV4_DNS2), 4);
+		memcpy (ipv4_ntp,		&SETTING_LONG(L_IPV4_NTP), 4);
+		
+		print_ipv4_config();
+		
+		dhcp_state = DHCP_READY;
+		
+	}
+	else
+	{
+		dhcp_state = DHCP_NO_LINK;
+		dhcp_T1 = 900; // 15 minutes if not overwritten by DHCPOFFER
+	}
+	
 	dhcp_timer = 0;
-	dhcp_T1 = 900; // 15 minutes if not overwritten by DHCPOFFER
 }
 
 
@@ -322,6 +360,9 @@ static void dhcp_get_new_xid(void)
 
 void dhcp_set_link_state (int link_up)
 {
+	if (dhcp_fixed_address)
+		return;  // nothing to do
+	
 	if (link_up != 0)
 	{
 		if (dhcp_state == DHCP_NO_LINK)
@@ -352,6 +393,9 @@ static void clear_dhcp_debug(void)
 
 void dhcp_service(void)
 {
+	if (dhcp_fixed_address)
+		return;  // nothing to do
+		
 	if (dhcp_timer > 0)
 	{
 		dhcp_timer --;
@@ -472,8 +516,7 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 				else if (p[2] == 5) // ACK
 				{
 					res = RECEIVED_ACK;
-					memcpy(ipv4_addr, m->yiaddr, 4); // set offered address	
-					ipv4_print_ip_addr(36, "MYIP", ipv4_addr);			
+					memcpy(ipv4_addr, m->yiaddr, 4); // set offered address				
 				}
 				break;
 			case 54: // server id
@@ -490,7 +533,7 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 					{
 						// use only first entry
 						memcpy(ipv4_gw, p+2, 4);
-						ipv4_print_ip_addr(12, "GW", p+2);
+						
 					}						
 				}
 				break;
@@ -500,7 +543,7 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 					if (option_len == 4)
 					{
 						memcpy(ipv4_netmask, p+2, 4);
-						ipv4_print_ip_addr(18, "MASK", p+2);
+						
 					}					
 				}
 				break;
@@ -511,7 +554,7 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 					{
 						// use only first entry
 						memcpy(ipv4_ntp, p+2, 4);
-						ipv4_print_ip_addr(42, "NTP", p+2);
+						
 					}
 				}
 				break;
@@ -531,8 +574,6 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 							memset(ipv4_dns_sec, 0, 4);
 						}					
 						
-						ipv4_print_ip_addr(24, "DNS1", ipv4_dns_pri);	
-						ipv4_print_ip_addr(30, "DNS2", ipv4_dns_sec);	
 					}
 				}
 				break;
@@ -593,12 +634,15 @@ static int parse_dhcp_options(const uint8_t * data, int data_len, const bootp_he
 			break;
 			*/
 			case 255:
+				
 				return res;
 		}
 		
 		p += 2 + option_len;
 		bytes_remaining -= 2 + option_len;
 	}
+	
+	
 	
 	return res;
 }
@@ -642,6 +686,7 @@ void dhcp_input_packet (const uint8_t * data, int data_len)
 			
 			case RECEIVED_ACK:
 				dhcp_state = DHCP_READY;
+				print_ipv4_config();
 				
 				if (dhcp_T1 < DHCP_TIMEOUT_TIMER_MIN)
 				{
