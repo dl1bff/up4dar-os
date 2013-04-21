@@ -52,8 +52,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 static void lcd_send(int linksrechts, int rs, int data)
 {
-	// uint32_t d = data << 24; 
-	
 	uint32_t d = 0;
 	int i;
 	
@@ -110,8 +108,84 @@ static void lcd_send(int linksrechts, int rs, int data)
 	taskYIELD();
 }
 
+
+
+static int lcd_recv(int linksrechts, int rs)
+{
+	uint32_t data;
+	
+	int i;
+	int d;
+	
+	if (rs != 0)
+	{
+		gpio_set_pin_high(LCD_PIN_DI);
+	}
+	else
+	{
+		gpio_set_pin_low(LCD_PIN_DI);
+	}
+	
+	if (linksrechts == 1)
+	{
+		gpio_set_pin_high(LCD_PIN_CS1);
+	}
+	else
+	{
+		gpio_set_pin_high(LCD_PIN_CS2);
+	}
+	
+	gpio_set_pin_high(LCD_PIN_RW);
+	
+	gpio_configure_group(1 /* PORT B */, 0xFF000000, GPIO_DIR_INPUT | GPIO_PULL_UP);
+		// data pins are now input pins with pull-up
+	
+	gpio_set_pin_high(LCD_PIN_E);
+	
+	taskYIELD();
+	
+	data = AVR32_GPIO.port[1 /* PORT B */].pvr;  // read PORT B
+	
+	gpio_set_pin_low(LCD_PIN_E);
+	
+	gpio_set_pin_low(LCD_PIN_RW);
+	
+	if (linksrechts == 1)
+	{
+		gpio_set_pin_low(LCD_PIN_CS1);
+	}
+	else
+	{
+		gpio_set_pin_low(LCD_PIN_CS2);
+	}
+	
+	d = 0;
+	
+	for (i=0; i < 8; i++)
+	{
+		d = d << 1;
+		
+		if ((data & (1 << 24)) != 0)
+		{
+			d |= 1;
+		}
+		
+		data = data >> 1;
+	}
+	
+	gpio_configure_group(1 /* PORT B */, 0xFF000000, GPIO_DIR_OUTPUT | GPIO_INIT_LOW);
+		// data pins are now output pins
+	
+	taskYIELD();
+	
+	return d;
+}
+
+#define LCD_CHECK_INTERVAL	110
+
 char lcd_current_layer = 0;
 char lcd_update_screen = 1;
+char lcd_init_screen_counter = LCD_CHECK_INTERVAL;
 
 static uint8_t display_layer[128];
 
@@ -174,7 +248,7 @@ void lcd_set_contrast (int v)
 }
 
 
-static void vLCDTask( void *pvParameters )
+static void lcd_reset (void)
 {
 	gpio_set_pin_low(LCD_PIN_RES);
 	gpio_set_pin_low(LCD_PIN_E);
@@ -191,9 +265,14 @@ static void vLCDTask( void *pvParameters )
 	
 	vTaskDelay( 10 );
 	
-	lcd_send(1, 0, 0x3f);
+	lcd_send(1, 0, 0x3f); // switch display on
 	lcd_send(2, 0, 0x3f);
+}
+
+static void vLCDTask( void *pvParameters )
+{
 	
+	lcd_reset();
 	
 	unsigned char blob[8];
 	
@@ -242,6 +321,25 @@ static void vLCDTask( void *pvParameters )
 		} // if (lcd_update_screen != 0)		
 		
 		vTaskDelay( 5 );
+		
+		lcd_init_screen_counter --;
+		
+		if (lcd_init_screen_counter <= 0)
+		{
+			lcd_init_screen_counter = LCD_CHECK_INTERVAL;
+			
+			/* char buf[3];
+			
+			vdisp_i2s(buf, 2, 16, 1, lcd_recv(1, 0));
+			vd_prints_xy(VDISP_DEBUG_LAYER, 0, 56, VDISP_FONT_6x8, 0, buf);
+			*/
+			
+			if ((lcd_recv(1, 0) != 0x00) || (lcd_recv(2, 0) != 0x00))
+			{
+				lcd_reset();
+			}
+		}
+		
 	}
 	
 }
