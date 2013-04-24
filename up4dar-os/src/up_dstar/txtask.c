@@ -62,7 +62,7 @@ static ambe_q_t * microphone;
 
 		
 
-static void set_phy_parameters(void)
+void set_phy_parameters(void)
 {
 	uint8_t value;
 	
@@ -74,10 +74,20 @@ static void set_phy_parameters(void)
 	snmp_set_phy_sysparam(3, &value, 1);
 	value = SETTING_CHAR(C_PHY_TXDCSHIFT) & 0xFF;
 	snmp_set_phy_sysparam(4, &value, 1);
+	
+	uint8_t buf[8];
+	
+	memcpy (buf, settings.s.my_callsign, CALLSIGN_LENGTH);
+	buf[7] = 'B'; // just for testing
+	
+	snmp_set_phy_sysparam(5, buf, 8);
+	
+	/* 
 	value = SETTING_SHORT(S_PHY_MATFST) & 0xFF;
 	snmp_set_phy_sysparam(5, &value, 1);
 	value = SETTING_SHORT(S_PHY_LENGTHOFVW) & 0xFF;
 	snmp_set_phy_sysparam(6, &value, 1);
+	*/
 }
 
 #define DLE 0x10
@@ -421,7 +431,7 @@ static void vTXTask( void *pvParameters )
 				tx_state = 1;
 				ambe_start_encode();
 						
-				if (!dcs_mode || hotspot_mode)
+				if (!dcs_mode || hotspot_mode || repeater_mode)
 				{
 					phy_start_tx();
 				}
@@ -468,7 +478,7 @@ static void vTXTask( void *pvParameters )
 					tx_state = 10;
 					last_rx_source = rx_source;
 					
-					if (hotspot_mode)
+					if (hotspot_mode || repeater_mode)
 					{
 						if (last_rx_source == SOURCE_NET) // rx comes over the internet
 						{
@@ -530,7 +540,7 @@ static void vTXTask( void *pvParameters )
 						send_dcs(  session_id, 0, frame_counter ); // send normal frame
 					}
 					
-					if (!dcs_mode || hotspot_mode)
+					if (!dcs_mode || hotspot_mode || repeater_mode)
 					{
 						send_phy ( dcs_ambe_data, frame_counter );
 					}		
@@ -574,7 +584,7 @@ static void vTXTask( void *pvParameters )
 					send_dcs(  session_id, 0, frame_counter ); // send normal frame
 				}
 				
-				if (!dcs_mode || hotspot_mode)
+				if (!dcs_mode || hotspot_mode || repeater_mode)
 				{
 					send_phy ( dcs_ambe_data, frame_counter );
 				}					
@@ -610,7 +620,7 @@ static void vTXTask( void *pvParameters )
 			{
 				tx_state = 0;
 				
-				if (hotspot_mode)
+				if (hotspot_mode || repeater_mode)
 				{
 					if (last_rx_source == SOURCE_PHY) // rx comes over PHY
 					{
@@ -642,7 +652,7 @@ static void vTXTask( void *pvParameters )
 			}
 			else
 			{
-				if (hotspot_mode)
+				if (hotspot_mode || repeater_mode)
 				{
 					if (last_rx_source == SOURCE_NET) // rx comes over the internet
 					{	

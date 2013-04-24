@@ -591,6 +591,37 @@ int snmp_set_phy_sysparam (int32_t arg, const uint8_t * req, int req_len)
 	return 1; // timeout or error
 }
 
+int snmp_set_phy_sysparam_raw (int32_t arg, const uint8_t * req, int req_len)
+{
+	struct snmpReq rq;
+	char buf[12];
+	
+	if ((req_len > 10) || (req_len <= 0))
+		return 1;
+	
+	while (xQueueReceive( snmpReqQueue, &rq, 0))  // flush Q
+	;
+	
+	
+	buf[0] = 0x42; // set parameter
+	buf[1] = arg;
+	
+	memcpy (buf + 2, req, req_len);
+	
+	phyCommSendCmd(buf, req_len + 2);
+	
+	if (xQueueReceive( snmpReqQueue, &rq, 200)) // wait max 200ms
+	{
+		if (rq.param == -1)  // 0xD4  cmd_execution
+		{
+			if (rq.data == 1)  // successful
+			return 0;
+		}
+	}
+	
+	return 1; // timeout or error
+}
+
 
 
 #define NUM_PACKETS_IN_FRAME 21

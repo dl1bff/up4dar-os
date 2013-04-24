@@ -314,6 +314,7 @@ static void set_speaker_volume (int up)
 
 char dcs_mode = 0;
 char hotspot_mode = 0;
+char repeater_mode = 0;
 
 static char snmp_reset_cmnty = 0;
 
@@ -410,10 +411,11 @@ void a_dispatch_key_event( int key_num, int key_event )
 #define REF_SELECTION_SPECIAL 6
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 2, 2, 9, 9, 9, 25 };
-static const char * const ref_modes[3] = { "D-STAR Modem",
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 3, 2, 9, 9, 9, 25 };
+static const char * const ref_modes[4] = { "D-STAR Modem",
 										   "IP Reflector",
-										   "Hotspot     "};
+										   "Hotspot     ",
+										   "Repeater    "};
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
 
 
@@ -519,8 +521,9 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				
 		}
 		
-		dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot"
+		dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
 		hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
+		repeater_mode = (ref_items[0] == 3); //  "Repeater"
 		
 		int n = ref_items[2] * 100 +
 				ref_items[3] * 10 +
@@ -646,8 +649,9 @@ void a_app_manager_init(void)
 	}
 	
 	
-	dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot"
+	dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
 	hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
+	repeater_mode = (ref_items[0] == 3); //  "Repeater"
 	
 	int n = ref_items[2] * 100 +
 	ref_items[3] * 10 +

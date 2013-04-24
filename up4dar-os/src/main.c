@@ -522,7 +522,7 @@ static void vServiceTask( void *pvParameters )
 	
 	int last_backlight = -1;
 	int last_contrast = -1;
-	char last_dcs_mode = 0;
+	char last_repeater_mode = 0;
 	char dcs_boot_timer = 8;
 
 	for (;;)
@@ -681,14 +681,14 @@ static void vServiceTask( void *pvParameters )
 		{
 			dcs_service();
 		
-			if (dcs_mode != last_dcs_mode)
+			if (repeater_mode != last_repeater_mode)
 			{
-				// vdisp_clear_rect(0,0,128,64);
-			
-				/*
-				if (dcs_mode != 0)
+				
+				if (repeater_mode != 0)
 				{
 					dstarChangeMode(1); // Service mode
+					set_phy_parameters();
+					dstarChangeMode(3);  // Repeater mode
 				}
 				else
 				{				
@@ -696,9 +696,8 @@ static void vServiceTask( void *pvParameters )
 					set_phy_parameters();
 					dstarChangeMode(2); // single user mode
 				}
-				*/
 			
-				last_dcs_mode = dcs_mode;
+				last_repeater_mode = repeater_mode;
 			}
 		
 			if (dcs_mode != 0)
