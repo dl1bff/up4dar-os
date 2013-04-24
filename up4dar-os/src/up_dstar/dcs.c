@@ -58,6 +58,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "rx_dstar_crc_header.h"
 
 
+
+char repeater_callsign[CALLSIGN_LENGTH];
+
 static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<td width=\"4%\"><img border=\"0\" src=\"up4dar_dcs.jpg\"></td>"
@@ -996,11 +999,20 @@ static void send_dcs_hotspot_dextra (int session_id, int last_frame, uint8_t fra
 void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter,
 	const uint8_t * rx_data, const uint8_t * rx_voice, uint8_t crc_result, const uint8_t * rx_header)
 {
-	if ((dcs_state == DCS_CONNECTED) && // only send if connected
+	if ( (  hotspot_mode &&
+			(dcs_state == DCS_CONNECTED) && // only send if connected
 			(crc_result == DSTAR_HEADER_OK) &&  // last received header was OK
 			(rx_header[0] == 0x00) &&   // no repeater flag in header
 			(memcmp("DIRECT  ", rx_header + 3, 8) == 0) &&  // RPT1 and RPT2 contain "DIRECT  "
 			(memcmp("DIRECT  ", rx_header + 11, 8) == 0) ) 
+			||
+		 ( repeater_mode &&
+		   (dcs_state == DCS_CONNECTED) && // only send if connected
+		   (crc_result == DSTAR_HEADER_OK) &&  // last received header was OK
+		   (rx_header[0] == 0x40) &&   // repeater flag in header
+		   (memcmp(repeater_callsign, rx_header + 11, 8) == 0)  // RPT1 repeater callsign
+		    )
+		 )
 	{	
 		if (current_server_type == SERVER_TYPE_DEXTRA)
 		{

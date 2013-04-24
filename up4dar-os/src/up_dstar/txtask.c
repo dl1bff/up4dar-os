@@ -60,7 +60,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 static ambe_q_t * microphone;
 
-		
+
+
 
 void set_phy_parameters(void)
 {
@@ -75,12 +76,7 @@ void set_phy_parameters(void)
 	value = SETTING_CHAR(C_PHY_TXDCSHIFT) & 0xFF;
 	snmp_set_phy_sysparam(4, &value, 1);
 	
-	uint8_t buf[8];
-	
-	memcpy (buf, settings.s.my_callsign, CALLSIGN_LENGTH);
-	buf[7] = 'B'; // just for testing
-	
-	snmp_set_phy_sysparam_raw(5, buf, 8);
+	snmp_set_phy_sysparam_raw(5, (uint8_t *) repeater_callsign, CALLSIGN_LENGTH);
 	
 	/* 
 	value = SETTING_SHORT(S_PHY_MATFST) & 0xFF;
@@ -712,6 +708,9 @@ static void vTXTask( void *pvParameters )
 void txtask_init( ambe_q_t * mic )
 {
 	microphone = mic;
+	
+	memcpy (repeater_callsign, settings.s.my_callsign, CALLSIGN_LENGTH);
+	repeater_callsign[7] = 'B'; // just for testing
 
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, tskIDLE_PRIORITY + 1, ( xTaskHandle * ) NULL );
 	
