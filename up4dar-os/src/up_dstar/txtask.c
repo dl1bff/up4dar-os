@@ -80,7 +80,7 @@ void set_phy_parameters(void)
 	memcpy (buf, settings.s.my_callsign, CALLSIGN_LENGTH);
 	buf[7] = 'B'; // just for testing
 	
-	snmp_set_phy_sysparam(5, buf, 8);
+	snmp_set_phy_sysparam_raw(5, buf, 8);
 	
 	/* 
 	value = SETTING_SHORT(S_PHY_MATFST) & 0xFF;

@@ -746,7 +746,7 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 
 static void rx_q_input_stop( uint8_t source, uint16_t session ) 
 {
-	if (dcs_mode && !hotspot_mode && (source == SOURCE_PHY))
+	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
 	
 	if ((source == current_source) && (session == current_session))
@@ -764,7 +764,7 @@ static void rx_q_input_stop( uint8_t source, uint16_t session )
 
 static void rx_q_input_data( uint8_t source, uint16_t session, uint8_t pos, const uint8_t * data )
 {
-	if (dcs_mode && !hotspot_mode && (source == SOURCE_PHY))
+	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
 		
 	if ((source == current_source) && (session == current_session))
@@ -782,7 +782,7 @@ static void rx_q_input_data( uint8_t source, uint16_t session, uint8_t pos, cons
 
 static void rx_q_input_voice_sd ( uint8_t source, uint16_t session, uint8_t pos, const uint8_t * data )
 {
-	if (dcs_mode && !hotspot_mode && (source == SOURCE_PHY))
+	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
 		
 	if (current_source == 0) // start new transmission
@@ -818,7 +818,7 @@ static void rx_q_input_voice( uint8_t source, uint16_t session, uint8_t pos, con
 
 static void rx_q_input_progress ( uint8_t source, uint16_t session, int packet_num )
 {
-	if (dcs_mode && !hotspot_mode && (source == SOURCE_PHY))
+	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
 		
 	if ((source == current_source) && (session == current_session))
