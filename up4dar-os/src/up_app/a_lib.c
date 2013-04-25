@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -419,6 +419,14 @@ static const char * const ref_modes[4] = { "D-STAR Modem",
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
 
 
+static void set_mode_vars(void)
+{
+	dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
+	hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
+	repeater_mode = (ref_items[0] == 3); //  "Repeater"
+}
+
+
 static void ref_print_status (void)
 {
 	
@@ -521,9 +529,9 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				
 		}
 		
-		dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
-		hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
-		repeater_mode = (ref_items[0] == 3); //  "Repeater"
+		
+		set_mode_vars();
+	
 		
 		int n = ref_items[2] * 100 +
 				ref_items[3] * 10 +
@@ -637,9 +645,10 @@ void a_app_manager_init(void)
 		ref_items[5] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
 	}
 	
-	if (SETTING_CHAR(C_DCS_MODE) == 1)
+	if ((SETTING_CHAR(C_DCS_MODE) >= 0) &&
+		(SETTING_CHAR(C_DCS_MODE) <= 3))
 	{
-		ref_items[0] = 1;
+		ref_items[0] = SETTING_CHAR(C_DCS_MODE);
 	}		
 	
 	if ((SETTING_CHAR(C_REF_TYPE) >= 0) &&
@@ -648,10 +657,8 @@ void a_app_manager_init(void)
 		ref_items[1] = SETTING_CHAR(C_REF_TYPE);
 	}
 	
-	
-	dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
-	hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
-	repeater_mode = (ref_items[0] == 3); //  "Repeater"
+		
+	set_mode_vars();
 	
 	int n = ref_items[2] * 100 +
 	ref_items[3] * 10 +
