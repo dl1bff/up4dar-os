@@ -318,7 +318,7 @@ char repeater_mode = 0;
 
 static char snmp_reset_cmnty = 0;
 
-void a_dispatch_key_event( int key_num, int key_event )
+void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 {
 	if (key_num == A_KEY_BUTTON_APP_MANAGER)
 	{
@@ -382,10 +382,30 @@ void a_dispatch_key_event( int key_num, int key_event )
 		
 		int res = 0;
 		
-		if (current_app->key_event_handler != NULL)
+		if (layer_num == VDISP_CURRENT_LAYER)
 		{
-			res = current_app->key_event_handler(current_app, key_num, key_event);
+			if (current_app->key_event_handler != NULL)
+			{
+				res = current_app->key_event_handler(current_app, key_num, key_event);
+			}
 		}
+		else
+		{
+			app_context_t * tmp_app = app_list_head;
+			
+			while (tmp_app != NULL)
+			{
+				if ((tmp_app->screen_num == layer_num) && 
+					(tmp_app->key_event_handler != NULL))
+				{
+					res = tmp_app->key_event_handler(tmp_app, key_num, key_event);
+					break;
+				}
+				
+				tmp_app = tmp_app->next;
+			}
+		}
+		
 		
 		if (res == 0) // handler didn't use this event
 		{

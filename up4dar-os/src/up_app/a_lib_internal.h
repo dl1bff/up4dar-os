@@ -31,7 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define A_KEY_BUTTON_APP_MANAGER  0
 
-void a_dispatch_key_event( int key_num, int key_event );
+
+void a_dispatch_key_event( int layer_num, int key_num, int key_event );
 
 void a_run_app ( void (*app_main) (void * app_context));
 

@@ -67,4 +67,6 @@ SNMP_GET_FUNC ( snmp_get_sw_version )
 
 SNMP_GET_FUNC ( snmp_get_display )
 
+SNMP_SET_FUNC ( snmp_set_remote_button )
+
 #endif /* SNMP_DATA_H_ */

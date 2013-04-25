@@ -103,6 +103,19 @@ int snmp_get_voltage(int32_t arg, uint8_t * res, int * res_len, int maxlen)
 }
 
 
+static uint8_t remote_button_pressed;
+static uint8_t remote_button_screen;
+static uint8_t remote_button_number;
+
+int snmp_set_remote_button (int32_t arg, const uint8_t * req, int req_len)
+{
+	remote_button_screen = arg;
+	remote_button_number = req[req_len -1]; // last byte
+	remote_button_pressed = 1;
+	
+	return 0;
+}
+
 
 // static unsigned char x_counter = 0;
 
@@ -428,6 +441,18 @@ static void vButtonTask( void *pvParameters )
 			sw3_pressed = 1;
 		}					
 		
+		
+		if (remote_button_pressed != 0)
+		{
+			remote_button_pressed = 0; // delete request
+			
+			a_dispatch_key_event( remote_button_screen, 
+				remote_button_number, A_KEY_PRESSED);
+			a_dispatch_key_event( remote_button_screen,
+				remote_button_number, A_KEY_RELEASED);
+		}
+		
+		
 		int i;
 				
 		for (i=0; i < NUMBER_OF_KEYS; i++)
@@ -451,37 +476,37 @@ static void vButtonTask( void *pvParameters )
 			{
 				if (touchKeyCounter[i] >= 2)
 				{
-					a_dispatch_key_event( i, A_KEY_RELEASED);
+					a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_RELEASED);
 				}
 				touchKeyCounter[i] = 0;					
 			}					
 					
 			if (touchKeyCounter[i] == 2)
 			{
-				a_dispatch_key_event( i, A_KEY_PRESSED);
+				a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_PRESSED);
 			} 
 			else if (touchKeyCounter[i] == 50)
 			{
-				a_dispatch_key_event( i, A_KEY_HOLD_500MS);
+				a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_HOLD_500MS);
 			}
 			else if (touchKeyCounter[i] == 200)
 			{
-				a_dispatch_key_event( i, A_KEY_HOLD_2S);
+				a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_HOLD_2S);
 			}
 			else if (touchKeyCounter[i] == 500)
 			{
-				a_dispatch_key_event( i, A_KEY_HOLD_5S);
+				a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_HOLD_5S);
 			}
 			else if (touchKeyCounter[i] == 1000)
 			{
-				a_dispatch_key_event( i, A_KEY_HOLD_10S);
+				a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_HOLD_10S);
 			}
 			
 			if (touchKeyCounter[i] > 63) // start repeat after 630ms
 			{
 				if ((touchKeyCounter[i] & 0x07) == 0) // every 80ms
 				{
-					a_dispatch_key_event( i, A_KEY_REPEAT);
+					a_dispatch_key_event( VDISP_CURRENT_LAYER, i, A_KEY_REPEAT);
 				}
 			}
 			

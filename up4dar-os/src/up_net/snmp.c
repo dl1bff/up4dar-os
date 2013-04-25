@@ -346,6 +346,13 @@ static const struct snmp_table_struct {
 	{ "18140", BER_OCTETSTRING, snmp_get_display, 0, 3 },
 	{ "18150", BER_OCTETSTRING, snmp_get_display, 0, 4 },
 	{ "18160", BER_OCTETSTRING, snmp_get_display, 0, 5 },
+	
+	{ "18210", BER_INTEGER, snmp_return_integer, snmp_set_remote_button, 0 },
+	{ "18220", BER_INTEGER, snmp_return_integer, snmp_set_remote_button, 1 },
+	{ "18230", BER_INTEGER, snmp_return_integer, snmp_set_remote_button, 2 },
+	{ "18240", BER_INTEGER, snmp_return_integer, snmp_set_remote_button, 3 },
+	{ "18250", BER_INTEGER, snmp_return_integer, snmp_set_remote_button, 4 },
+	{ "18260", BER_INTEGER, snmp_return_integer, snmp_set_remote_button, 5 },
 		
 	{ "210",	BER_OCTETSTRING,	snmp_get_phy_sysinfo,		0			, 0},
 	{ "220",	BER_OCTETSTRING,	snmp_get_phy_cpuid,		0			, 0},
