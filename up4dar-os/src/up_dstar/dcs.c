@@ -595,22 +595,28 @@ static void dcs_keepalive_response(int request_size)
 	
 	memcpy (d, settings.s.my_callsign, 7);
 
-	switch (request_size)
+
+	if (current_server_type == SERVER_TYPE_DEXTRA)
 	{
-		case DEXTRA_KEEPALIVE_SIZE:
-			d[7] = ' ';
-			d[8] = 0;
-	    	break;
-		case DEXTRA_KEEPALIVE_V2_SIZE:
-	  		d[7] = DCS_REGISTER_MODULE;
-			d[8] = current_module;
-			d[9] = 0;
-	    	break;
-		default:
-	  		d[7] = DCS_REGISTER_MODULE;
-			d[8] = 0;
-			dcs_get_current_reflector_name((char *) (d + 9));
-	    	break;
+		switch (request_size)
+		{
+			case DEXTRA_KEEPALIVE_SIZE:
+				d[7] = ' ';
+				d[8] = 0;
+				break;
+			
+			case DEXTRA_KEEPALIVE_V2_SIZE:
+				d[7] = DCS_REGISTER_MODULE;
+				d[8] = current_module;
+				d[9] = 0;
+				break;
+		}				
+	}
+	else
+	{
+		d[7] = DCS_REGISTER_MODULE;
+		d[8] = 0;
+		dcs_get_current_reflector_name((char *) (d + 9));
 	}
 
 	dcs_calc_chksum_and_send(packet, size);
