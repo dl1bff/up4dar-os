@@ -575,8 +575,8 @@ static void vServiceTask( void *pvParameters )
 			
 		vdisp_prints_xy( 55, 0, VDISP_FONT_4x6, 0, tmp_buf );
 			
-		vdisp_i2s( tmp_buf, 5, 10, 0, serial_rx_error );
-		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 28, VDISP_FONT_4x6, 0, tmp_buf );
+		// vdisp_i2s( tmp_buf, 5, 10, 0, serial_rx_error );
+		// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 28, VDISP_FONT_4x6, 0, tmp_buf );
 		vdisp_i2s( tmp_buf, 5, 10, 0, serial_rx_ok );
 		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 34, VDISP_FONT_4x6, 0, tmp_buf );	
 		// vdisp_i2s( tmp_buf, 5, 10, 0, serial_timeout_error );

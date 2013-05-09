@@ -115,7 +115,7 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	{
 		if (diagram_displayed != 0)
 		{
-			vdisp_clear_rect (0, 0, 128, 36);
+			vdisp_clear_rect (0, 8, 128, 19);
 			diagram_displayed = 0;
 		}
 		vdisp_prints_xy(74, 18, VDISP_FONT_4x6, 0, "UR:");
@@ -332,7 +332,7 @@ static char pos_in_frame = 0;
 
 #define SOURCE_STOP	3
 
-static void rx_q_input_stop( uint8_t source, uint16_t session );
+static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos );
 
 
 static void dstarStateChange(unsigned char n)
@@ -367,7 +367,7 @@ static void dstarStateChange(unsigned char n)
 			
 		case 1:
 		
-			rx_q_input_stop ( SOURCE_PHY, 0 );
+			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
 		
 			if (repeater_msg == 0)
 			{	
@@ -436,14 +436,32 @@ static void dstarStateChange(unsigned char n)
 	dState = n;
 }
 
-/*
-static void print_diagram(int mean_value)
+
+int diagram_mean_value = 0;
+int diagram_deviation = 0;
+
+static void set_diagram(int mean_value, int deviation)
+{
+	diagram_mean_value = mean_value;
+	diagram_deviation = deviation;
+}
+
+
+void dstar_print_diagram(void)
 {
 	int i;
 	
+	char buf[5];
+	
+	vdisp_i2s(buf, 4, 10, 0, diagram_deviation);
+	vdisp_prints_xy( 0, 10, VDISP_FONT_6x8, 0, buf );
+	vdisp_prints_xy( 24, 10, VDISP_FONT_6x8, 0, "Hz" );
+	vdisp_prints_xy( 0, 18, VDISP_FONT_6x8, 0, "Hub" );
+	
+	
 	for (i=0; i < FRAMESYNC_LEN; i++)
 	{
-		int d = (mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
+		int d = (diagram_mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
 					
 		if ((d > -20) && (d < 20))
 		{
@@ -455,13 +473,11 @@ static void print_diagram(int mean_value)
 		}
 	}			
 				
-	char buf[5];
-			
-	vdisp_i2s(buf, 3, 10, 0, mean_value);
+	vdisp_i2s(buf, 3, 10, 0, diagram_mean_value);
 	vdisp_prints_xy( 116, 14, VDISP_FONT_4x6, 0, buf );
 	
 }
-*/
+
 
 void dstarResetCounters(void)
 {
@@ -660,9 +676,18 @@ static uint8_t last_valid_source = 0;
 
 int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 {
-	if (num_written < 8)  // pre-queue at least 8 ambe frames
-		return 0;
+	// if (num_written < 8)  // pre-queue at least 8 ambe frames
+	//	return 0;
 	
+	if (num_written == 0)
+		return 0;
+
+/*		
+	char tmp_buf[6];
+	
+	vdisp_i2s( tmp_buf, 5, 10, 0, num_written );
+	vd_prints_xy(VDISP_DEBUG_LAYER, 108, 28, VDISP_FONT_4x6, 0, tmp_buf );
+	*/
 	switch (rx_q_buf[current_pos].source)
 	{
 		case SOURCE_NET:
@@ -672,10 +697,12 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 			break;
 			
 		case SOURCE_STOP:
+			current_source = 0; // switch off
 			num_written = 0; // stop processing
 			rx_q_buf[current_pos].source = 0; 
 			last_valid_source = 0;
 			current_pos = 0;
+			num_empty = 0;
 			return 0;
 			
 		default: // zero
@@ -741,10 +768,12 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 		current_pos = 0;
 	}
 	
+	 
+	
 	return last_valid_source;
 }
 
-static void rx_q_input_stop( uint8_t source, uint16_t session ) 
+static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos ) 
 {
 	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
@@ -753,9 +782,9 @@ static void rx_q_input_stop( uint8_t source, uint16_t session )
 	{
 		current_source = 0;
 		
-		int p = pos_in_frame & 0x1F;
+		int p = pos & 0x1F;
 		
-		if (p > 20)
+		if (p >= NUM_PACKETS_IN_FRAME)
 		return;
 		
 		rx_q_buf[p].source = SOURCE_STOP;
@@ -771,7 +800,7 @@ static void rx_q_input_data( uint8_t source, uint16_t session, uint8_t pos, cons
 	{
 		int p = pos & 0x1F;
 		
-		if (p > 20)
+		if (p >= NUM_PACKETS_IN_FRAME)
 			return;
 		
 		memcpy (rx_q_buf[p].data, data, 3);
@@ -798,7 +827,7 @@ static void rx_q_input_voice_sd ( uint8_t source, uint16_t session, uint8_t pos,
 	{
 		int p = pos & 0x1F; 
 		
-		if (p > 20)
+		if (p >= NUM_PACKETS_IN_FRAME)
 			return;
 			
 		rx_q_buf[p].source = source;
@@ -852,7 +881,7 @@ static void processPacket(void)
 	{
 		case 0x01:
 			
-			vdisp_clear_rect (0, 0, 128, 64);
+			// vdisp_clear_rect (0, 0, 128, 64);
 			// dstarChangeMode(4);
 			if (dp.dataLen <= (sizeof sysinfo))
 			{
@@ -1017,7 +1046,7 @@ static void processPacket(void)
 			}
 			break;
 		case 0x34:
-			rx_q_input_stop ( SOURCE_PHY, 0 );
+			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
 			break;
 			
 		case 0x35:
@@ -1036,18 +1065,10 @@ static void processPacket(void)
 					frameSync[i] = dp.data[i+2];
 				}			
 				
-				// print_diagram(dp.data[0]);	
-				
-				/*
-				char buf[5];
-				int hub = dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR);
+				set_diagram(dp.data[0], dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR));	
 				
 				
-				vdisp_i2s(buf, 4, 10, 0, hub);
-				vdisp_prints_xy( 0, 10, VDISP_FONT_6x8, 0, buf );
-				vdisp_prints_xy( 24, 10, VDISP_FONT_6x8, 0, "Hz" );
-				vdisp_prints_xy( 0, 18, VDISP_FONT_6x8, 0, "Hub" );
-				*/
+				
 				
 				/*
 				if (hub > hub_max)
@@ -1269,7 +1290,7 @@ void dstarProcessDCSPacket( const uint8_t * data )
 	if ((data[45] & 0x40) != 0)
 	{
 		last_frame = 1;
-		rx_q_input_stop ( SOURCE_NET, dcs_session );
+		rx_q_input_stop ( SOURCE_NET, dcs_session, data[45] & 0x1F );
 	}			
 	else
 	{
@@ -1371,7 +1392,7 @@ void dstarProcessDExtraPacket(const uint8_t* data)
 
 	if ((data[14] & 0x40) != 0)
 	{
-		rx_q_input_stop ( SOURCE_NET, dcs_session );
+		rx_q_input_stop ( SOURCE_NET, dcs_session, data[14] & 0x1F );
 	}
 	else
 	{

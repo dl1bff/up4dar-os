@@ -411,7 +411,7 @@ static void vTXTask( void *pvParameters )
 	uint8_t frame_counter = 0;
 	short secs = 0;
 	short tx_counter = 0;
-	char buf[4];
+	char buf[6];
 	long curr_tx_ticks = 0;
 	int last_rx_source = 0;
 	
@@ -459,7 +459,12 @@ static void vTXTask( void *pvParameters )
 					vd_copy_screen(VDISP_SAVE_LAYER, VDISP_MAIN_LAYER, 36, 64);
 					vdisp_clear_rect (0, 0, 128, 64);
 					
+					if (rx_source == SOURCE_PHY)
+					{
+						dstar_print_diagram();
+					}
 					
+					vTaskDelay(200); // fill rx buffer
 					
 					dstar_get_header(rx_source, &header_crc_result, rx_header);
 					
@@ -473,6 +478,8 @@ static void vTXTask( void *pvParameters )
 					
 					tx_state = 10;
 					last_rx_source = rx_source;
+					
+					
 					
 					if (hotspot_mode || repeater_mode)
 					{
@@ -488,6 +495,8 @@ static void vTXTask( void *pvParameters )
 									header_crc_result, rx_header );
 						}						
 					}
+					
+					
 				}
 				else
 				{
@@ -547,6 +556,11 @@ static void vTXTask( void *pvParameters )
 					
 					if (tdiff > 0)
 					{
+						if (tdiff > 500)
+						{
+							tdiff = 500;
+						}
+						
 						vTaskDelay(tdiff); 
 					}
 					
@@ -667,11 +681,19 @@ static void vTXTask( void *pvParameters )
 				
 				if (tdiff > 0)
 				{
+					if (tdiff > 500)
+					{
+						tdiff = 500;
+					}
+					
 					vTaskDelay(tdiff);
 				}
 			}
 			break;
 		}
+		
+		vdisp_i2s( buf, 5, 10, 0, tx_state );
+		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 28, VDISP_FONT_4x6, 0, buf );
 		
 		if ((tx_state > 0) && (tx_state < 10)) // increment frame_counter only for PTT+microphone usage
 		{

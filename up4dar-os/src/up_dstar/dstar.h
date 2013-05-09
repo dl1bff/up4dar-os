@@ -62,5 +62,5 @@ void dstarProcessDExtraPacket(const uint8_t* data);
 int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice);
 
 void dstar_get_header(uint8_t rx_source, uint8_t * crc_result, uint8_t * header_data);
-
+void dstar_print_diagram(void);
 #endif /* DSTAR_H_ */
