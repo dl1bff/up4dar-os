@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ extern const uint8_t ipv4_zero_addr[4];
 
 #define UDP_PACKET_SIZE(a) (14 + 20 + 8 + (a))
 
-#define NUM_UDP_SOCKETS   4
+#define NUM_UDP_SOCKETS   5
 
 extern unsigned short udp_socket_ports[NUM_UDP_SOCKETS];
 
@@ -52,7 +52,7 @@ extern unsigned short udp_socket_ports[NUM_UDP_SOCKETS];
 #define UDP_SOCKET_SNMP		1
 #define UDP_SOCKET_DNS		2
 #define UDP_SOCKET_DCS		3
-
+#define UDP_SOCKET_NTP		4
 
 
 void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header);

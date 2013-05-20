@@ -532,6 +532,12 @@
     <Compile Include="src\up_net\lldp.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_net\ntp.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_net\ntp.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_net\snmp.c">
       <SubType>compile</SubType>
     </Compile>

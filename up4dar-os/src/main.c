@@ -79,6 +79,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/sw_update.h"
 #include "up_crypto/up_crypto.h"
 #include "up_dstar/txtask.h"
+#include "up_net/ntp.h"
 
 
 
@@ -1110,6 +1111,8 @@ int main (void)
 	crypto_init(& microphone);
 	
 	dns_init();
+	
+	ntp_init();
 	
 	if (eth_txmem_init() != 0)
 	{

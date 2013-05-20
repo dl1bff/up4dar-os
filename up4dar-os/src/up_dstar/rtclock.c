@@ -121,3 +121,9 @@ void rtclock_disp_xy(int x, int y, int dots, int display_seconds)
 		vdisp_prints_xy(x + 32, y, VDISP_FONT_6x8, 0, buf);
 	}
 }
+
+
+void rtclock_set_time(unsigned long time)
+{
+	the_clock = time;
+}
