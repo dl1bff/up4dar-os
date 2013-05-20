@@ -26,5 +26,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void ntp_handle_packet(const uint8_t* data, int length, const uint8_t* address);
 void ntp_init(void);
+void ntp_service(void);
 
 #endif

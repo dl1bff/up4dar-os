@@ -697,6 +697,8 @@ static void vServiceTask( void *pvParameters )
 		ipneigh_service();
 		
 		a_app_manager_service();
+		
+		ntp_service();
 			 
 			
 		if (dcs_boot_timer > 0)
