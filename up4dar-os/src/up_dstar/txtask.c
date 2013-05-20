@@ -732,8 +732,10 @@ void txtask_init( ambe_q_t * mic )
 	microphone = mic;
 	
 	memcpy (repeater_callsign, settings.s.my_callsign, CALLSIGN_LENGTH);
-	repeater_callsign[7] = 'B'; // just for testing
-
+	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'Z'))
+	{
+		repeater_callsign[7] = 'B'; // my repeater module
+	}
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, tskIDLE_PRIORITY + 1, ( xTaskHandle * ) NULL );
 	
 }

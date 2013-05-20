@@ -562,7 +562,11 @@ static void dcs_link_to (char module)
 	vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "    ");
 	
 	d[7] = ' ';
-	d[8] = DCS_REGISTER_MODULE; // my repeater module
+	d[8] = settings.s.my_callsign[7];
+	if ((d[8] < 'A') || (d[8] > 'Z'))
+	{
+		d[8] = DCS_REGISTER_MODULE; // my repeater module
+	}
 	d[9] = module; // module to link to
 	d[10] = 0;
 
@@ -606,7 +610,11 @@ static void dcs_keepalive_response(int request_size)
 				break;
 			
 			case DEXTRA_KEEPALIVE_V2_SIZE:
-				d[7] = DCS_REGISTER_MODULE;
+				d[7] = settings.s.my_callsign[7];
+				if ((d[7] < 'A') || (d[7] > 'Z'))
+				{
+					d[7] = DCS_REGISTER_MODULE; // my repeater module
+				}
 				d[8] = current_module;
 				d[9] = 0;
 				break;
@@ -614,7 +622,11 @@ static void dcs_keepalive_response(int request_size)
 	}
 	else
 	{
-		d[7] = DCS_REGISTER_MODULE;
+		d[7] = settings.s.my_callsign[7];
+		if ((d[7] < 'A') || (d[7] > 'Z'))
+		{
+			d[7] = DCS_REGISTER_MODULE; // my repeater module
+		}
 		d[8] = 0;
 		dcs_get_current_reflector_name((char *) (d + 9));
 	}
@@ -750,8 +762,11 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	
 	memcpy (d + 7, buf, 8);
 	//memcpy (d + 15, buf, 8);
-	memcpy (d + 15, settings.s.my_callsign, 7);
-	d[22] = DCS_REGISTER_MODULE;
+	memcpy (d + 15, settings.s.my_callsign, 8);
+	if ((d[22] < 'A') || (d[22] > 'Z'))
+	{
+		d[22] = DCS_REGISTER_MODULE; // my repeater module
+	}
 	memcpy(d + 23, "CQCQCQ  ", 8); 
 	memcpy (d + 31, settings.s.my_callsign, 8);
 	memcpy (d + 39, settings.s.my_ext, 4);
@@ -928,8 +943,11 @@ static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_
 	
 	memcpy (d + 7, buf, 8);
 	//memcpy (d + 15, buf, 8);
-	memcpy (d + 15, settings.s.my_callsign, 7);
-	d[22] = DCS_REGISTER_MODULE;
+	memcpy (d + 15, settings.s.my_callsign, 8);
+	if ((d[22] < 'A') || (d[22] > 'Z'))
+	{
+		d[22] = DCS_REGISTER_MODULE; // my repeater module
+	}
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy (d + 31, rx_header + 27, 8);
 	memcpy (d + 39, rx_header + 35, 4);
