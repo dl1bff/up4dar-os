@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -72,6 +72,15 @@ static audio_q_t * audio_input_q;
 static ambe_q_t ambe_output_q;
 static ambe_q_t * ambe_input_q;
 
+// our special LFI indicator:  {0x9E, 0x8D, 0x36, 0x98, 0x66, 0x1E, 0x3F, 0x23, 0xE4}
+static const uint8_t ambe_lfi_data_sd[36] = 
+  {0xF0, 0x0F, 0xFF, 0xF0, 0xF0, 0x00, 0xFF, 0x0F,
+	  0x00, 0xFF,
+	  0x0F, 0xF0, 0xF0, 0x0F, 0xF0, 0x00, 0x0F, 0xF0,
+	  0x0F, 0xF0, 0x00, 0x0F, 0xFF, 0xF0, 0x00, 0xFF,
+	  0xFF, 0xFF,
+	  0x00, 0xF0, 0x00, 0xFF, 0xFF, 0xF0, 0x0F, 0x00};  // SD version of LFI indicator
+	  
 
 static unsigned short int chan_tx_data[60] =
   {
@@ -312,7 +321,6 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 	char audio_meter_hold_timer = 0;
 
 	char audio_clip = 0;
-	
 
 	for( ;; )
 	{
@@ -528,6 +536,14 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 													// after queue is empty
 						}
 						
+						if (memcmp((chan_tx_data + 12), ambe_lfi_data_sd, sizeof ambe_lfi_data_sd) == 0)
+						{
+							chan_tx_data[1] = 0x0080; // set lost frame indicator bit
+						}
+						else
+						{
+							chan_tx_data[1] = 0x0000; // clear lost frame indicator bit
+						}							
 					}
 					
 					break;
