@@ -526,15 +526,22 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 					}
 					else
 					{
-						chan_tx_data[11] = 0x8003; // decoder,  do not set rate again
-						
-						
+												
 						if (ambe_q_get_sd (& ambe_output_q, (uint8_t *) (chan_tx_data + 12)) == 0)
 						{
 							 // if buffer not empty set silence_counter
 							silence_counter = 150;  // output audio for another 150 samples
 													// after queue is empty
 						}
+						
+						if (silence_counter == 0) // no AMBE data received for some time
+						{
+							chan_tx_data[11] = 0x800b; // decoder,  do not set rate again, enable standard sleep mode
+						}
+						else
+						{
+							chan_tx_data[11] = 0x8003; // decoder,  do not set rate again							
+						}							
 						
 						if (memcmp((chan_tx_data + 12), ambe_lfi_data_sd, sizeof ambe_lfi_data_sd) == 0)
 						{

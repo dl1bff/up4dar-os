@@ -78,7 +78,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *----------------------------------------------------------*/
 
 #define configUSE_PREEMPTION      1
-#define configUSE_IDLE_HOOK       0
+#define configUSE_IDLE_HOOK       1
 // #define configUSE_TICK_HOOK       0
 #define configUSE_TICK_HOOK       1
 

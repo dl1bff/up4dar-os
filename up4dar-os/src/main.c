@@ -1127,3 +1127,9 @@ int main (void)
   
 	return 0;
 }
+
+
+void vApplicationIdleHook( void )
+{
+	SLEEP(0); // idle sleep mode
+}
