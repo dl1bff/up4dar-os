@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //#define SWVER_BYTE0		(SOFTWARE_IMAGE_SYSTEM(5) | SOFTWARE_MATURITY_BETA )
 #define SWVER_BYTE1		1
 #define SWVER_BYTE2		1
-#define SWVER_BYTE3		29
+#define SWVER_BYTE3		31
 
 
 
