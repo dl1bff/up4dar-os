@@ -90,6 +90,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define L_IPV4_DNS1				3
 #define L_IPV4_DNS2				4
 #define L_IPV4_NTP				5
+#define L_BOOLVAL_A				6
 
 
 // SHORT values
@@ -128,9 +129,20 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_REF_TYPE					18
 
 
+// BOOL values
+
+#define B_ENABLE_NTP			((L_BOOLVAL_A << 5) | (1 <<  0))
+#define B_ONLY_TEN_MBIT			((L_BOOLVAL_A << 5) | (1 <<  1))
+#define B_ENABLE_ALT_DNS		((L_BOOLVAL_A << 5) | (1 <<  2))
+
+
+
 #define SETTING_LONG(a) (settings.s.long_values[a])
 #define SETTING_SHORT(a) (settings.s.short_values[a])
 #define SETTING_CHAR(a) (settings.s.char_values[a])
+#define SETTING_BOOL(a) ((settings.s.long_values[(a) >> 5] & (1 << ((a) & 0x1F))) ? 1 : 0)
+#define SETTING_SET_BOOL(a,b) (settings.s.long_values[(a) >> 5] = \
+	(settings.s.long_values[(a) >> 5] & (~(1 << ((a) & 0x1F)))) | (((b) ? 1 : 0) << ((a) & 0x1F)) )
 
 void settings_init(void);
 

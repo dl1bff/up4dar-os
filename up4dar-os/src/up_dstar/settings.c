@@ -45,6 +45,7 @@ const limits_t long_values_limits[NUM_LONG_VALUES] = {
 	{  0,  0,  0  },
 	{  0,  0,  0  },
 	{  0,  0,  0  },
+	{  0,  0,  0  },
 	{  0,  0,  0  }
 };
 
@@ -230,6 +231,13 @@ int snmp_get_setting_char (int32_t arg, uint8_t * res, int * res_len, int maxlen
 	return 0;
 }
 
+int snmp_get_setting_bool (int32_t arg, uint8_t * res, int * res_len, int maxlen)
+{
+	*res = SETTING_BOOL(arg);
+	*res_len = 1;
+	return 0;
+}
+
 int snmp_set_setting_long (int32_t arg, const uint8_t * req, int req_len)
 {
 	limits_t limit = long_values_limits[arg];
@@ -315,3 +323,20 @@ int snmp_set_setting_char (int32_t arg, const uint8_t * req, int req_len)
 	settings.s.char_values[arg] = value;
 	return 0;
 }	
+
+int snmp_set_setting_bool (int32_t arg, const uint8_t * req, int req_len)
+{
+	int value = 0;
+	if ((req[0] & 0x80) != 0)
+	{
+		value = -1;
+	}
+	int i;
+	for (i=0; i < req_len; i++)
+	{
+		value = (value << 8) | req[i];
+	}
+	
+	SETTING_SET_BOOL(arg, value);
+	return 0;
+}

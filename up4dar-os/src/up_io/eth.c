@@ -108,6 +108,8 @@ void eth_init(void)
 	
 	AVR32_MACB.USRIO.rmii = 0; // RMII
 	
+	
+	
 	// tx_buffer_q[0] = (unsigned long) & vdisp_frame;
 	// tx_buffer_q[1] = (sizeof vdisp_frame) | 0x40008000; // wrap bit, last buffer
 	
@@ -197,6 +199,13 @@ void eth_init(void)
 	
 	*/
 	
+	// AVR32_MACB.man = 0x50820800; // write register 0x00, power down
+	
+	// AVR32_MACB.man = 0x50821200; // write register 0x00, power on, autoneg, restart autoneg
+	
+	// AVR32_MACB.man = 0x50920061; // write register 0x04, advertise only 10MBit/s for autoneg
+	
+	AVR32_MACB.man = 0x50828000; // write register 0x00, software reset
 }
 
 

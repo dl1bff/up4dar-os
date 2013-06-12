@@ -338,7 +338,10 @@ static const struct snmp_table_struct {
 	{ "1730", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_GW },
 	{ "1740", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_DNS1 },
 	{ "1750", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_DNS2 },
-	{ "1760", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_NTP },	
+	{ "1760", BER_OCTETSTRING, snmp_get_setting_long, snmp_set_ipv4_addr, L_IPV4_NTP },
+	{ "1770", BER_INTEGER, snmp_get_setting_bool, snmp_set_setting_bool, B_ENABLE_NTP },
+	{ "1780", BER_INTEGER, snmp_get_setting_bool, snmp_set_setting_bool, B_ONLY_TEN_MBIT },
+	{ "1790", BER_INTEGER, snmp_get_setting_bool, snmp_set_setting_bool, B_ENABLE_ALT_DNS },
 		
 	{ "18110", BER_OCTETSTRING, snmp_get_display, 0, 0 },
 	{ "18120", BER_OCTETSTRING, snmp_get_display, 0, 1 },

@@ -27,6 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipneigh.h"
 #include "ipv4.h"
 #include "dhcp.h"
+#include "up_dstar/settings.h"
 
 // #include "dns_cache.h"
 
@@ -117,7 +118,7 @@ void ntp_service(void)
 	{
 		case NTP_STATE_IDLE:
 			
-			if (dhcp_is_ready())
+			if (dhcp_is_ready() && SETTING_BOOL(B_ENABLE_NTP))
 			{
 				
 				if (memcmp(ipv4_ntp, ipv4_zero_addr, sizeof(ipv4_ntp)) == 0)

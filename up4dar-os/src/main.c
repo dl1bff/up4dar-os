@@ -542,6 +542,7 @@ static void set_phy_parameters(void)
 */
 
 static int initialHeapSize;
+static char eth_autoneg_state = 0;
 		
 static void vServiceTask( void *pvParameters )
 {
@@ -590,14 +591,34 @@ static void vServiceTask( void *pvParameters )
 		vdisp_i2s( tmp_buf, 5, 10, 0, xPortGetFreeHeapSize() );
 		vd_prints_xy(VDISP_DEBUG_LAYER, 108, 58, VDISP_FONT_4x6, 0, tmp_buf );
 		
-			
-		// ethernet status
-			
-		int v = AVR32_MACB.MAN.data;
-			
-		AVR32_MACB.man = 0x60C20000; // read register 0x10
-			
 		
+		int v = 0;
+			
+		switch (eth_autoneg_state)
+		{
+			case 0:
+			if (SETTING_BOOL(B_ONLY_TEN_MBIT))
+			{
+				AVR32_MACB.man = 0x50920061; // write register 0x04, advertise only 10MBit/s for autoneg
+			}
+			eth_autoneg_state = 1;
+			break;
+			
+			case 1:
+			AVR32_MACB.man = 0x50821200; // write register 0x00, power on, autoneg, restart autoneg
+			eth_autoneg_state = 2;
+			break;
+			
+			case 2:
+			AVR32_MACB.man = 0x60C20000; // read register 0x10
+			eth_autoneg_state = 3;
+			break;
+			
+			case 3:
+			v = AVR32_MACB.MAN.data; // read data from previously read register 0x10
+			AVR32_MACB.man = 0x60C20000; // read register 0x10
+			break;
+		}
 			
 		const char * net_status = "     ";
 			
@@ -668,6 +689,8 @@ static void vServiceTask( void *pvParameters )
 			*/
 			
 		// printDebug("Test von DL1BFF\r\n");
+		
+		
 			
 		lldp_counter --;
 			

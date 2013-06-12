@@ -191,7 +191,14 @@ static void dcs_set_dns_name(void)
 		case SERVER_TYPE_DCS:
 			memcpy(dcs_server_dns_name, "dcs", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
-			memcpy(dcs_server_dns_name+6, ".xreflector.net", 16);
+			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
+			{
+				memcpy(dcs_server_dns_name+6, ".mdx.de", 8);
+			}
+			else
+			{
+				memcpy(dcs_server_dns_name+6, ".xreflector.net", 16);
+			}
 			break;
 		case SERVER_TYPE_DEXTRA:
 			memcpy(dcs_server_dns_name, "xrf", 3);
