@@ -127,11 +127,21 @@ static int dns_parse_domain(const char * name)
 	return 0;
 }
 
+static const uint8_t tst002addr[4] = { 192, 168, 1, 210 };
+	
+static uint8_t dns_result_ipv4_addr[4];
 
 int dns_req_A (const char * name)
 {
 	if (dns_state == DNS_STATE_LOCKED)
 	{
+		if (strcmp(name, "tst002.mdx.de") == 0)
+		{
+			memcpy (dns_result_ipv4_addr, tst002addr, sizeof tst002addr);
+			dns_state = DNS_STATE_RESULT_OK;
+			return 0;
+		}
+		
 		if (dns_parse_domain(name) != 0)
 		{
 			return -1;  // something wrong with the requested name
@@ -171,7 +181,7 @@ int dns_result_available(void)
 }
 
 
-static uint8_t dns_result_ipv4_addr[4];
+
 
 int dns_get_A_addr ( uint8_t * v4addr)
 {
