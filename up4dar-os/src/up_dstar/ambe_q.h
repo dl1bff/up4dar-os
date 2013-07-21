@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define AMBE_Q_BUFLEN  (AMBE_Q_DATASIZE_SD * 50)
 
 extern const uint8_t ambe_silence_data[AMBE_Q_DATASIZE];
+extern const uint8_t ambe_lfi_indicator[AMBE_Q_DATASIZE];
 
 struct ambe_q {
 	uint8_t buf[AMBE_Q_BUFLEN];

@@ -39,6 +39,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 const uint8_t ambe_silence_data[AMBE_Q_DATASIZE] =
  { 0x9e, 0x8d, 0x32, 0x88, 0x26, 0x1a, 0x3f, 0x61, 0xe8 };
+	 
+const uint8_t ambe_lfi_indicator[AMBE_Q_DATASIZE] =
+ { 0x9E, 0x8D, 0x36, 0x98, 0x66, 0x1E, 0x3F, 0x23, 0xE4 };
 
 
 void ambe_expand_to_sd_data( uint8_t * sd_data, const uint8_t * inp_data)

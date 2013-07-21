@@ -530,7 +530,7 @@ static portTASK_FUNCTION( ambeTask, pvParameters )
 						if (ambe_q_get_sd (& ambe_output_q, (uint8_t *) (chan_tx_data + 12)) == 0)
 						{
 							 // if buffer not empty set silence_counter
-							silence_counter = 150;  // output audio for another 150 samples
+							silence_counter = 10;  // output audio for another 10 * AUDIO_Q_TRANSFERLEN samples
 													// after queue is empty
 						}
 						
@@ -699,7 +699,7 @@ void ambe_input_data( const uint8_t * d)
 void ambe_input_data_sd( const uint8_t * d)
 {
 	ambe_q_put_sd ( & ambe_output_q, d );
-	ambe_output_q.state = 1; // "fast" option
+	// ambe_output_q.state = 1; // "fast" option
 }
 
 void ambe_init( audio_q_t * decoded_audio, audio_q_t * input_audio,

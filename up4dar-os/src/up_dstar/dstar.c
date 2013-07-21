@@ -650,15 +650,21 @@ struct rx_q_buffer {
 	uint8_t voice[36];
 	};
 	
-static struct rx_q_buffer * rx_q_buf = 0;
+static struct rx_q_buffer * rx_q_buffers[4] = { 0, 0, 0, 0 };
 
 int dstar_pos_not_correct = 0;
 
 static uint8_t current_source = 0;
 static uint16_t current_session = 0;
 static uint8_t current_pos = 0;
+static uint8_t current_rx_buf = 0;
+static uint8_t current_tx_buf = 0;
 static uint8_t num_empty = 0;
 static int num_written = 0;
+
+static int tx_count_offset = 0;
+static int rx_count_offset = 0;
+
 
 /*
 static void rx_q_clean(void)
@@ -672,6 +678,29 @@ static void rx_q_clean(void)
 }
 */
 
+
+static int p_max = 0;
+
+static void set_tx_buf(int p)
+{
+	if (p > p_max)
+	{
+		p_max = p;
+	}
+	
+	if (p < (p_max - 1))
+	{
+		p_max = p;
+		current_tx_buf ^= 1;
+		tx_count_offset += 21;
+	}
+	
+	if (p_max < 0)
+	{
+		p_max = 0;
+	}
+}
+
 static uint8_t last_valid_source = 0;
 
 int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
@@ -681,6 +710,8 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 	
 	if (num_written == 0)
 		return 0;
+		
+	struct rx_q_buffer * rx_q_buf = rx_q_buffers[current_rx_buf];
 
 /*		
 	char tmp_buf[6];
@@ -702,7 +733,9 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 			rx_q_buf[current_pos].source = 0; 
 			last_valid_source = 0;
 			current_pos = 0;
+			current_rx_buf = 0;
 			num_empty = 0;
+			rx_count_offset = 0;
 			return 0;
 			
 		default: // zero
@@ -714,7 +747,7 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 				rx_q_buf[current_pos].data[2] =  0x66;
 			}
 		
-			ambe_expand_to_sd_data( rx_q_buf[current_pos].voice, ambe_silence_data );
+			ambe_expand_to_sd_data( rx_q_buf[current_pos].voice, ambe_lfi_indicator );
 		
 			num_empty ++;
 		
@@ -724,8 +757,15 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 				num_written = 0; // stop processing
 				last_valid_source = 0;
 				current_pos = 0;
+				current_rx_buf = 0;
 				num_empty = 0;
+				rx_count_offset = 0;
 				return 0;
+			}
+			
+			if ((rx_count_offset + current_pos) > (tx_count_offset + p_max))
+			{
+				set_tx_buf(-5); // insert empty 21 frames
 			}
 			break;
 	}	
@@ -761,17 +801,29 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 	
 	
 	rx_q_buf[current_pos].source = 0; // mark this position as "processed"
+
+#define CALC_XPOS(a,b) (((a)<<1) + ((b)*42))
+
+	vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(current_pos, current_rx_buf), 1, 0, 0, 1);
+	vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(current_pos, current_rx_buf), 3, 0, 0, 1);
+	vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(current_pos, current_rx_buf), 4, 0, 0, 1);
+	vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(current_pos, current_rx_buf), 5, 0, 0, 1);
 	
 	current_pos ++;
 	if (current_pos >= NUM_PACKETS_IN_FRAME)
 	{
 		current_pos = 0;
+		current_rx_buf ^= 1; 
+		rx_count_offset += 21;
 	}
 	
+	vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(current_pos, current_rx_buf), 5, 0, 1, 1);
 	 
 	
 	return last_valid_source;
 }
+
+
 
 static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos ) 
 {
@@ -780,14 +832,20 @@ static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos )
 	
 	if ((source == current_source) && (session == current_session))
 	{
-		current_source = 0;
+		// current_source = 0;
 		
 		int p = pos & 0x1F;
 		
 		if (p >= NUM_PACKETS_IN_FRAME)
 		return;
 		
+		set_tx_buf(p);
+		
+		struct rx_q_buffer * rx_q_buf = rx_q_buffers[current_tx_buf];
+		
 		rx_q_buf[p].source = SOURCE_STOP;
+		
+		vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(p, current_tx_buf), 4, 0, 1, 1);
 	}
 }
 
@@ -802,8 +860,14 @@ static void rx_q_input_data( uint8_t source, uint16_t session, uint8_t pos, cons
 		
 		if (p >= NUM_PACKETS_IN_FRAME)
 			return;
+			
+		set_tx_buf(p);
+		
+		struct rx_q_buffer * rx_q_buf = rx_q_buffers[current_tx_buf];
 		
 		memcpy (rx_q_buf[p].data, data, 3);
+		
+		vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(p, current_tx_buf), 3, 0, 1, 1);
 	}
 }
 
@@ -814,25 +878,39 @@ static void rx_q_input_voice_sd ( uint8_t source, uint16_t session, uint8_t pos,
 	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
 		
+	int p = pos & 0x1F;
+	
+	if (p >= NUM_PACKETS_IN_FRAME)
+		return;
+		
 	if (current_source == 0) // start new transmission
 	{
 		current_source = source;
 		current_session = session;
-		// current_pos = 0;
+		current_pos = pos;
+		current_tx_buf = 0;
+		tx_count_offset = 0;
+		p_max = 0;
 		num_empty = 0;
 		num_written = 0;
 	}
 	
 	if ((source == current_source) && (session == current_session))
 	{
-		int p = pos & 0x1F; 
 		
-		if (p >= NUM_PACKETS_IN_FRAME)
-			return;
 			
+		set_tx_buf(p);
+			
+		struct rx_q_buffer * rx_q_buf = rx_q_buffers[current_tx_buf];
+		
 		rx_q_buf[p].source = source;
 		memcpy (rx_q_buf[p].voice, data, 36);
 		num_written ++;
+		
+		
+		
+		vd_set_pixel(VDISP_AUDIO_LAYER, CALC_XPOS(p, current_tx_buf), 1, 0, 1, 1);
+		
 	}
 }
 
@@ -1428,7 +1506,13 @@ void dstarInit( xQueueHandle dq )
 	
 	dstarQueue = dq;
 	
-	rx_q_buf = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
+	rx_q_buffers[0] = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
+	rx_q_buffers[1] = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
+	rx_q_buffers[2] = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
+	rx_q_buffers[3] = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
+	
+	
+	
 	
 	snmpReqQueue = xQueueCreate( 3, sizeof (struct snmpReq) );
 	

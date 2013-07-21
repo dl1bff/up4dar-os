@@ -464,7 +464,9 @@ static void vTXTask( void *pvParameters )
 						dstar_print_diagram();
 					}
 					
-					vTaskDelay(200); // fill rx buffer
+					// vTaskDelay(200); // fill rx buffer
+					
+					vTaskDelay(40);
 					
 					dstar_get_header(rx_source, &header_crc_result, rx_header);
 					
