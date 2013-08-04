@@ -55,6 +55,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "txtask.h"
 #include "up_app\a_lib_internal.h"
 #include "up_crypto\up_crypto.h"
+#include "gpio.h"
 
 
 
@@ -382,6 +383,11 @@ static void send_phy_hotspot( uint8_t frame_counter, uint8_t * rx_data, uint8_t 
 }			
 
 	
+static const gpio_map_t ext_gpio_map =
+{
+	{ AVR32_PIN_PA24, GPIO_DIR_OUTPUT | GPIO_INIT_LOW }	// GPIO0 on extension header
+	
+};
 
 static uint8_t rx_data[3];
 static uint8_t rx_voice[9];
@@ -393,6 +399,15 @@ static void vTXTask( void *pvParameters )
 	int tx_state = 0;
 	
 	int session_id = 0;
+	
+	int i;
+	
+	gpio_enable_gpio( ext_gpio_map, sizeof( ext_gpio_map ) / sizeof( ext_gpio_map[0] ) );
+	
+	for (i=0; i < (sizeof( ext_gpio_map ) / sizeof( ext_gpio_map[0] )); i++)
+	{
+		gpio_configure_pin( ext_gpio_map[i].pin, ext_gpio_map[i].function);
+	}
 	
 	
 	vTaskDelay(1000); // 1secs
@@ -719,6 +734,16 @@ static void vTXTask( void *pvParameters )
 			
 			
 		}
+		
+		if (tx_state == 10)
+		{
+			gpio_set_pin_high(AVR32_PIN_PA24);
+		}
+		else
+		{
+			gpio_set_pin_low(AVR32_PIN_PA24);
+		}
+		
 	}		
 	
 }	
