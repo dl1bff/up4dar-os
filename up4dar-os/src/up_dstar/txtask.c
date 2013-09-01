@@ -861,6 +861,7 @@ static void vTXTask( void *pvParameters )
 					{
 						// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
 						
+						vTaskDelay(250); // wait before sending ACK
 						phy_send_response( rx_header );
 					}
 				}
