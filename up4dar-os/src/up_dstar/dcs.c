@@ -131,9 +131,7 @@ static char current_module;
 static short current_server;
 static char current_server_type;
 
-#define SERVER_TYPE_DCS		0
-#define SERVER_TYPE_TST		1
-#define SERVER_TYPE_DEXTRA	2
+
 
 #define NUM_SERVERS 30
 
@@ -169,6 +167,11 @@ void dcs_get_current_reflector_name (char * s)
 	s[7] = current_module;
 }
 
+void dcs_get_current_statustext (char * s)
+{
+	memcpy(s, dcs_state_text[  (dcs_mode != 0) ? dcs_state : 0 ], 12);
+	 // text is 12 bytes long
+}
 
 
 static uint8_t dcs_server_ipaddr[4];

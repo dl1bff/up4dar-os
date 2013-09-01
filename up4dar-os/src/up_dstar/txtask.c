@@ -269,6 +269,92 @@ static void phy_start_tx_hotspot(uint8_t crc_result, uint8_t * rx_header)
 }
 
 
+static void phy_send_response(uint8_t * rx_header)
+{
+
+	// Schalte UP4DAR auf Senden um
+	
+	send_cmd(tx_on, 1);
+	
+	// Bereite einen Header vor
+	
+	header[0] = 0x20;  // send header command
+	header[1] = 0x00;
+	header[2] = 0x00;				// "2nd control byte"
+	header[3] = 0x00;				// "3rd control byte"
+	
+	// RPT1 and RPT2
+	for (short i=0; i<CALLSIGN_LENGTH; i++)
+	{
+		header[4+i] = settings.s.my_callsign[i];
+	}
+	
+	for (short i=0; i<CALLSIGN_LENGTH; i++)
+	{
+		header[12+i] = settings.s.my_callsign[i];
+	}
+	
+	
+	for (short i=0; i<CALLSIGN_LENGTH; ++i){
+		header[20+i] = rx_header[27+i]; // UR is calling station
+	}
+	
+	for (short i=0; i<CALLSIGN_LENGTH; ++i){
+		header[28+i] = settings.s.my_callsign[i]; // MY
+	}
+	
+	for (short i=0; i<CALLSIGN_EXT_LENGTH; ++i){
+		header[36+i] = "RPTR"[i];
+	}
+	
+	send_cmd(header, 40);
+	
+	send_voice[0] = 0x21;
+	send_voice[1] = 0x01;
+	memcpy(send_voice+2, ambe_silence_data, 9);
+	
+	send_data[0] = 0x22;
+	
+	send_cmd(send_voice, 11);
+	
+	char txmsg[20];
+	
+	dcs_get_current_reflector_name(txmsg);
+	
+	txmsg[6] = txmsg[7];
+	txmsg[7] = ' ';
+	
+	dcs_get_current_statustext(txmsg + 8);
+	
+	int j;
+
+	for (j=0; j < 8; j++)
+	{
+		send_cmd(send_voice, 11);
+		
+		int i = j >> 1;
+		if ((j & 1) == 0)
+		{
+			send_data[1] = 0x40 + i;
+			send_data[2] = txmsg[ i * 5 + 0 ];
+			send_data[3] = txmsg[ i * 5 + 1 ];
+		}
+		else
+		{
+			send_data[1] = txmsg[ i * 5 + 2 ];
+			send_data[2] = txmsg[ i * 5 + 3 ];
+			send_data[3] = txmsg[ i * 5 + 4 ];
+		}
+		
+		send_cmd(send_data, 4);
+	}
+	
+	
+}
+
+
+
+
 static int slow_data_count;
 static uint8_t slow_data[5];
 
@@ -508,8 +594,64 @@ static void vTXTask( void *pvParameters )
 						}
 						else if (last_rx_source == SOURCE_PHY) // rx comes over PHY
 						{
-							send_dcs_hotspot(  session_id, 0, frame_counter, rx_data, rx_voice, 
+							/* 
+							buf[0] = rx_header[24];
+							buf[1] = rx_header[25];
+							buf[2] = rx_header[26];
+							buf[3] = 0;
+							
+							vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, buf );
+							*/
+							
+							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
+							
+							if ((header_crc_result == DSTAR_HEADER_OK)
+								&& ((rx_header[26] == 'U') || (rx_header[26] == 'L')))
+							{
+								tx_state = 11; // don't forward transmission
+								
+								if (rx_header[26] == 'U')
+								{
+									dcs_off();
+								}
+								else if ((rx_header[26] == 'L') && (rx_header[25] >= 'A') && (rx_header[25] <= 'Z'))
+								{
+									int n = 0;
+									int i;
+									
+									for (i=22; i < 25; i++)
+									{
+										if ((rx_header[i] >= '0') && (rx_header[i] <= '9'))
+										{
+											n = n*10 + (rx_header[i] & 0x0F);
+										}
+										else
+										{
+											n = -1;
+											break;
+										}
+									}
+									
+									if (n >= 0)
+									{
+										if (memcmp("DCS", rx_header+19, 3) == 0)
+										{
+											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DCS);
+											dcs_on();
+										}
+										else if (memcmp("XRF", rx_header+19, 3) == 0)
+										{
+											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DEXTRA);
+											dcs_on();
+										}
+									}									
+								}
+							}
+							else
+							{								
+								send_dcs_hotspot(  session_id, 0, frame_counter, rx_data, rx_voice, 
 									header_crc_result, rx_header );
+							}									
 						}						
 					}
 					
@@ -692,6 +834,40 @@ static void vTXTask( void *pvParameters )
 					}
 				}			
 					
+				curr_tx_ticks += 20; // rx/tx AMBE data every 20ms
+				
+				long tdiff = curr_tx_ticks - rtclock_get_tx_ticks();
+				
+				if (tdiff > 0)
+				{
+					if (tdiff > 500)
+					{
+						tdiff = 500;
+					}
+					
+					vTaskDelay(tdiff);
+				}
+			}
+			break;
+			
+		case 11: // dummy receive for command-transmission (link, unlink etc.)
+			if (last_rx_source != rx_q_process(&frame_counter,rx_data,rx_voice))
+			{
+				tx_state = 0;
+			
+				if (hotspot_mode || repeater_mode)
+				{
+					if (last_rx_source == SOURCE_PHY) // rx comes over PHY
+					{
+						// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
+						
+						phy_send_response( rx_header );
+					}
+				}
+			}
+			else
+			{
+				
 				curr_tx_ticks += 20; // rx/tx AMBE data every 20ms
 				
 				long tdiff = curr_tx_ticks - rtclock_get_tx_ticks();
