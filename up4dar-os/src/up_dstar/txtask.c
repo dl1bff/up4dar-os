@@ -57,6 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto\up_crypto.h"
 #include "gpio.h"
 
+#include "ambe_fec.h"
 
 
 static ambe_q_t * microphone;
@@ -480,6 +481,9 @@ static uint8_t rx_voice[9];
 static uint8_t rx_header[39];
 static uint8_t header_crc_result;
 
+static char dtmf_test[21] = "12345678901234567890";
+static int dtmf_cnt = 0;
+
 static void vTXTask( void *pvParameters )
 {
 	int tx_state = 0;
@@ -833,6 +837,46 @@ static void vTXTask( void *pvParameters )
 								header_crc_result, rx_header );
 					}
 				}			
+				
+				
+				/*
+				uint32_t data1;
+				uint32_t data2;
+				char buf[7];
+				
+				
+				ambe_fec_decode_first_block(rx_voice, &data1, &data2);
+				
+				vdisp_i2s(buf, 6, 16, 1, data1);
+				vd_prints_xy(VDISP_AUDIO_LAYER, 69, 48, VDISP_FONT_6x8, 0, buf);
+				vdisp_i2s(buf, 6, 16, 1, data2);
+				vd_prints_xy(VDISP_AUDIO_LAYER, 69, 56, VDISP_FONT_6x8, 0, buf);
+				*/
+				
+				if (last_rx_source == SOURCE_PHY)
+				{
+					dtmf_cnt ++;
+					if (dtmf_cnt >= 20)
+					{
+						dtmf_cnt = 0;
+					}
+					
+					int dtmf = ambe_get_dtmf(rx_voice);
+					
+					if (dtmf != 0)
+					{
+						dtmf_test[dtmf_cnt] = dtmf;
+					}
+					else
+					{
+						dtmf_test[dtmf_cnt] = 32;
+					}
+					
+					dtmf_test[20] = 0;
+					
+					vd_prints_xy(VDISP_AUDIO_LAYER, 0, 48, VDISP_FONT_6x8, 0, dtmf_test);
+				}
+				
 					
 				curr_tx_ticks += 20; // rx/tx AMBE data every 20ms
 				

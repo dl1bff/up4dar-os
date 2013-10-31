@@ -47,8 +47,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 
-
-
 #define BUF_SIZE  (AUDIO_Q_TRANSFERLEN * 4)
 
 static uint32_t out_buf1[BUF_SIZE];
