@@ -311,19 +311,28 @@ int ambe_fec_decode_first_block (const uint8_t * d, uint32_t * first_block, uint
 }
 
 
-static const char dtmfchar[] = "123A456B789C*0#D";
+static const char dtmfchar[] = " 123A456B789C*0#D";
 
-int ambe_get_dtmf (const uint8_t * d)
+int dtmf_code_to_char (int code)
+{
+	if ((code >= 0) && (code <= 16))
+	{
+		return dtmfchar[code];
+	}
+	return ' ';
+}
+
+int ambe_get_dtmf_code (const uint8_t * d)
 {
 	uint32_t data1;
 	uint32_t data2;
 	
 	ambe_fec_decode_first_block(d, &data1, &data2);
 	
-	if (((data1 & 0xFC8) == 0xFC0) && ((data2 & 0xFFFF00) == 0))
+	if ((data1 & 0xFFC) == 0xFC0)
 	{
 		int num = ((data1 & 0x03) << 2) | ((data2 & 0x60) >> 5);
-		return dtmfchar[num];
+		return num + 1;
 	}
 	
 	return 0;

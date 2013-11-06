@@ -30,5 +30,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 int ambe_fec_decode_first_block (const uint8_t * d, uint32_t * first_block, uint32_t * last_block);
-int ambe_get_dtmf (const uint8_t * d);
+
+int dtmf_code_to_char (int code);
+int ambe_get_dtmf_code (const uint8_t * d);
+
 #endif /* AMBE_FEC_H_ */

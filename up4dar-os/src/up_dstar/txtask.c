@@ -481,8 +481,18 @@ static uint8_t rx_voice[9];
 static uint8_t rx_header[39];
 static uint8_t header_crc_result;
 
-static char dtmf_test[21] = "12345678901234567890";
-static int dtmf_cnt = 0;
+#define MAX_DTMF_COMMAND  6
+static char dtmf_cmd_string[MAX_DTMF_COMMAND + 1];
+static uint8_t dtmf_cmd_ptr = 0;
+#define MAX_DTMF_HISTORY  5
+static uint8_t dtmf_history[MAX_DTMF_HISTORY];
+#define DTMF_THRESHOLD  3
+#define DTMF_HISTOGRAM_SIZE  17
+static uint8_t dtmf_histogram[DTMF_HISTOGRAM_SIZE];
+static uint8_t dtmf_counter = 0;
+#define DTMF_DETECT_TIME 250
+static uint8_t dtmf_tone_detected = 0;
+
 
 static void vTXTask( void *pvParameters )
 {
@@ -586,6 +596,11 @@ static void vTXTask( void *pvParameters )
 					tx_state = 10;
 					last_rx_source = rx_source;
 					
+					dtmf_tone_detected = 0;
+					strncpy(dtmf_cmd_string, "      ", MAX_DTMF_COMMAND);
+					dtmf_cmd_ptr = 0;
+					memset(dtmf_history, 0, MAX_DTMF_HISTORY);
+					dtmf_counter = 0;
 					
 					
 					if (hotspot_mode || repeater_mode)
@@ -853,28 +868,46 @@ static void vTXTask( void *pvParameters )
 				vd_prints_xy(VDISP_AUDIO_LAYER, 69, 56, VDISP_FONT_6x8, 0, buf);
 				*/
 				
-				if (last_rx_source == SOURCE_PHY)
+				if ((last_rx_source == SOURCE_PHY) && (dtmf_counter < DTMF_DETECT_TIME))
 				{
-					dtmf_cnt ++;
-					if (dtmf_cnt >= 20)
+					dtmf_counter ++;					
+					
+					dtmf_history[dtmf_counter % MAX_DTMF_HISTORY] = ambe_get_dtmf_code(rx_voice);
+					
+					memset(dtmf_histogram, 0, DTMF_HISTOGRAM_SIZE);
+					
+					for (i=0; i < MAX_DTMF_HISTORY; i++)
 					{
-						dtmf_cnt = 0;
+						dtmf_histogram[dtmf_history[i]] ++;
 					}
 					
-					int dtmf = ambe_get_dtmf(rx_voice);
-					
-					if (dtmf != 0)
+					if (dtmf_tone_detected != 0)
 					{
-						dtmf_test[dtmf_cnt] = dtmf;
+						if (dtmf_histogram[0] == MAX_DTMF_HISTORY) // no tone
+						{
+							if (dtmf_cmd_ptr < MAX_DTMF_COMMAND)
+							{
+								dtmf_cmd_string[dtmf_cmd_ptr] = dtmf_code_to_char(dtmf_tone_detected);
+								dtmf_cmd_ptr++;
+								dtmf_cmd_string[dtmf_cmd_ptr] = 0;
+							}
+							
+							dtmf_tone_detected = 0;
+						}
 					}
 					else
 					{
-						dtmf_test[dtmf_cnt] = 32;
+						for (i=1; i < DTMF_HISTOGRAM_SIZE; i++)
+						{
+							if (dtmf_histogram[i] >= DTMF_THRESHOLD)
+							{
+								dtmf_tone_detected = i;
+							}
+						}
 					}
 					
-					dtmf_test[20] = 0;
 					
-					vd_prints_xy(VDISP_AUDIO_LAYER, 0, 48, VDISP_FONT_6x8, 0, dtmf_test);
+					vd_prints_xy(VDISP_AUDIO_LAYER, 0, 48, VDISP_FONT_6x8, 0, dtmf_cmd_string);
 				}
 				
 					
