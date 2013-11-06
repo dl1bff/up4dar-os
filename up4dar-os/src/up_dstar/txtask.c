@@ -885,13 +885,6 @@ static void vTXTask( void *pvParameters )
 					{
 						if (dtmf_histogram[0] == MAX_DTMF_HISTORY) // no tone
 						{
-							if (dtmf_cmd_ptr < MAX_DTMF_COMMAND)
-							{
-								dtmf_cmd_string[dtmf_cmd_ptr] = dtmf_code_to_char(dtmf_tone_detected);
-								dtmf_cmd_ptr++;
-								dtmf_cmd_string[dtmf_cmd_ptr] = 0;
-							}
-							
 							dtmf_tone_detected = 0;
 						}
 					}
@@ -902,6 +895,13 @@ static void vTXTask( void *pvParameters )
 							if (dtmf_histogram[i] >= DTMF_THRESHOLD)
 							{
 								dtmf_tone_detected = i;
+								
+								if (dtmf_cmd_ptr < MAX_DTMF_COMMAND)
+								{
+									dtmf_cmd_string[dtmf_cmd_ptr] = dtmf_code_to_char(dtmf_tone_detected);
+									dtmf_cmd_ptr++;
+									dtmf_cmd_string[dtmf_cmd_ptr] = 0;
+								}
 							}
 						}
 					}
