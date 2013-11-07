@@ -583,6 +583,11 @@ static void parse_number(const char * s, int len, int * num, char * dcs_room)
 		}
 	}
 	
+	if (n >= 1000) // only three digit reflector numbers
+	{
+		return; 
+	}
+	
 	*num = n;
 }
 
