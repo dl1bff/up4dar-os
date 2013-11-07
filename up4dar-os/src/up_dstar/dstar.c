@@ -393,7 +393,7 @@ static void dstarStateChange(unsigned char n)
 			{
 				// vdisp_load_buf();
 				
-				// vd_copy_screen(VDISP_MAIN_LAYER, VDISP_SAVE_LAYER, 36, 64);
+				vd_copy_screen(VDISP_MAIN_LAYER, VDISP_SAVE_LAYER, 36, 64);
 			}
 
 			vdisp_prints_xy( 0,0, VDISP_FONT_6x8, 0, "    " );
