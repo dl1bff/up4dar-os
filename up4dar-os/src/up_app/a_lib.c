@@ -475,6 +475,22 @@ static void ref_print_status (void)
 	#undef XPOS
 }
 
+void set_ref_params (int ref_num, int ref_letter, int ref_type)
+{
+	int n = ref_num;
+	
+	ref_items[4] = n % 10;
+	n /= 10;
+	ref_items[3] = n % 10;
+	n /= 10;
+	ref_items[2] = n % 10;
+	
+	ref_items[5] = ref_letter - 0x41;
+	
+	ref_items[1] = ref_type;
+	
+	ref_print_status();
+}
 
 static int ref_app_key_event_handler (void * app_context, int key_num, int key_event)
 {
@@ -693,7 +709,7 @@ void a_app_manager_init(void)
 		dcs_on();
 	}
 	
-	ref_print_status();
+	
 	
 	// TODO error handling
 	

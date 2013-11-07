@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -50,6 +50,7 @@ void * a_malloc ( void * app_context, int num_bytes );
 void a_set_button_text ( void * app_context, const char * button1, const char * button2, const char * button3);
 void * a_new_app ( const char * app_name, char screen_num);
 void a_app_manager_select_first(void);
+void set_ref_params (int ref_num, int ref_letter, int ref_type);
 
 extern char software_ptt;
 

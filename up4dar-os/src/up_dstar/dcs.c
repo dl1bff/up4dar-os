@@ -501,6 +501,7 @@ void dcs_select_reflector (short server_num, char module, char server_type)
 	current_server = server_num;
 	current_module = module;
 	
+	set_ref_params(server_num, module, server_type);
 }
 
 

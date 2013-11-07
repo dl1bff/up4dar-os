@@ -494,6 +494,145 @@ static uint8_t dtmf_counter = 0;
 static uint8_t dtmf_tone_detected = 0;
 
 
+static void dtmf_decode_init(void)
+{
+	dtmf_tone_detected = 0;
+	strncpy(dtmf_cmd_string, "      ", MAX_DTMF_COMMAND);
+	dtmf_cmd_ptr = 0;
+	memset(dtmf_history, 0, MAX_DTMF_HISTORY);
+	dtmf_counter = 0;
+}
+
+
+static int dtmf_decode(const uint8_t * ambe_data)
+{
+	int i;
+	int dtmf_code = 0;
+	
+	if (dtmf_counter < DTMF_DETECT_TIME)
+	{
+		dtmf_counter ++;
+	
+		dtmf_code = ambe_get_dtmf_code(ambe_data);
+	
+		dtmf_history[dtmf_counter % MAX_DTMF_HISTORY] = dtmf_code;
+	
+		memset(dtmf_histogram, 0, DTMF_HISTOGRAM_SIZE);
+	
+		for (i=0; i < MAX_DTMF_HISTORY; i++)
+		{
+			dtmf_histogram[dtmf_history[i]] ++;
+		}
+	
+		
+		for (i=0; i < DTMF_HISTOGRAM_SIZE; i++)
+		{
+			if (dtmf_histogram[i] >= DTMF_THRESHOLD)
+			{
+				if (i != dtmf_tone_detected)
+				{
+					dtmf_tone_detected = i;
+					
+					if ((i > 0) && (dtmf_cmd_ptr < MAX_DTMF_COMMAND))
+					{
+						dtmf_cmd_string[dtmf_cmd_ptr] = dtmf_code_to_char(dtmf_tone_detected);
+						dtmf_cmd_ptr++;
+						dtmf_cmd_string[dtmf_cmd_ptr] = 0;
+					}
+				}
+				
+				break;
+			}
+		}
+	
+		vd_prints_xy(VDISP_AUDIO_LAYER, 0, 48, VDISP_FONT_6x8, 0, dtmf_cmd_string);
+	}
+	
+	return dtmf_code;
+}
+
+
+static void parse_number(const char * s, int len, int * num, char * dcs_room)
+{
+	int n = 0;
+	int i;
+	
+	for (i=0; i < len; i++)
+	{
+		if ((s[i] >= '0') && (s[i] <= '9'))
+		{
+			n = n*10 + (s[i] & 0x0F);
+		}
+		else
+		{
+			return; // not a number
+		}
+	}
+	
+	if (dcs_room != 0)
+	{
+		int room = n % 100; // last to chars: room number
+		n /= 100;
+		if ((room >= 1) && (room <= 26))
+		{
+			*dcs_room = 64 + room; // ASCII  A..Z
+		}
+		else
+		{
+			return; // not a valid dcs format
+		}
+	}
+	
+	*num = n;
+}
+
+static void dtmf_cmd_exec(void)
+{
+	if (dtmf_cmd_string[0] != 32) // a DTMF string was received
+	{
+		int len = strlen(dtmf_cmd_string);
+		char last_char = dtmf_cmd_string[len - 1];
+		
+		if (dtmf_cmd_string[0] == '#') // unlink
+		{
+			dcs_off();
+		}
+		else if (dtmf_cmd_string[0] == 'D')
+		{
+			int reflector = -1;
+			char room_letter = 'A';
+			
+			if ((last_char >= 'A') && (last_char <= 'D'))
+			{
+				parse_number (dtmf_cmd_string+1, len - 2, &reflector, 0);
+				room_letter = last_char;
+			}
+			else
+			{
+				parse_number (dtmf_cmd_string+1, len - 1, &reflector, &room_letter);
+			}
+			
+			if (reflector >= 0)
+			{
+				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
+				dcs_on();
+			}
+		}
+		else if ((dtmf_cmd_string[0] >= '0') && (dtmf_cmd_string[0] <= '9') &&
+					(last_char >= 'A') && (last_char <= 'D'))
+		{
+			int reflector = -1;
+			parse_number (dtmf_cmd_string, len - 1, &reflector, 0);
+			
+			if (reflector >= 0)
+			{
+				dcs_select_reflector(reflector, last_char, SERVER_TYPE_DEXTRA);
+				dcs_on();
+			}
+		}
+	}	
+}
+
 static void vTXTask( void *pvParameters )
 {
 	int tx_state = 0;
@@ -549,6 +688,8 @@ static void vTXTask( void *pvParameters )
 				
 				frame_counter = 20; // counter 0..20,  first "send_dcs" with 0
 				tx_counter = 0;
+				
+				dtmf_decode_init();
 									
 				vTaskDelay(80); // pre-buffer audio while PHY sends header
 				dcs_reset_tx_counters();
@@ -596,12 +737,8 @@ static void vTXTask( void *pvParameters )
 					tx_state = 10;
 					last_rx_source = rx_source;
 					
-					dtmf_tone_detected = 0;
-					strncpy(dtmf_cmd_string, "      ", MAX_DTMF_COMMAND);
-					dtmf_cmd_ptr = 0;
-					memset(dtmf_history, 0, MAX_DTMF_HISTORY);
-					dtmf_counter = 0;
 					
+					dtmf_decode_init();
 					
 					if (hotspot_mode || repeater_mode)
 					{
@@ -718,15 +855,25 @@ static void vTXTask( void *pvParameters )
 				}					
 				else
 				{
-					if (dcs_mode && dcs_is_connected())
-					{
-						send_dcs(  session_id, 0, frame_counter ); // send normal frame
-					}
-					
 					if (!dcs_mode || hotspot_mode || repeater_mode)
 					{
 						send_phy ( dcs_ambe_data, frame_counter );
-					}		
+					}
+					
+					
+					
+					if (dcs_mode)
+					{
+						if (dtmf_decode(dcs_ambe_data) != 0)
+						{
+							memcpy(dcs_ambe_data, ambe_silence_data, 9); // silence DTMF on DCS connection
+						}
+						
+						if (dcs_is_connected())
+						{
+							send_dcs(  session_id, 0, frame_counter ); // send normal frame
+						}
+					}
 					
 					curr_tx_ticks += 20; // send AMBE data every 20ms			
 					
@@ -794,6 +941,8 @@ static void vTXTask( void *pvParameters )
 				vdisp_i2s(buf, 3, 10, 0, secs);
 				vdisp_prints_xy( 104, 48, VDISP_FONT_6x8, 0, buf );
 				vdisp_prints_xy( 122, 48, VDISP_FONT_6x8, 0, "s" );
+				
+				dtmf_cmd_exec();
 			}
 			else
 			{
@@ -812,6 +961,8 @@ static void vTXTask( void *pvParameters )
 				{
 					if (last_rx_source == SOURCE_PHY) // rx comes over PHY
 					{
+						dtmf_cmd_exec();
+						
 						if (dcs_is_connected())
 						{
 							frame_counter ++;  // frame_counter was not set by rx_q_process, increment here
@@ -840,6 +991,15 @@ static void vTXTask( void *pvParameters )
 			}
 			else
 			{
+				// only detect DTMF from PHY source
+				if (last_rx_source == SOURCE_PHY)
+				{
+					if (dtmf_decode(rx_voice) != 0)
+					{
+						memcpy(rx_voice, ambe_silence_data, 9); // silence DTMF on DCS connection
+					}
+				}
+				
 				if (hotspot_mode || repeater_mode)
 				{
 					if (last_rx_source == SOURCE_NET) // rx comes over the internet
@@ -868,47 +1028,8 @@ static void vTXTask( void *pvParameters )
 				vd_prints_xy(VDISP_AUDIO_LAYER, 69, 56, VDISP_FONT_6x8, 0, buf);
 				*/
 				
-				if ((last_rx_source == SOURCE_PHY) && (dtmf_counter < DTMF_DETECT_TIME))
-				{
-					dtmf_counter ++;					
-					
-					dtmf_history[dtmf_counter % MAX_DTMF_HISTORY] = ambe_get_dtmf_code(rx_voice);
-					
-					memset(dtmf_histogram, 0, DTMF_HISTOGRAM_SIZE);
-					
-					for (i=0; i < MAX_DTMF_HISTORY; i++)
-					{
-						dtmf_histogram[dtmf_history[i]] ++;
-					}
-					
-					if (dtmf_tone_detected != 0)
-					{
-						if (dtmf_histogram[0] == MAX_DTMF_HISTORY) // no tone
-						{
-							dtmf_tone_detected = 0;
-						}
-					}
-					else
-					{
-						for (i=1; i < DTMF_HISTOGRAM_SIZE; i++)
-						{
-							if (dtmf_histogram[i] >= DTMF_THRESHOLD)
-							{
-								dtmf_tone_detected = i;
-								
-								if (dtmf_cmd_ptr < MAX_DTMF_COMMAND)
-								{
-									dtmf_cmd_string[dtmf_cmd_ptr] = dtmf_code_to_char(dtmf_tone_detected);
-									dtmf_cmd_ptr++;
-									dtmf_cmd_string[dtmf_cmd_ptr] = 0;
-								}
-							}
-						}
-					}
-					
-					
-					vd_prints_xy(VDISP_AUDIO_LAYER, 0, 48, VDISP_FONT_6x8, 0, dtmf_cmd_string);
-				}
+				
+				
 				
 					
 				curr_tx_ticks += 20; // rx/tx AMBE data every 20ms
