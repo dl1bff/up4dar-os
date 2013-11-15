@@ -601,7 +601,15 @@ static void dtmf_cmd_exec(void)
 		if (dtmf_cmd_string[0] == '#') // unlink
 		{
 			dcs_off();
+			vTaskDelay(950); // wait before sending ACK
+			phy_send_response( rx_header );
 		}
+		else if (dtmf_cmd_string[0] == '0')
+		{
+		vTaskDelay(950); // wait before sending ACK
+		phy_send_response( rx_header );
+	    }
+			
 		else if (dtmf_cmd_string[0] == 'D')
 		{
 			int reflector = -1;
@@ -621,6 +629,11 @@ static void dtmf_cmd_exec(void)
 			{
 				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
 				dcs_on();
+			
+				// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
+				
+				vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
+				phy_send_response( rx_header );
 			}
 		}
 		else if ((dtmf_cmd_string[0] >= '0') && (dtmf_cmd_string[0] <= '9') &&
