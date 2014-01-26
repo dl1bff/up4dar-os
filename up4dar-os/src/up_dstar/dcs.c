@@ -50,7 +50,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/settings.h"
 
 #include "up_crypto/up_crypto.h"
-#include "up_net/dns.h"
+#include "up_net/dns2.h"
 
 #include "up_app/a_lib_internal.h"
 #include "up_app/a_lib.h"
@@ -178,7 +178,8 @@ static uint8_t dcs_server_ipaddr[4];
 
 static void dcs_link_to (char module);
 
-static char dcs_server_dns_name[30]; // dns name of reflector e.g. "dcs001.xreflector.net"
+static char dcs_server_dns_name[40]; // dns name of reflector e.g. "dcs001.xreflector.net"
+static int dns_handle;
 
 static void dcs_set_dns_name(void)
 {
@@ -187,7 +188,14 @@ static void dcs_set_dns_name(void)
 		case SERVER_TYPE_TST:
 			memcpy(dcs_server_dns_name, "tst", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
-			memcpy(dcs_server_dns_name+6, ".mdx.de", 8);
+			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
+			{
+				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
+			}
+			else
+			{
+				memcpy(dcs_server_dns_name+6, ".reflector.up4dar.de", 21);
+			}
 			break;
 			
 		default:
@@ -196,7 +204,7 @@ static void dcs_set_dns_name(void)
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
-				memcpy(dcs_server_dns_name+6, ".mdx.de", 8);
+				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
 			}
 			else
 			{
@@ -206,12 +214,14 @@ static void dcs_set_dns_name(void)
 		case SERVER_TYPE_DEXTRA:
 			memcpy(dcs_server_dns_name, "xrf", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
-			if ((current_server >= 230) && (current_server < 300))
+			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
-				memcpy(dcs_server_dns_name+6, ".dstar.su", 10);
-				break;
+				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
 			}
-			memcpy(dcs_server_dns_name+6, ".reflector.ircddb.net", 22);
+			else
+			{
+				memcpy(dcs_server_dns_name+6, ".reflector.up4dar.de", 21);
+			}
 			break;
 	}			
 			
@@ -286,20 +296,12 @@ void dcs_service (void)
 			break;
 			
 		case DCS_DNS_REQ:
-			if (dns_get_lock()) // resolver not busy
+		
+			dns_handle = dns2_req_A(dcs_server_dns_name);
+			
+			if (dns_handle >= 0) // resolver not busy
 			{
-				if (dns_req_A(dcs_server_dns_name) == 0) // OK
-				{
-					dcs_state = DCS_DNS_REQ_SENT;
-				}
-				else
-				{
-					// network probably not ready
-					dns_release_lock();
-					
-					dcs_timeout_timer = 10; // 5 seconds
-					dcs_state = DCS_WAIT;
-				}
+				dcs_state = DCS_DNS_REQ_SENT;
 			}			
 			else if (dcs_timeout_timer == 0)
 			{
@@ -312,7 +314,6 @@ void dcs_service (void)
 				{
 					dcs_timeout_timer = 30; // 15 seconds
 					dcs_state = DCS_WAIT;
-					dns_release_lock();
 				}
 				else
 				{
@@ -322,15 +323,17 @@ void dcs_service (void)
 			break;
 			
 		case DCS_DNS_REQ_SENT:
-			if (dns_result_available()) // resolver is ready
+			if (dns2_result_available(dns_handle)) // resolver is ready
 			{
-				if (dns_get_A_addr(dcs_server_ipaddr) < 0) // DNS didn't work
+				uint8_t * addrptr;
+				if (dns2_get_A_addr(dns_handle, &addrptr) <= 0) // DNS didn't work
 				{
 					dcs_timeout_timer = 30; // 15 seconds
 					dcs_state = DCS_WAIT;
 				}
 				else
 				{
+					memcpy (dcs_server_ipaddr, addrptr, 4); // use first address of DNS result
 					dcs_udp_local_port = (current_server_type == SERVER_TYPE_DEXTRA) ? DEXTRA_UDP_PORT : udp_get_new_srcport();
 					
 					udp_socket_ports[UDP_SOCKET_DCS] = dcs_udp_local_port;
@@ -342,7 +345,7 @@ void dcs_service (void)
 					dcs_timeout_timer =  DCS_CONNECT_REQ_TIMEOUT;
 				}
 				
-				dns_release_lock();
+				dns2_free(dns_handle);
 			}
 			break;
 			

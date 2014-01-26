@@ -47,7 +47,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "snmp.h"
 #include "up_dstar/dcs.h"
 #include "up_net/dhcp.h"
-#include "dns.h"
+#include "dns2.h"
 
 #include "up_dstar/vdisp.h"
 #include "up_crypto/up_crypto.h"
@@ -338,6 +338,11 @@ int udp_get_new_srcport(void)
 			}
 		}
 		
+		if (dns2_find_dns_port(p) >= 0) // port is used by DNS
+		{
+			already_in_use = 1;
+		}
+		
 		if (already_in_use == 0)
 			break;
 	}
@@ -391,11 +396,13 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 			case UDP_SOCKET_DCS:
 				dcs_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
 				break;
-				
-			case UDP_SOCKET_DNS:
-				dns_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
-				break;
 			
+				
+			// case UDP_SOCKET_DNS:
+			//	dns_input_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+			//	break;
+		
+				
 			case UDP_SOCKET_NTP:
 				ntp_handle_packet( p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
 				break;
@@ -403,8 +410,14 @@ static void udp_input (const uint8_t * p, int len, const uint8_t * ipv4_header)
 			
 			return;
 		}		 
-	}		
+	}// for		
 	   
+	int handle = dns2_find_dns_port(dest_port);
+	
+	if (handle >= 0)
+	{
+		dns2_input_packet(handle, p + 8, udp_length - 8, ipv4_header + 12 /* src addr */);
+	}
 	
 }	
 	

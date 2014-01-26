@@ -72,7 +72,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io/sdcard.h"
 
 #include "up_crypto/up_crypto_init.h"
-#include "up_net/dns.h"
+#include "up_net/dns2.h"
 
 
 #include "software_version.h"
@@ -1135,7 +1135,7 @@ int main (void)
 	
 	crypto_init(& microphone);
 	
-	dns_init();
+	dns2_init();
 	
 	ntp_init();
 	
