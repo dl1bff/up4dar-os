@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2011,2012   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2014   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -101,6 +101,21 @@ static int ipv4_header_checksum( const uint8_t * p, int header_len )
 	return ( ~sum ) & 0xFFFF;
 }
 
+static void ipv4_send (eth_txmem_t * packet, const uint8_t * ipv4_dest_addr)
+{
+	ip_addr_t  tmp_addr;
+		
+	if (ipv4_get_neigh_addr(&tmp_addr, ipv4_dest_addr ) != 0)  // get addr of neighbor
+	{
+		// neighbor could not be set - no gateway!
+		eth_txmem_free(packet); // throw away packet
+	}
+	else
+	{
+		ipneigh_send_packet (&tmp_addr, packet);
+	}
+}
+
 	
 static void icmpv4_send_echo_reply (const uint8_t * p, int len, const uint8_t * ipv4_header)
 {
@@ -151,13 +166,8 @@ static void icmpv4_send_echo_reply (const uint8_t * p, int len, const uint8_t * 
 	sum = ( ~sum ) & 0xFFFF;
 	
 	((unsigned short *) (echo_reply_buf + 34)) [1] = sum;
-	
-	
-	ip_addr_t  tmp_addr;
-	memset(&tmp_addr.ipv4.zero, 0, sizeof tmp_addr.ipv4.zero);
-	memcpy(&tmp_addr.ipv4.addr, ipv4_header + 12 , sizeof ipv4_addr);  // antwort an diese adresse
-	
-	ipneigh_send_packet(&tmp_addr, packet);
+		
+	ipv4_send(packet, ipv4_header + 12); // send response to src address of request
 		
 	eth_counter ++;
 }	
@@ -592,17 +602,7 @@ void udp4_calc_chksum_and_send (eth_txmem_t * packet, const uint8_t * ipv4_dest_
 	}
 	else
 	{
-		ip_addr_t  tmp_addr;
-			
-		if (ipv4_get_neigh_addr(&tmp_addr, ipv4_dest_addr ) != 0)  // get addr of neighbor
-		{
-			// neighbor could not be set - no gateway!
-			eth_txmem_free(packet); // throw away packet
-		}
-		else
-		{
-			ipneigh_send_packet (&tmp_addr, packet);
-		}
+		ipv4_send(packet, ipv4_dest_addr);
 	}
 	
 }
