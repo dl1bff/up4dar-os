@@ -1,7 +1,7 @@
 /*
 
 Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2014   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "ipv4.h"
 #include "dhcp.h"
 #include "up_dstar/settings.h"
+#include "dns2.h"
 
 // #include "dns_cache.h"
 
@@ -104,6 +105,8 @@ void update_time()
 */
 
 
+static int ntp_dns_handle;
+
 
 
 void ntp_service(void)
@@ -111,22 +114,31 @@ void ntp_service(void)
 	if (ntp_timer > 0)
 	{
 		ntp_timer --;
-		return;
+		return; // !!!!
 	}
+	
+	// do the rest of this function only if ntp_timer is zero
 	
 	switch(ntp_state)
 	{
 		case NTP_STATE_IDLE:
-			
+					
 			if (dhcp_is_ready() && SETTING_BOOL(B_ENABLE_NTP))
 			{
 				
-				if (memcmp(ipv4_ntp, ipv4_zero_addr, sizeof(ipv4_ntp)) == 0)
-				{	// no DHCP NTP address or no fixed NTP address
-				
-					ntp_state = NTP_STATE_DNS_REQ_SENT;
-					ntp_timer = TIMER_SECONDS(5);
-					// send DNS request for 0.up4dar.pool.ntp.org
+				if (memcmp(ipv4_ntp, ipv4_zero_addr, sizeof(ipv4_ntp)) == 0) // no DHCP NTP address or no fixed NTP address
+				{	
+					ntp_dns_handle = dns2_req_A("0.up4dar.pool.ntp.org");
+					
+					if (ntp_dns_handle < 0) // error
+					{
+						ntp_timer = TIMER_SECONDS(3); // wait for DNS to get ready
+					}
+					else
+					{
+						ntp_state = NTP_STATE_DNS_REQ_SENT;
+						ntp_timer = 0;
+					}
 				}
 				else
 				{
@@ -141,13 +153,34 @@ void ntp_service(void)
 			else
 			{
 				ntp_timer = TIMER_SECONDS(3); // wait for DHCP to get ready
-			}				
+			}		
+			
 			break;
 			
 		case NTP_STATE_DNS_REQ_SENT:
-			// TODO: implement DNS request
-			ntp_state = NTP_STATE_IDLE;
-			ntp_timer = TIMER_SECONDS(120);
+		
+			if (dns2_result_available(ntp_dns_handle) != 0)
+			{
+				uint8_t * addrptr;
+				int num_addr = dns2_get_A_addr(ntp_dns_handle, &addrptr);
+				
+				if (num_addr < 1) // less then 1 address or error
+				{
+					ntp_state = NTP_STATE_IDLE;
+					ntp_timer = TIMER_SECONDS(60); // try again in 1 minute
+				}
+				else
+				{
+					ntp_state = NTP_STATE_NTP_REQ_SENT;
+					ntp_timer = TIMER_SECONDS(2);
+					ntp_retry_counter = 4;
+					memcpy(ntp_server_address, addrptr, sizeof(ntp_server_address));
+					LOCAL_PORT = udp_get_new_srcport();
+					query_time();
+				}
+				
+				dns2_free(ntp_dns_handle); 
+			}
 			break;
 			
 		case NTP_STATE_NTP_REQ_SENT:
