@@ -86,13 +86,13 @@ struct dns2_cache
 {
 	uint16_t udp_local_port;
 	uint16_t req_id;
+	uint16_t ttl;
 	uint8_t req_type;
 	uint8_t timeout;
 	uint8_t retry;
 	uint8_t primary_server; 
 	uint8_t state;
 	
-	uint8_t ttl;
 	uint8_t link;
 	
 	uint8_t reqname_len;
@@ -308,6 +308,7 @@ static int dns_req_type = 0;
 */
 
 #define DNS_QTYPE_A		1
+#define DNS_QTYPE_CNAME	5
 #define DNS_QTYPE_SRV	33
 
 #define DNS_UDP_PORT  53
@@ -399,6 +400,10 @@ void dns2_free(int handle)
 }
 
 
+#define DNS_TTL_COUNTER_TIMER	3000
+#define DNS_WAIT_TIME_PER_SLOT  3
+
+
 void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr)
 {
 	struct dns2_cache * cur = dc + handle;
@@ -466,7 +471,7 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	// for now: expect first answer to be the requested RR
 	// doesn't work with CNAME   -- FIXIT!!
 		
-	if ((d[0] == 0xC0) && (d[1] == 0x0C)) // domain compression
+	if ((d[0] == 0xC0) && (d[1] == 0x0C)) // domain compression (this name is same as request)
 	{
 		d += 2;
 	}
@@ -488,12 +493,26 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	
 	
 	
-	if ((d[0] != 0) || (d[1] != cur->req_type) || (d[2] != 0) || (d[3] != 1)
-	  || (d[8] != 0) || (d[9] != 4) )
+	if ((d[0] != 0) || (d[1] != DNS_QTYPE_A) || (d[2] != 0) || (d[3] != 1) /* CLASS IN */
+	  || (d[8] != 0) || (d[9] != 4) /* size of IPv4 address */ )
 	{
 		cur->state = DNS_STATE_RESULT_ERR;
 		return;  // wrong type or class, wrong length of address
-	}		
+	}
+	
+	uint32_t ttl = (d[4] << 24) | (d[5] << 16) | (d[6] << 8) | d[7];
+	 
+	if (ttl < 5)
+	{
+		ttl = 5; // at least 5 seconds
+	}
+	
+	if (ttl > 7200)  // 2 hours
+	{
+		ttl = 7200;
+	}
+	
+	cur->ttl = ttl / (DNS_TTL_COUNTER_TIMER / 1000); // current ttl counter has tick rate of 3 seconds
 	
 	memcpy (cur->result_data, d + 10, sizeof ipv4_addr);
 	cur->result_data_len = sizeof ipv4_addr;
@@ -501,7 +520,7 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	// vdisp_prints_xy( 0, 48, VDISP_FONT_6x8, 1, "DNS1" );
 	
 	cur->state = DNS_STATE_RESULT_OK;
-	cur->ttl = 10; // for now: 30 seconds.. FIXIT
+	
 }
 
 
@@ -525,7 +544,7 @@ static void vDNSTask( void *pvParameters )
 		
 		for (i=0; i < DNS_NUMBER_OF_ENTRIES; i++)
 		{
-			vTaskDelay(3); // give time to other threads
+			vTaskDelay(DNS_WAIT_TIME_PER_SLOT); // give time to other threads
 			
 			struct dns2_cache * cur = dc + i;
 			
@@ -599,7 +618,7 @@ static void vDNSTask( void *pvParameters )
 		
 		if (ttl_check_counter == 0)
 		{
-			ttl_check_counter = 100; // decrease TTL every 3 seconds
+			ttl_check_counter = (DNS_TTL_COUNTER_TIMER / DNS_WAIT_TIME_PER_SLOT) / DNS_NUMBER_OF_ENTRIES; // decrease TTL every 3 seconds
 		}
 		
 		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 54, VDISP_FONT_4x6, 0, entry_counter);
