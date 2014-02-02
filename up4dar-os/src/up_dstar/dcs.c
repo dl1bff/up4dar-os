@@ -214,7 +214,12 @@ static void dcs_set_dns_name(void)
 		case SERVER_TYPE_DEXTRA:
 			memcpy(dcs_server_dns_name, "xrf", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
-			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
+			
+			if ((current_server >= 230) && (current_server < 270))
+			{
+				memcpy(dcs_server_dns_name+6, ".dstar.su", 10);
+			}
+			else if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
 				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
 			}
