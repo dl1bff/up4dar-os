@@ -181,7 +181,7 @@ int dns2_req_A (const char * name)
 	int i;
 	int handle = -1;
 	int link_zero_slot = -1;
-	int ttl_min = 255;
+	int ttl_min = 65535;
 	
 	for (i=0; i < DNS_NUMBER_OF_ENTRIES; i++)
 	{
