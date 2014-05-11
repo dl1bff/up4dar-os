@@ -145,6 +145,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 	(settings.s.long_values[(a) >> 5] & (~(1 << ((a) & 0x1F)))) | (((b) ? 1 : 0) << ((a) & 0x1F)) )
 
 void settings_init(void);
+void settings_write(void);
 
 
 #endif /* SETTINGS_H_ */

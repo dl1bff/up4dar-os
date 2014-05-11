@@ -173,6 +173,19 @@ void settings_init(void)
 	}
 }
 
+void settings_write(void)
+{
+	uint32_t chk = get_crc();
+		
+	if (chk != settings.settings_words[USER_PAGE_CHECKSUM])
+	{
+		settings.settings_words[USER_PAGE_CHECKSUM] = chk;
+		settings.settings_words[BOOT_LOADER_CONFIGURATION] = 0x929E1424; // boot loader config word
+			
+		flashc_memcpy(AVR32_FLASHC_USER_PAGE, & settings, 512, TRUE);
+	}
+}
+
 
 int snmp_get_flashstatus (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {

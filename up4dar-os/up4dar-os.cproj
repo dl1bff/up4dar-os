@@ -415,6 +415,12 @@
     <Compile Include="src\up_dstar\dstar.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\dvset.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\dvset.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\gps.c">
       <SubType>compile</SubType>
     </Compile>
@@ -425,6 +431,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\phycomm.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\r2cs.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\r2cs.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\rtclock.c">
@@ -467,6 +479,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\txtest.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\urcall.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\urcall.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\vdisp.c">

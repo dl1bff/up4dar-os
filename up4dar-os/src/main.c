@@ -63,6 +63,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_net/dhcp.h"
 #include "up_dstar/gps.h"
+#include "up_dstar/dvset.h"
+#include "up_dstar/r2cs.h"
 
 #include "up_io/lcd.h"
 #include "up_dstar/settings.h"
@@ -619,6 +621,8 @@ static void vServiceTask( void *pvParameters )
 			AVR32_MACB.man = 0x60C20000; // read register 0x10
 			break;
 		}
+		
+		dvset();
 			
 		const char * net_status = "     ";
 			
@@ -773,7 +777,6 @@ static void vServiceTask( void *pvParameters )
 		    lcd_set_contrast( SETTING_CHAR(C_DISP_CONTRAST) );
 		    last_contrast = SETTING_CHAR(C_DISP_CONTRAST);
 	    }
-		
 	}
 }
 
@@ -1031,6 +1034,11 @@ int main (void)
 		// error handling..
 	}
 	
+	if (vd_new_screen() != VDISP_DVSET_LAYER)
+	{
+		// error handling..
+	}
+	
 	
 	if (vd_new_screen() != VDISP_REF_LAYER)
 	{
@@ -1125,10 +1133,7 @@ int main (void)
 	
 	// xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 
-
 	gps_init( externalComPort );
-	
-	
 	
 	// sdcard_init(& audio_tx_q);
 	

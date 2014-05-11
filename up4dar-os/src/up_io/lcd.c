@@ -237,6 +237,33 @@ void lcd_show_help_layer(int help_layer)
 	lcd_update_screen = 1;
 }
 
+void lcd_show_menu_layer(int help_layer)
+{
+	if (help_layer == 0) // turn off help_layer
+	{
+		lcd_show_layer(lcd_current_layer);
+		return;
+	}
+	
+	int i;
+	/* int j;
+	
+	for (j=0; j < ((sizeof help_lines) / (sizeof help_lines[0])); j++)
+	{		
+		for (i=help_lines[j]*16 + 11; i < ((help_lines[j]+1)*16); i++ )
+		{
+			display_layer[i] = help_layer;
+		}
+	} */
+	
+	for (i=0; i < 128; i++)
+	{
+		display_layer[i] = help_layer;
+	}
+	
+	lcd_update_screen = 1;
+}
+
 void lcd_set_backlight (int v)
 {
 	AVR32_PWM.channel[6].cdty = 1000 - (v * 10);  // v = 0..100

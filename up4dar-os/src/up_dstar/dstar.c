@@ -49,6 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/snmp.h"
 #include "settings.h"
 #include "up_app/a_lib_internal.h"
+#include "up_dstar/r2cs.h"
 
 
 static xQueueHandle dstarQueue;
@@ -131,7 +132,6 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	memcpy(buf, header_data + 27, 8);
 	mkPrintableString(buf,8);
 	
-	
 	if ((crc_result == 0) && (ypos == 5))
 	{
 		if ((header_data[0] & 0x07) == 0)
@@ -155,7 +155,6 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vd_prints_xy(VDISP_DEBUG_LAYER, 50, 58, VDISP_FONT_4x6, crc_result, "RX:");
 		vd_prints_xy(VDISP_DEBUG_LAYER, 62, 58, VDISP_FONT_4x6, crc_result, buf);
 	}
-	
 	
 	memcpy(buf, header_data + 35, 4);
 	mkPrintableString(buf,4);
@@ -1240,6 +1239,9 @@ void dstar_get_header(uint8_t rx_source, uint8_t * crc_result, uint8_t * header_
 	{
 		repeater_msg = 0;
 		printHeader (5, rx_q_header[rx_source].crc_result, rx_q_header[rx_source].data );
+		memcpy(buf, rx_q_header[rx_source].data + 27, 8);
+		mkPrintableString(buf, CALLSIGN_LENGTH);
+		r2cs_append(buf);
 		rx_q_header[rx_source].crc_result = DSTAR_HEADER_OK; // mark as "seen"
 	}
 	
