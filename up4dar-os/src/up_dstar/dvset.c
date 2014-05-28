@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 /*
- * call.c
+ * dvset.c
  *
  * Created: 14.02.2014 23:19:25
  *  Author: rballis
@@ -239,7 +239,6 @@ void dvset_select(bool select)
 		feld_idx = 0;
 		sub_feld_idx = 0;
 		
-		//Schreiben in den Flash- Speicher
 		settings_write();
 	}
 }
