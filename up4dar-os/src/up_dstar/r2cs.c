@@ -124,7 +124,7 @@ void r2cs_print(int layer, int position)
 	int y_pos = 12;
 	int disp_inverse = 0;
 
-	vd_clear_rect(layer, 8, y_pos, 145, 43);
+	vd_clear_rect(layer, 0, y_pos, 145, 43);
 	
 	vd_printc_xy(layer, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
 	vd_printc_xy(layer, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up

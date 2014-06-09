@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dstar.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #include "rx_dstar_crc_header.h"
 
@@ -962,24 +963,36 @@ static void processPacket(void)
 			// dstarChangeMode(4);
 			if (dp.dataLen <= (sizeof sysinfo))
 			{
+				int qrg_rx = atoi(settings.s.qrg_rx);
+				int qrg_tx = atoi(settings.s.qrg_tx);
 				memcpy(sysinfo, dp.data, dp.dataLen);
 				sysinfo_len = dp.dataLen;
 				
-#define QRG_TX  430375000
-#define QRG_RX  430375000
-
-				char buf[12];
-				
+//#define QRG_TX  430375000
+//#define QRG_RX  430375000
+//
+				//char buf[12];
+				//
+				//buf[0] = 0x44;
+				//buf[1] = (QRG_RX >> 24) & 0xFF;
+				//buf[2] = (QRG_RX >> 16) & 0xFF;
+				//buf[3] = (QRG_RX >> 8) & 0xFF;
+				//buf[4] = (QRG_RX >> 0) & 0xFF;
+				//buf[5] = (QRG_TX >> 24) & 0xFF;
+				//buf[6] = (QRG_TX >> 16) & 0xFF;
+				//buf[7] = (QRG_TX >> 8) & 0xFF;
+				//buf[8] = (QRG_TX >> 0) & 0xFF;
+ 				//
 				buf[0] = 0x44;
-				buf[1] = (QRG_RX >> 24) & 0xFF;
-				buf[2] = (QRG_RX >> 16) & 0xFF;
-				buf[3] = (QRG_RX >> 8) & 0xFF;
-				buf[4] = (QRG_RX >> 0) & 0xFF;
-				buf[5] = (QRG_TX >> 24) & 0xFF;
-				buf[6] = (QRG_TX >> 16) & 0xFF;
-				buf[7] = (QRG_TX >> 8) & 0xFF;
-				buf[8] = (QRG_TX >> 0) & 0xFF;
- 				
+				buf[1] = (qrg_rx >> 24) & 0xFF;
+				buf[2] = (qrg_rx >> 16) & 0xFF;
+				buf[3] = (qrg_rx >> 8) & 0xFF;
+				buf[4] = (qrg_rx >> 0) & 0xFF;
+				buf[5] = (qrg_tx >> 24) & 0xFF;
+				buf[6] = (qrg_tx >> 16) & 0xFF;
+				buf[7] = (qrg_tx >> 8) & 0xFF;
+				buf[8] = (qrg_tx >> 0) & 0xFF;
+				
 				phyCommSendCmd(buf, 9);
 			}
 			

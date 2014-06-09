@@ -1029,18 +1029,27 @@ int main (void)
 		// error handling..
 	}
 	
-	if (vd_new_screen() != VDISP_GPS_LAYER)
-	{
-		// error handling..
-	}
-	
+	//if (vd_new_screen() != VDISP_RMUSET_LAYER)
+	//{
+	//// error handling..
+	//}
+
 	if (vd_new_screen() != VDISP_DVSET_LAYER)
 	{
 		// error handling..
 	}
 	
+	if (vd_new_screen() != VDISP_GPS_LAYER)
+	{
+		// error handling..
+	}
 	
 	if (vd_new_screen() != VDISP_REF_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_AUDIO_LAYER)
 	{
 		// error handling..
 	}
@@ -1051,11 +1060,6 @@ int main (void)
 	}
 	
 	if (vd_new_screen() != VDISP_SAVE_LAYER)
-	{
-		// error handling..
-	}
-	
-	if (vd_new_screen() != VDISP_AUDIO_LAYER)
 	{
 		// error handling..
 	}

@@ -439,6 +439,12 @@
     <Compile Include="src\up_dstar\r2cs.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\rmuset.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\rmuset.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\rtclock.c">
       <SubType>compile</SubType>
     </Compile>

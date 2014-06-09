@@ -42,6 +42,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net\dhcp.h"
 #include "up_dstar\dvset.h"
 #include "up_dstar\r2cs.h"
+#include "up_dstar\rmuset.h"
 #include "up_dstar\urcall.h"
 
 
@@ -231,7 +232,7 @@ void tx_info_on(void)
 		lcd_show_menu_layer(help_layer);
 		help_layer_timer = 0; // display permanent
 	
-		vd_clear_rect(help_layer, 8, 12, 146, 43);	
+		vd_clear_rect(help_layer, 0, 12, 146, 43);	
 
 		for (int i = 8; i < 66; i++)
 		{
@@ -411,7 +412,7 @@ static void set_speaker_volume (int up)
 		lcd_show_menu_layer(help_layer);
 		help_layer_timer = 0; // display permanent
 		
-		vd_clear_rect(help_layer, 8, 12, 146, 43);
+		vd_clear_rect(help_layer, 0, 12, 146, 43);
 
 		vdisp_i2s(buf + 1, 2, 10, 1, new_volume);
 		vd_prints_xy(help_layer, 30, 30, VDISP_FONT_6x8, 0, "Volume");
@@ -516,6 +517,12 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 			{
 				help_layer_timer = 0; // show help forever..
 			}
+			else if (current_app->screen_num == VDISP_RMUSET_LAYER)
+			{
+				help_layer_timer = 0; // show help forever..
+
+				rmuset_print();				
+			}
 			else
 			{
 				help_layer_timer = 5; // approx 2 seconds
@@ -606,11 +613,11 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 	}			
 }
 
-#define REF_NUM_ITEMS 6
-#define REF_SELECTION_SPECIAL 6
+#define REF_NUM_ITEMS 7
+#define REF_SELECTION_SPECIAL 7
 static char ref_selected_item = 0;
-static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 3, 2, 9, 9, 9, 25 };
+static char ref_items[REF_NUM_ITEMS] = { 0, 3, 0, 0, 0, 1, 2 };
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 3, 4, 2, 9, 9, 9, 25 };
 static const char * const ref_modes[4] = { "D-STAR Modem",
 										   "IP Reflector",
 										   "Hotspot     ",
@@ -632,23 +639,27 @@ static void ref_print_status (void)
 	vd_prints_xy(VDISP_REF_LAYER, 36, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
 		ref_modes[(int) ref_items[0]]);
 	
-	#define XPOS 10
-	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
-		ref_types[(int) ref_items[1]]);
+	vd_printc_xy(VDISP_REF_LAYER, 0, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
+		ref_items[1] + 0x41);
 	
+	vd_prints_xy(VDISP_REF_LAYER, 10, 24, VDISP_FONT_6x8, 0, "==>");
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
-		ref_items[2] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
+	#define XPOS 30
+	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
+		ref_types[(int) ref_items[2]]);
+	
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
 		ref_items[3] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
 		ref_items[4] + 0x30);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+		ref_items[5] + 0x30);
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
 		0x20);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
-		ref_items[5] + 0x41);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
+		ref_items[6] + 0x41);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
 		0x20);
 	
 	#undef XPOS
@@ -658,15 +669,15 @@ void set_ref_params (int ref_num, int ref_letter, int ref_type)
 {
 	int n = ref_num;
 	
+	ref_items[5] = n % 10;
+	n /= 10;
 	ref_items[4] = n % 10;
 	n /= 10;
 	ref_items[3] = n % 10;
-	n /= 10;
-	ref_items[2] = n % 10;
 	
-	ref_items[5] = ref_letter - 0x41;
+	ref_items[6] = ref_letter - 0x41;
 	
-	ref_items[1] = ref_type;
+	ref_items[2] = ref_type;
 	
 	ref_print_status();
 }
@@ -809,6 +820,42 @@ static int dvset_app_key_event_handler (void * app_context, int key_num, int eve
 	return 1;
 }
 
+static int rmuset_app_key_event_handler (void * app_context, int key_num, int event_type)
+{
+	// app_context_t * a = (app_context_t *) app_context;
+
+	if ((event_type == A_KEY_PRESSED) || (event_type == A_KEY_REPEAT))
+	{
+		if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_PRESSED))
+		{
+			refresh_main_menu = true;
+
+		}
+		else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
+		{
+		
+		}	
+		else if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_PRESSED))
+		{
+		
+		}
+		else if ((key_num == A_KEY_BUTTON_DOWN) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
+		{
+			rmuset_field(1);
+		
+		}
+		else if ((key_num == A_KEY_BUTTON_UP) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
+		{
+			rmuset_field(0);
+		
+		}
+		
+		rmuset_print();
+	}
+	
+	return 1;
+}
+
 static int ref_app_key_event_handler (void * app_context, int key_num, int key_event)
 {
 	// app_context_t * a = (app_context_t *) app_context;
@@ -886,15 +933,16 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 		set_mode_vars();
 	
 		
-		int n = ref_items[2] * 100 +
-				ref_items[3] * 10 +
-				ref_items[4];
+		int n = ref_items[3] * 100 +
+				ref_items[4] * 10 +
+				ref_items[5];
 				
-		dcs_select_reflector( n, ref_items[5] + 0x41, ref_items[1] );
+		dcs_select_reflector( n, ref_items[6] + 0x41, ref_items[2]);
 		
-		SETTING_CHAR(C_REF_TYPE) = ref_items[1];
+		SETTING_CHAR(C_REF_TYPE) = ref_items[2];
 		SETTING_SHORT(S_REF_SERVER_NUM) = n;
-		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[5] + 0x41;
+		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[6] + 0x41;
+		SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) = ref_items[1] + 0x41;
 		SETTING_CHAR(C_DCS_MODE) = ref_items[0];
 		
 		ref_print_status();
@@ -1023,12 +1071,16 @@ void a_app_manager_init(void)
 	a_set_key_event_handler(a, main_app_key_event_handler);
 	main_screen = a;
 	
-	a = a_new_app( "GPS", VDISP_GPS_LAYER);
-	a_set_button_text(a, "", "", "", "MENU");
+	a = a_new_app( "RMU SET", VDISP_RMUSET_LAYER);
+	a_set_button_text(a, "SELECT", "", "", "MENU");
+	a_set_key_event_handler(a, rmuset_app_key_event_handler);
 	
 	a = a_new_app( "DV SET", VDISP_DVSET_LAYER);
 	a_set_button_text(a, "SELECT", "", "", "MENU");
 	a_set_key_event_handler(a, dvset_app_key_event_handler);
+	
+	a = a_new_app( "GPS", VDISP_GPS_LAYER);
+	a_set_button_text(a, "", "", "", "MENU");
 	
 	a = a_new_app( "REFLECTOR", VDISP_REF_LAYER);
 	a_set_button_text(a, "CONNECT", "DISC", "SELECT", "MENU");
@@ -1050,17 +1102,23 @@ void a_app_manager_init(void)
 	{
 		int n = SETTING_SHORT(S_REF_SERVER_NUM);
 		
+		ref_items[5] = n % 10;
+		n /= 10;
 		ref_items[4] = n % 10;
 		n /= 10;
 		ref_items[3] = n % 10;
-		n /= 10;
-		ref_items[2] = n % 10;
 	}
 	
 	if ((SETTING_CHAR(C_REF_MODULE_CHAR) >= 'A') &&
 		(SETTING_CHAR(C_REF_MODULE_CHAR) <= 'Z'))
 	{
-		ref_items[5] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
+		ref_items[6] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
+	}
+	
+	if ((SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) >= 'A') &&
+	(SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) <= 'E'))
+	{
+		ref_items[1] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) - 0x41;
 	}
 	
 	if ((SETTING_CHAR(C_DCS_MODE) >= 0) &&
@@ -1072,17 +1130,16 @@ void a_app_manager_init(void)
 	if ((SETTING_CHAR(C_REF_TYPE) >= 0) &&
 		(SETTING_CHAR(C_REF_TYPE) <= 2))
 	{
-		ref_items[1] = SETTING_CHAR(C_REF_TYPE);
+		ref_items[2] = SETTING_CHAR(C_REF_TYPE);
 	}
 	
-		
 	set_mode_vars();
 	
-	int n = ref_items[2] * 100 +
-	ref_items[3] * 10 +
-	ref_items[4];
+	int n = ref_items[3] * 100 +
+	ref_items[4] * 10 +
+	ref_items[5];
 	
-	dcs_select_reflector( n, ref_items[5] + 0x41,  ref_items[1] );
+	dcs_select_reflector( n, ref_items[6] + 0x41,  ref_items[2]);
 	
 	if ((dcs_mode != 0)  && 
 		(SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)) 
@@ -1142,6 +1199,9 @@ void a_app_manager_init(void)
 	
 	vd_printc_xy(VDISP_DVSET_LAYER, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
 	vd_printc_xy(VDISP_DVSET_LAYER, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up
+	
+	vd_printc_xy(VDISP_RMUSET_LAYER, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
+	vd_printc_xy(VDISP_RMUSET_LAYER, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up
 	
 	set_help_text();
 }

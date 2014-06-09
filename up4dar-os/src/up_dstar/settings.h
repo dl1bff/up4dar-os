@@ -40,6 +40,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define CALLSIGN_EXT_LENGTH		4
 #define DPRS_MSG_LENGTH		13
 #define TXMSG_LENGTH		20
+#define QRG_LENGTH			9
+#define TXPWR_LENGTH        2
 
 #define NUM_RPT_SETTINGS	5
 #define NUM_URCALL_SETTINGS		10
@@ -63,6 +65,9 @@ typedef union settings_union
 		char txmsg[TXMSG_LENGTH];
 		char dprs_msg[DPRS_MSG_LENGTH];
 		char snmp_cmnty[SNMP_CMNTY_LENGTH];
+		char qrg_tx[QRG_LENGTH];
+		char qrg_rx[QRG_LENGTH];
+		char pwr_tx[TXPWR_LENGTH];
 	} s;
 	
 } settings_t;
@@ -127,6 +132,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DCS_MODE					16
 #define C_DCS_CONNECT_AFTER_BOOT	17
 #define C_REF_TYPE					18
+#define C_REF_SOURCE_MODULE_CHAR	19
+#define C_RMU_ENABLED				20
 
 
 // BOOL values

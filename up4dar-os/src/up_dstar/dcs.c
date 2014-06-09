@@ -69,9 +69,9 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
 
-                              "<font size=\"2\"><b>www.UP4DAR.de</b>&nbsp;</font>"
+                              "<font size=\"2\"><b><li><a href=\"http://www.UP4DAR.de\">www.UP4DAR.de</a></li></b>&nbsp;</font>"
 							  
-							 // "<font size=\"1\">Version: X.0.00.00 </font>"
+							  //"<font size=\"1\">Version: X.0.00.00 </font>"
 		 
                               "</td>"
 
@@ -554,8 +554,6 @@ static void infocpy ( uint8_t * mem )
 	}
 }
 
-#define DCS_REGISTER_MODULE  'D'
-
 // #define DCS_CONNECT_FRAME_SIZE	19
 #define DCS_CONNECT_FRAME_SIZE		519
 
@@ -584,7 +582,7 @@ static void dcs_link_to (char module)
 	d[8] = settings.s.my_callsign[7];
 	if ((d[8] < 'A') || (d[8] > 'Z'))
 	{
-		d[8] = DCS_REGISTER_MODULE; // my repeater module
+		d[8] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	d[9] = module; // module to link to
 	d[10] = 0;
@@ -593,9 +591,9 @@ static void dcs_link_to (char module)
 	{
 		dcs_get_current_reflector_name(buf);
 		memcpy(d + 11, buf, 7);
-		// d[18] = ' ';
+		d[18] = ' ';
 		d[18] = '@';
-		// memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
+		memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
 		infocpy(d + 19);
 	}
 
@@ -632,7 +630,7 @@ static void dcs_keepalive_response(int request_size)
 				d[7] = settings.s.my_callsign[7];
 				if ((d[7] < 'A') || (d[7] > 'Z'))
 				{
-					d[7] = DCS_REGISTER_MODULE; // my repeater module
+					d[7] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 				}
 				d[8] = current_module;
 				d[9] = 0;
@@ -644,7 +642,7 @@ static void dcs_keepalive_response(int request_size)
 		d[7] = settings.s.my_callsign[7];
 		if ((d[7] < 'A') || (d[7] > 'Z'))
 		{
-			d[7] = DCS_REGISTER_MODULE; // my repeater module
+			d[7] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 		}
 		d[8] = 0;
 		dcs_get_current_reflector_name((char *) (d + 9));
@@ -784,7 +782,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = DCS_REGISTER_MODULE; // my repeater module
+		d[22] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8); 
 	memcpy (d + 31, settings.s.my_callsign, 8);
@@ -965,7 +963,7 @@ static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = DCS_REGISTER_MODULE; // my repeater module
+		d[22] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy (d + 31, rx_header + 27, 8);
