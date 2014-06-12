@@ -33,10 +33,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gcc_builtin.h"
 
 static const ref_item_min_val[RMUSET_MAX_FELD] = { 0, 0, 0, 1, 0 };
-static const char ref_item_max_val[RMUSET_MAX_FELD] = { 11, 9, 15, 30, 1 };
+static const char ref_item_max_val[RMUSET_MAX_FELD] = { 94, 9, 15, 30, 1 };
 
-static const char * const ref_qrg_MHz_ITU_Region1[12] = { "144", "145",
-	"430", "431", "432", "433", "434", "435", "436", "437", "438", "439" };
+static const char * const ref_qrg_MHz[95] = { "137", "138", "139", "138", "139",
+	"140", "141", "142", "143", "144", "145", "146", "147", "148", "149",
+	"150", "151", "152", "153", "154", "155", "156", "157", "158", "159",
+	"410", "411", "412", "413", "414", "415", "416", "417", "418", "419"
+	"420", "421", "422", "423", "424", "425", "426", "427", "428", "429"
+	"430", "431", "432", "433", "434", "435", "436", "437", "438", "439"
+	"440", "441", "442", "443", "444", "445", "446", "447", "448", "449"
+	"450", "451", "452", "453", "454", "455", "456", "457", "458", "459"
+	"460", "461", "462", "463", "464", "465", "466", "467", "468", "469"
+	"470", "471", "472", "473", "474", "475", "476", "477", "478", "479" };
 
 static const char * const ref_qrg_6_25kHz[16] = { "00,00", "06,25", "12,50", "18,75",
 	"25,00", "31,25", "37,50", "43,75",
@@ -69,13 +77,13 @@ void rmuset_print(void)
 	
 	vd_prints_xy(VDISP_RMUSET_LAYER, 0, 12, VDISP_FONT_5x8, 0, "TX-QRG:");
 	vd_prints_xy(VDISP_RMUSET_LAYER, 0, 23, VDISP_FONT_5x8, 0, "RX-QRG:");
-	vd_prints_xy(VDISP_RMUSET_LAYER, 0, 34, VDISP_FONT_5x8, 0, "TX-PWR:");
+	//vd_prints_xy(VDISP_RMUSET_LAYER, 0, 34, VDISP_FONT_5x8, 0, "TX-PWR:");
 
 	if (SETTING_CHAR(C_RMU_ENABLED) == 0)
 	{
 		vd_prints_xy(VDISP_RMUSET_LAYER, 40, 12, VDISP_FONT_5x8, 0, "---");
 		vd_prints_xy(VDISP_RMUSET_LAYER, 40, 23, VDISP_FONT_5x8, 0, "---");
-		vd_prints_xy(VDISP_RMUSET_LAYER, 40, 34, VDISP_FONT_5x8, 0, "---");
+		//vd_prints_xy(VDISP_RMUSET_LAYER, 40, 34, VDISP_FONT_5x8, 0, "---");
 	}
 	else
 	{
@@ -119,11 +127,11 @@ void rmuset_print(void)
 
 		vd_prints_xy(VDISP_RMUSET_LAYER, 93, 23, VDISP_FONT_5x8, 0, "MHz");
 
-		memset(str, '\0', RMUSET_LINE_LENGTH);
-		memcpy(str, settings.s.pwr_tx, TXPWR_LENGTH);
-		vd_prints_xy(VDISP_RMUSET_LAYER, 40, 34, VDISP_FONT_5x8, 0, str);
-	
-		vd_prints_xy(VDISP_RMUSET_LAYER, 60, 34, VDISP_FONT_5x8, 0, "mW");
+		//memset(str, '\0', RMUSET_LINE_LENGTH);
+		//memcpy(str, settings.s.pwr_tx, TXPWR_LENGTH);
+		//vd_prints_xy(VDISP_RMUSET_LAYER, 40, 34, VDISP_FONT_5x8, 0, str);
+	//
+		//vd_prints_xy(VDISP_RMUSET_LAYER, 60, 34, VDISP_FONT_5x8, 0, "mW");
 	}
 		
 	vd_prints_xy(VDISP_RMUSET_LAYER, 40, 45, VDISP_FONT_6x8, enabled_invers, ref_enabled[SETTING_CHAR(C_RMU_ENABLED)]);

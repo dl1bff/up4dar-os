@@ -426,6 +426,7 @@ static void set_speaker_volume (int up)
 char dcs_mode = 0;
 char hotspot_mode = 0;
 char repeater_mode = 0;
+char parrot_mode = 0;
 
 static char snmp_reset_cmnty = 0;
 
@@ -617,19 +618,21 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 #define REF_SELECTION_SPECIAL 7
 static char ref_selected_item = 0;
 static char ref_items[REF_NUM_ITEMS] = { 0, 3, 0, 0, 0, 1, 2 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 3, 4, 2, 9, 9, 9, 25 };
-static const char * const ref_modes[4] = { "D-STAR Modem",
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 4, 4, 2, 9, 9, 9, 25 };
+static const char * const ref_modes[5] = { "D-STAR Modem",
 										   "IP Reflector",
 										   "Hotspot     ",
-										   "Repeater    "};
+										   "Repeater    ",
+										   "Parrot (DVR)" };
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
 	
 
 static void set_mode_vars(void)
 {
-	dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
+	dcs_mode = ((ref_items[0] != 0) && (ref_items[0] != 4)); // "IP Reflector" "Hotspot" "Repeater"
 	hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
 	repeater_mode = (ref_items[0] == 3); //  "Repeater"
+	parrot_mode = (ref_items[0] == 4); // "Parrot"
 }
 
 
@@ -1122,7 +1125,7 @@ void a_app_manager_init(void)
 	}
 	
 	if ((SETTING_CHAR(C_DCS_MODE) >= 0) &&
-		(SETTING_CHAR(C_DCS_MODE) <= 3))
+		(SETTING_CHAR(C_DCS_MODE) <= 4))
 	{
 		ref_items[0] = SETTING_CHAR(C_DCS_MODE);
 	}		

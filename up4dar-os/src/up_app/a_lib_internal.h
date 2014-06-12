@@ -43,6 +43,7 @@ void a_app_manager_service(void);
 extern char dcs_mode;
 extern char hotspot_mode;
 extern char repeater_mode;
+extern char parrot_mode;
 
 
 #endif /* A_LIB_INTERNAL_H_ */

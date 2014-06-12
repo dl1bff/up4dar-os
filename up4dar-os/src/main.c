@@ -552,6 +552,7 @@ static void vServiceTask( void *pvParameters )
 	int last_backlight = -1;
 	int last_contrast = -1;
 	char last_repeater_mode = 0;
+	char last_parrot_mode = 0;
 	char dcs_boot_timer = 8;
 
 	for (;;)
@@ -736,9 +737,26 @@ static void vServiceTask( void *pvParameters )
 		{
 			dcs_service();
 		
+			if (parrot_mode != last_parrot_mode)
+			{
+				if (parrot_mode != 0)
+				{
+					dstarChangeMode(1); // Service mode
+					set_phy_parameters();
+					dstarChangeMode(4);  // DVR mode
+				}
+				else
+				{
+					dstarChangeMode(1);
+					set_phy_parameters();
+					dstarChangeMode(2); // single user mode
+				}
+				
+				last_parrot_mode = parrot_mode;
+			}
+			
 			if (repeater_mode != last_repeater_mode)
 			{
-				
 				if (repeater_mode != 0)
 				{
 					dstarChangeMode(1); // Service mode
