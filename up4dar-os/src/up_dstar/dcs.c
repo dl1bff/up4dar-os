@@ -69,7 +69,7 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
 
-                              "<font size=\"2\"><b><li><a href=\"http://www.UP4DAR.de\">www.UP4DAR.de</a></li></b>&nbsp;</font>"
+                              "<font size=\"2\"><b><a href=\"http://www.UP4DAR.de\">www.UP4DAR.de</a></b>&nbsp;</font>"
 							  
 							  //"<font size=\"1\">Version: X.0.00.00 </font>"
 		 
