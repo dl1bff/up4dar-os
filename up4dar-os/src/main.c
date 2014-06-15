@@ -737,31 +737,19 @@ static void vServiceTask( void *pvParameters )
 		{
 			dcs_service();
 		
-			if (parrot_mode != last_parrot_mode)
-			{
-				if (parrot_mode != 0)
-				{
-					dstarChangeMode(1); // Service mode
-					set_phy_parameters();
-					dstarChangeMode(4);  // DVR mode
-				}
-				else
-				{
-					dstarChangeMode(1);
-					set_phy_parameters();
-					dstarChangeMode(2); // single user mode
-				}
-				
-				last_parrot_mode = parrot_mode;
-			}
-			
-			if (repeater_mode != last_repeater_mode)
+			if ((parrot_mode != last_parrot_mode) || (repeater_mode != last_repeater_mode))
 			{
 				if (repeater_mode != 0)
 				{
 					dstarChangeMode(1); // Service mode
 					set_phy_parameters();
 					dstarChangeMode(3);  // Repeater mode
+				}
+				else if (parrot_mode != 0)
+				{
+					dstarChangeMode(1); // Service mode
+					set_phy_parameters();
+					dstarChangeMode(4);  // DVR mode
 				}
 				else
 				{				
@@ -771,6 +759,7 @@ static void vServiceTask( void *pvParameters )
 				}
 			
 				last_repeater_mode = repeater_mode;
+				last_parrot_mode = parrot_mode;
 			}
 		
 			if (dcs_mode != 0)
