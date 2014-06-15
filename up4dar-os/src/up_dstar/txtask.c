@@ -687,7 +687,7 @@ static void vTXTask( void *pvParameters )
 	vdisp_clear_rect(0,0,128,64);
 	gps_reset_slow_data();
 	
-#define PTT_CONDITION  ((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1))
+#define PTT_CONDITION  (((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1)) && (!parrot_mode))
 
 	
 	short tx_min_count = 0;

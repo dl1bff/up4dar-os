@@ -56,7 +56,7 @@ void r2cs(int layer, int position)
 		vd_set_pixel(layer, 88, i + 1, 0, 1, 1);
 	}
 
-	if (position <= history_max && position >=0 && history_max >= 0)
+	if (position <= history_max && position >= 0 && history_max >= 0)
 	{
 		urcall_from_r2cs = true;
 		urcall_position = position;
@@ -65,6 +65,7 @@ void r2cs(int layer, int position)
 	else
 	{
 		urcall_from_r2cs = false;
+		SETTING_CHAR(C_DV_USE_URCALL_SETTING  ) = 1;
 		memcpy(urcall, settings.s.urcall + ((SETTING_CHAR(C_DV_USE_URCALL_SETTING  ) - 1)*CALLSIGN_LENGTH), CALLSIGN_LENGTH);
 	}
 	
