@@ -983,7 +983,8 @@ static void processPacket(void)
 				//buf[7] = (QRG_TX >> 8) & 0xFF;
 				//buf[8] = (QRG_TX >> 0) & 0xFF;
  				//
-				buf[0] = 0x44;
+
+				buf[0] = SET_QRG;
 				buf[1] = (qrg_rx >> 24) & 0xFF;
 				buf[2] = (qrg_rx >> 16) & 0xFF;
 				buf[3] = (qrg_rx >> 8) & 0xFF;

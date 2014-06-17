@@ -171,7 +171,6 @@ void settings_init(void)
 		memcpy(settings.s.urcall + (2*CALLSIGN_LENGTH), "CQCQ DVR", CALLSIGN_LENGTH);
 		memcpy(settings.s.qrg_tx, "430375000", QRG_LENGTH);
 		memcpy(settings.s.qrg_rx, "430375000", QRG_LENGTH);
-		//memcpy(settings.s.pwr_tx, "30", TXPWR_LENGTH);
 	}
 }
 

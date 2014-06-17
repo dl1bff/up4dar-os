@@ -522,6 +522,7 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 			{
 				help_layer_timer = 0; // show help forever..
 
+				rmuset_ref(-1);
 				rmuset_print();				
 			}
 			else
@@ -831,8 +832,7 @@ static int rmuset_app_key_event_handler (void * app_context, int key_num, int ev
 	{
 		if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_PRESSED))
 		{
-			refresh_main_menu = true;
-
+			
 		}
 		else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
 		{
@@ -840,17 +840,15 @@ static int rmuset_app_key_event_handler (void * app_context, int key_num, int ev
 		}	
 		else if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_PRESSED))
 		{
-		
+			rmuset_feld();
 		}
 		else if ((key_num == A_KEY_BUTTON_DOWN) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
 		{
-			rmuset_field(1);
-		
+			rmuset_ref(0);
 		}
 		else if ((key_num == A_KEY_BUTTON_UP) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
 		{
-			rmuset_field(0);
-		
+			rmuset_ref(1);
 		}
 		
 		rmuset_print();
@@ -1075,7 +1073,7 @@ void a_app_manager_init(void)
 	main_screen = a;
 	
 	a = a_new_app( "RMU SET", VDISP_RMUSET_LAYER);
-	a_set_button_text(a, "SELECT", "", "", "MENU");
+	a_set_button_text(a, "SET", "", "SELECT", "MENU");
 	a_set_key_event_handler(a, rmuset_app_key_event_handler);
 	
 	a = a_new_app( "DV SET", VDISP_DVSET_LAYER);
@@ -1125,7 +1123,7 @@ void a_app_manager_init(void)
 	}
 	
 	if ((SETTING_CHAR(C_DCS_MODE) >= 0) &&
-		(SETTING_CHAR(C_DCS_MODE) <= 4))
+		(SETTING_CHAR(C_DCS_MODE) <= 5))
 	{
 		ref_items[0] = SETTING_CHAR(C_DCS_MODE);
 	}		

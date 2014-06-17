@@ -28,10 +28,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RMUSET_H_
 
 #define RMUSET_LINE_LENGTH 11
-#define RMUSET_MAX_FELD 5
+#define RMUSET_MAX_REF 4
+#define RMUSET_MAX_FELD 6
 
-void rmuset_field(int act);
-void rmuset_cursor(int act);
+void rmuset_ref(int act);
+void rmuset_feld(void);
+bool rmuset_enabled(void);
 void rmuset_print(void);
 
 

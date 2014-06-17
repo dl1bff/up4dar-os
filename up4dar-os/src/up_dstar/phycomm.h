@@ -21,6 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef PHYCOMM_H_
 #define PHYCOMM_H_
 
+#define SET_QRG	0x44
 
 
 // void phyCommInit( xQueueHandle dq );
