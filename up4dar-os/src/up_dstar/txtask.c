@@ -296,7 +296,7 @@ static void phy_send_response(uint8_t * rx_header)
 	
 	
 	for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		header[20+i] = rx_header[27+i]; // UR is calling station
+		header[20+i] = "CQCQCQ  "[i]; // UR is calling station
 	}
 	
 	for (short i=0; i<CALLSIGN_LENGTH; ++i){
