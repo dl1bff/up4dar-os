@@ -22,6 +22,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define PHYCOMM_H_
 
 #define SET_QRG	0x44
+#define IND_QRG 0x45
+#define SET_RMU 0x46
+#define IND_RMU 0x47
 
 
 // void phyCommInit( xQueueHandle dq );

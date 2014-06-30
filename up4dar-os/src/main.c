@@ -554,6 +554,7 @@ static void vServiceTask( void *pvParameters )
 	char last_repeater_mode = 0;
 	char last_parrot_mode = 0;
 	char dcs_boot_timer = 8;
+	bool update = true;
 
 	for (;;)
 	{	
@@ -727,6 +728,13 @@ static void vServiceTask( void *pvParameters )
 		a_app_manager_service();
 		
 		ntp_service();
+		
+		if (update)
+		{
+			dstarRMUEnable();
+			dstarRMUSetQRG();
+			update = false;
+		}
 			 
 			
 		if (dcs_boot_timer > 0)
@@ -737,7 +745,7 @@ static void vServiceTask( void *pvParameters )
 		{
 			dcs_service();
 		
-			if ((parrot_mode != last_parrot_mode) || (repeater_mode != last_repeater_mode))
+			if ((parrot_mode != last_parrot_mode) || (repeater_mode != last_repeater_mode) || (dstarRefreshMode()))
 			{
 				if (repeater_mode != 0)
 				{

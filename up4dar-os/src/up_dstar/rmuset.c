@@ -24,7 +24,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */ 
 
 #include "FreeRTOS.h"
-#include "vdisp.h"
 #include "rmuset.h"
 #include "urcall.h"
 #include "settings.h"
@@ -51,10 +50,10 @@ static const char * const ref_qrg_MHz[93] = { "137", "138", "139",
 	
 static const char * const ref_qrg_100kHz[10] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
 
-static const char * const ref_qrg_6_25kHz[16] = { "00,00", "06,25", "12,50", "18,75",
-	"25,00", "31,25", "37,50", "43,75",
-	"50,00", "56,25", "42,50", "68,75",
-	"75,00", "81,25", "87,50", "93,75" };
+static const char * const ref_qrg_6_25kHz[16] = { "0000", "0625", "1250", "1875",
+	"2500", "3125", "3750", "4375",
+	"5000", "5625", "4250", "6875",
+	"7500", "8125", "8750", "9375" };
 	
 static const char * const ref_enabled[2] = { "disabled", "enabled" };
 	
@@ -90,6 +89,7 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[0];
 		
 		memcpy(settings.s.qrg_tx, ref_qrg_MHz[ref_selected_item], 3);
+		dstarRMUSetQRG();
 	}
 	else if (feld_selected_item == 1)
 	{
@@ -113,6 +113,7 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[1];
 		
 		memcpy(settings.s.qrg_tx + 3, ref_qrg_100kHz[ref_selected_item], 1);
+		dstarRMUSetQRG();
 	}
 	else if (feld_selected_item == 2)
 	{
@@ -136,8 +137,9 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[2];
 		
 		memcpy(settings.s.qrg_tx + 4, ref_qrg_6_25kHz[ref_selected_item], 2);
-		memcpy(settings.s.qrg_tx + 6, ref_qrg_6_25kHz[ref_selected_item] + 3, 2);
+		memcpy(settings.s.qrg_tx + 6, ref_qrg_6_25kHz[ref_selected_item] + 2, 2);
 		memcpy(settings.s.qrg_tx + 8, "0", 1);
+		dstarRMUSetQRG();
 	}
 	if (feld_selected_item == 3)
 	{
@@ -161,6 +163,7 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[0];
 		
 		memcpy(settings.s.qrg_rx, ref_qrg_MHz[ref_selected_item], 3);
+		dstarRMUSetQRG();
 	}
 	else if (feld_selected_item == 4)
 	{
@@ -184,6 +187,7 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[1];
 		
 		memcpy(settings.s.qrg_rx + 3, ref_qrg_100kHz[ref_selected_item], 1);
+		dstarRMUSetQRG();
 	}
 	else if (feld_selected_item == 5)
 	{
@@ -207,8 +211,9 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[2];
 		
 		memcpy(settings.s.qrg_rx + 4, ref_qrg_6_25kHz[ref_selected_item], 2);
-		memcpy(settings.s.qrg_rx + 6, ref_qrg_6_25kHz[ref_selected_item] + 3, 2);
+		memcpy(settings.s.qrg_rx + 6, ref_qrg_6_25kHz[ref_selected_item] + 2, 2);
 		memcpy(settings.s.qrg_rx + 8, "0", 1);
+		dstarRMUSetQRG();
 	}
 	else if (feld_selected_item == 6)
 	{
@@ -225,6 +230,7 @@ void rmuset_ref(int act)
 			ref_selected_item = ref_item_min_val[3];
 			
 		SETTING_CHAR(C_RMU_ENABLED) = ref_selected_item;
+		dstarRMUEnable();
 	}
 }
 
@@ -298,7 +304,7 @@ void rmuset_print(void)
 	{
 		memset(str, '\0', RMUSET_LINE_LENGTH);
 		memcpy(str, settings.s.qrg_tx, 3);
-		vd_prints_xy(VDISP_RMUSET_LAYER, 40, 12, VDISP_FONT_5x8, tx_qrg_MHz_invers, str);
+		vd_prints_xy(VDISP_RMUSET_LAYER, 39, 12, VDISP_FONT_5x8, tx_qrg_MHz_invers, str);
 		vd_prints_xy(VDISP_RMUSET_LAYER, 54, 12, VDISP_FONT_5x8, 0, ".");
 	
 		memset(str, '\0', RMUSET_LINE_LENGTH);
@@ -316,7 +322,7 @@ void rmuset_print(void)
 
 		memset(str, '\0', RMUSET_LINE_LENGTH);
 		memcpy(str, settings.s.qrg_rx, 3);
-		vd_prints_xy(VDISP_RMUSET_LAYER, 40, 23, VDISP_FONT_5x8, rx_qrg_MHz_invers, str);
+		vd_prints_xy(VDISP_RMUSET_LAYER, 39, 23, VDISP_FONT_5x8, rx_qrg_MHz_invers, str);
 		vd_prints_xy(VDISP_RMUSET_LAYER, 54, 23, VDISP_FONT_5x8, 0, ".");
 	
 		memset(str, '\0', RMUSET_LINE_LENGTH);

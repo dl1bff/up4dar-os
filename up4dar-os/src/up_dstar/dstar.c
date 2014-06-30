@@ -70,6 +70,7 @@ static int repeater_msg;
 int ppm_buf[PPM_BUFSIZE];
 int ppm_ptr;
 int ppm_display_active;
+bool mode_refresh = false;
 
 static void mkPrintableString (char * data, int len)
 {
@@ -485,6 +486,67 @@ void dstarResetCounters(void)
 	syncPackets = 0;
 }
 
+void dstarRMUSetQRG(void)
+{
+	char str[QRG_LENGTH];
+	
+	int qrgRX = 0;
+	int qrgTX = 0;
+	
+	memcpy(str, settings.s.qrg_rx, QRG_LENGTH);
+	qrgRX = atoi(str);
+	
+	memcpy(str, settings.s.qrg_tx, QRG_LENGTH);
+	qrgTX = atoi(str);
+	
+	buf[0] = 0xD3;
+	buf[1] = 0x01;
+	
+	phyCommSendCmd(buf, 2);
+
+	buf[0] = SET_QRG;
+	buf[1] = ((unsigned int)qrgRX >> 24) & 0xFF;
+	buf[2] = ((unsigned int)qrgRX >> 16) & 0xFF;
+	buf[3] = ((unsigned int)qrgRX >> 8) & 0xFF;
+	buf[4] = ((unsigned int)qrgRX >> 0) & 0xFF;
+	buf[5] = ((unsigned int)qrgTX >> 24) & 0xFF;
+	buf[6] = ((unsigned int)qrgTX >> 16) & 0xFF;
+	buf[7] = ((unsigned int)qrgTX >> 8) & 0xFF;
+	buf[8] = ((unsigned int)qrgTX >> 0) & 0xFF;
+	
+	phyCommSendCmd(buf, 9);
+	
+	mode_refresh = true;
+}
+
+void dstarRMUEnable(void)
+{
+	buf[0] = 0xD3;
+	buf[1] = 0x01;
+	
+	phyCommSendCmd(buf, 2);
+
+	buf[0] = SET_RMU;
+	buf[1] = SETTING_CHAR(C_RMU_ENABLED) == 1 ? 0x01 : 0x02;
+				
+	phyCommSendCmd(buf, 2);
+	
+	mode_refresh = true;
+}
+
+void dstarRMUStatus(void)
+{
+	buf[0] = 0xD3;
+	buf[1] = 0x01;
+	
+	phyCommSendCmd(buf, 2);
+
+	buf[0] = SET_RMU;
+	buf[1] = 0x00;
+	
+	phyCommSendCmd(buf, 2);
+}
+
 void dstarChangeMode(int m)
 {
 	char buf[7] = { 0x00, 0x10, 0x02, 0xD3, m, 0x10, 0x03 };
@@ -492,6 +554,17 @@ void dstarChangeMode(int m)
 	phyCommSend( buf, sizeof buf );
 	
 	dstarResetCounters();
+}
+
+bool dstarRefreshMode()
+{
+	if (mode_refresh)
+	{
+		mode_refresh = false;
+		return true;
+	}
+	
+	return false;
 }
 
 static void dstarGetPHYVersion(void)
@@ -963,8 +1036,6 @@ static void processPacket(void)
 			// dstarChangeMode(4);
 			if (dp.dataLen <= (sizeof sysinfo))
 			{
-				int qrg_rx = atoi(settings.s.qrg_rx);
-				int qrg_tx = atoi(settings.s.qrg_tx);
 				memcpy(sysinfo, dp.data, dp.dataLen);
 				sysinfo_len = dp.dataLen;
 				
@@ -982,19 +1053,8 @@ static void processPacket(void)
 				//buf[6] = (QRG_TX >> 16) & 0xFF;
 				//buf[7] = (QRG_TX >> 8) & 0xFF;
 				//buf[8] = (QRG_TX >> 0) & 0xFF;
- 				//
-
-				buf[0] = SET_QRG;
-				buf[1] = (qrg_rx >> 24) & 0xFF;
-				buf[2] = (qrg_rx >> 16) & 0xFF;
-				buf[3] = (qrg_rx >> 8) & 0xFF;
-				buf[4] = (qrg_rx >> 0) & 0xFF;
-				buf[5] = (qrg_tx >> 24) & 0xFF;
-				buf[6] = (qrg_tx >> 16) & 0xFF;
-				buf[7] = (qrg_tx >> 8) & 0xFF;
-				buf[8] = (qrg_tx >> 0) & 0xFF;
-				
-				phyCommSendCmd(buf, 9);
+				//
+				//phyCommSendCmd(buf, 9);
 			}
 			
 			
@@ -1195,6 +1255,16 @@ static void processPacket(void)
 				}
 				
 				xQueueSend ( snmpReqQueue, & sr, 0 );
+			}
+			break;
+			
+		case IND_RMU:
+			if (dp.dataLen > 0)
+			{
+				struct snmpReq sr;
+				sr.param = dp.data[0];
+
+				SETTING_CHAR(C_RMU_ENABLED) = sr.param == 1 ? 1 : 0;
 			}
 			break;
 			

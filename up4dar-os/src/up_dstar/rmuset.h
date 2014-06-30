@@ -31,6 +31,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define RMUSET_MAX_REF 4
 #define RMUSET_MAX_FELD 6
 
+extern bool rmu_enabled;
+
+void dstarRMUSetQRG(void);
+void dstarRMUEnable(void);
+void dstarRMUStatus(void);
+
 void rmuset_ref(int act);
 void rmuset_feld(void);
 bool rmuset_enabled(void);
