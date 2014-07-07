@@ -1074,7 +1074,7 @@ void a_app_manager_init(void)
 	a = a_new_app( "GPS", VDISP_GPS_LAYER);
 	a_set_button_text(a, "", "", "", "MENU");
 	
-	a = a_new_app( "REFLECTOR", VDISP_REF_LAYER);
+	a = a_new_app( "MODE SET", VDISP_REF_LAYER);
 	a_set_button_text(a, "CONNECT", "DISC", "SELECT", "MENU");
 	a_set_key_event_handler(a, ref_app_key_event_handler);
 	
