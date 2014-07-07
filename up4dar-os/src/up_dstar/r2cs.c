@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gcc_builtin.h"
 
-char urcall_history[CALLSIGN_LENGTH * R2CS_HISTORY_DIM + 1];
+char urcall_history[CALLSIGN_LENGTH * R2CS_HISTORY_DIM];
 bool urcall_from_r2cs = false;
 int history_max = -1;
 int urcall_position = 0;
@@ -104,7 +104,7 @@ void r2cs_append(const char urcall[8])
 			return;
 	}
 
-	if (history_max < R2CS_HISTORY_DIM)
+	if (history_max < (R2CS_HISTORY_DIM - 1))
 		history_max++;
 	
 	if (history_max > 0)

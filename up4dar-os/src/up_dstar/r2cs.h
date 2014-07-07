@@ -27,7 +27,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef R2CS_H_
 #define R2CS_H_
 
-#define  R2CS_HISTORY_DIM 4
+#define  R2CS_HISTORY_DIM 5
 
 void r2cs(int layer, int position);
 bool r2csURCALL(void);
