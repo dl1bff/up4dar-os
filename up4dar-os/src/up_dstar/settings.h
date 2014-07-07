@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SETTINGS_H_
 
 
-#define SETTINGS_VERSION	0x0002
+#define SETTINGS_VERSION	0x0001
 
 #define NUM_LONG_VALUES		10
 #define NUM_SHORT_VALUES	30
