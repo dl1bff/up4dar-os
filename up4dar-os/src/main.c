@@ -65,6 +65,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/gps.h"
 #include "up_dstar/dvset.h"
 #include "up_dstar/r2cs.h"
+#include "up_dstar/rmuset.h"
 
 #include "up_io/lcd.h"
 #include "up_dstar/settings.h"
@@ -555,6 +556,7 @@ static void vServiceTask( void *pvParameters )
 	char last_parrot_mode = 0;
 	char dcs_boot_timer = 8;
 	bool update = true;
+	bool last_rmu_enabled = false;
 
 	for (;;)
 	{	
@@ -625,6 +627,13 @@ static void vServiceTask( void *pvParameters )
 		}
 		
 		dvset();
+				
+		if (last_rmu_enabled != rmu_enabled)
+		{
+			rmuset_print();
+			last_rmu_enabled = rmu_enabled;
+		}
+
 			
 		const char * net_status = "     ";
 			

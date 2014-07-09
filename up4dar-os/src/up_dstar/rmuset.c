@@ -31,9 +31,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "gcc_builtin.h"
 
+#include <pm.h>
+
 int ref_selected_item = 0;
-static const char ref_item_min_val[RMUSET_MAX_REF] = { 0, 0, 0, 0 };
-static const char ref_item_max_val[RMUSET_MAX_REF] = { 92, 9, 15, 1 };
+static const char ref_item_min_val[RMUSET_MAX_REF] = { 0, 0, 0, false };
+static const char ref_item_max_val[RMUSET_MAX_REF] = { 92, 9, 15, true };
 
 int feld_selected_item = 6;
 
@@ -49,12 +51,37 @@ static const char * const ref_qrg_MHz[93] = { "137", "138", "139",
 	"470", "471", "472", "473", "474", "475", "476", "477", "478", "479" };
 	
 static const char * const ref_qrg_100kHz[10] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" };
-
-static const char * const ref_qrg_6_25kHz[16] = { "0000", "0625", "1250", "1875",
-	"2500", "3125", "3750", "4375",
-	"5000", "5625", "4250", "6875",
-	"7500", "8125", "8750", "9375" };
 	
+//static const char * const ref_qrg_ kHz_step[4] = { "25", "12,5", "6,25", "5" }
+//
+//static const char * const ref_qrg_5kHz[20] = { "0000", "0500",
+	//"1000", "1500",
+	//"2000", "2500",
+	//"3000", "3500",
+	//"4000", "4500",
+	//"5000", "5500",
+	//"6000", "6500",
+	//"7000", "7500",
+	//"8000", "8500",
+	//"9000", "9500" };
+//
+static const char * const ref_qrg_6_25kHz[16] = { "0000", "0625",
+	"1250", "1875",
+	"2500", "3125",
+	"3750", "4375",
+	"5000", "5625",
+	"4250", "6875",
+	"7500", "8125",
+	"8750", "9375" };
+	//
+//static const char * const ref_qrg_12_5kHz[8] = { "0000", "1250",
+	//"2500", "3750",
+	//"5000", "6250",
+	//"7500", "8750"};
+//
+//static const char * const ref_qrg_25kHz[4] = { "0000", "2500",
+	//"5000", "7500" };
+//
 static const char * const ref_enabled[2] = { "disabled", "enabled" };
 	
 int tx_qrg_MHz_invers = 0;
@@ -273,7 +300,7 @@ void rmuset_feld(void)
 
 bool rmuset_enabled(void)
 {
-	return SETTING_CHAR(C_RMU_ENABLED) == 1 ? true : false;
+	return (SETTING_CHAR(C_RMU_ENABLED) == 1 && (rmu_enabled)) ? true : false;
 }
 
 void rmuset_print(void)
@@ -339,5 +366,5 @@ void rmuset_print(void)
 		vd_prints_xy(VDISP_RMUSET_LAYER, 75, 23, VDISP_FONT_5x8, rx_qrg_6_25kHz_invers, str);
 	}
 		
-	vd_prints_xy(VDISP_RMUSET_LAYER, 40, 35, VDISP_FONT_5x8, enabled_invers, ref_enabled[SETTING_CHAR(C_RMU_ENABLED)]);
+	vd_prints_xy(VDISP_RMUSET_LAYER, 40, 35, VDISP_FONT_5x8, enabled_invers, ref_enabled[rmuset_enabled()]);
 }

@@ -545,6 +545,8 @@ void dstarRMUStatus(void)
 	buf[1] = 0x00;
 	
 	phyCommSendCmd(buf, 2);
+	
+	mode_refresh = true;
 }
 
 void dstarChangeMode(int m)
@@ -1264,7 +1266,8 @@ static void processPacket(void)
 				struct snmpReq sr;
 				sr.param = dp.data[0];
 
-				SETTING_CHAR(C_RMU_ENABLED) = sr.param == 1 ? 1 : 0;
+				//SETTING_CHAR(C_RMU_ENABLED) = sr.param == 1 ? 1 : 0;
+				rmu_enabled = sr.param == 1 ? true : false;
 			}
 			break;
 			
