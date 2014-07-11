@@ -1260,6 +1260,36 @@ static void processPacket(void)
 			}
 			break;
 			
+		case IND_QRG:
+			if (dp.dataLen > 0)
+			{
+				struct snmpReq sr;
+				sr.param = dp.data[0];
+
+				if (sr.param == 0)
+				{
+					char str[QRG_LENGTH];
+	
+					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[1] << 24) |
+															(dp.data[2] << 16) |
+															(dp.data[3] << 8) |
+															(dp.data[4] << 0));
+					memcpy(settings.s.qrg_rx, str, QRG_LENGTH);
+	
+					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[5] << 24) |
+															(dp.data[6] << 16) |
+															(dp.data[7] << 8) |
+															(dp.data[8] << 0));
+					memcpy(settings.s.qrg_tx, str, QRG_LENGTH);
+				}
+				else
+				{
+					memcpy(settings.s.qrg_tx, "430375000", QRG_LENGTH);
+					memcpy(settings.s.qrg_rx, "430375000", QRG_LENGTH);
+				}
+			}
+			break;
+			
 		case IND_RMU:
 			if (dp.dataLen > 0)
 			{
