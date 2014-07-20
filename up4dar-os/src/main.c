@@ -674,15 +674,23 @@ static void vServiceTask( void *pvParameters )
 		
 		const char * mute_status = "      ";
 		
-		int i = ambe_get_automute();
+		int automute = ambe_get_automute();
 		
-		if (i != 0)
+		if (automute != 0)
 		{
 			mute_status = " MUTE ";
 		}
 		
 		vdisp_prints_xy( 70, 27, VDISP_FONT_4x6,
-			i % 2, mute_status );
+			automute % 2, mute_status );
+			
+		if (ambe_get_ref_timer() == 0)
+		{
+			dcs_home();
+				
+			ambe_set_ref_timer(0);
+		}
+		
 		
 		dhcp_service();				
 			

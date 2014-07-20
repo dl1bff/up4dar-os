@@ -39,7 +39,10 @@ void ambe_stop_encode(void);
 void ambe_input_data( const uint8_t * d);
 void ambe_input_data_sd( const uint8_t * d);
 void ambe_init( audio_q_t * decoded_audio, audio_q_t * input_audio, ambe_q_t * microphone );
-void ambe_set_automute (int enable);
+void ambe_set_automute(int enable);
 int ambe_get_automute(void);
+int ambe_get_ref_timer(void);
+void ambe_set_ref_timer(int enable);
+void ambe_ref_timer_break(int enable);
 void ambe_service(void);
 #endif /* AMBE_H_ */

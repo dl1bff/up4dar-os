@@ -599,6 +599,7 @@ static void dtmf_cmd_exec(void)
 		
 		if (dtmf_cmd_string[0] == '#') // unlink
 		{
+			ambe_set_ref_timer(1);
 			dcs_off();
 			if (header_crc_result == DSTAR_HEADER_OK)
 			{
@@ -631,6 +632,7 @@ static void dtmf_cmd_exec(void)
 			
 			if (reflector >= 0)
 			{
+				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
 				dcs_on();
 			
@@ -649,6 +651,7 @@ static void dtmf_cmd_exec(void)
 			
 			if (reflector >= 0)
 			{
+				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, last_char, SERVER_TYPE_DEXTRA);
 				dcs_on();
 				
@@ -704,6 +707,7 @@ static void vTXTask( void *pvParameters )
 		{
 		case 0:  // PTT off
 			tx_info_off();
+			ambe_ref_timer_break(0);
 			
 			if (PTT_CONDITION  // PTT pressed
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
@@ -801,6 +805,7 @@ static void vTXTask( void *pvParameters )
 								
 								if (rx_header[26] == 'U')
 								{
+									ambe_set_ref_timer(1);
 									dcs_off();
 								}
 								else if ((rx_header[26] == 'L') && (rx_header[25] >= 'A') && (rx_header[25] <= 'Z'))
@@ -825,11 +830,13 @@ static void vTXTask( void *pvParameters )
 									{
 										if (memcmp("DCS", rx_header+19, 3) == 0)
 										{
+											ambe_set_ref_timer(1);
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DCS);
 											dcs_on();
 										}
 										else if (memcmp("XRF", rx_header+19, 3) == 0)
 										{
+											ambe_set_ref_timer(1);
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DEXTRA);
 											dcs_on();
 										}
@@ -856,6 +863,7 @@ static void vTXTask( void *pvParameters )
 			
 		case 1:  // PTT on
 			tx_info_on();
+			ambe_ref_timer_break(1);
 			if ((!PTT_CONDITION) && (tx_min_count <= 0))  // PTT released
 			{
 				tx_state = 2;

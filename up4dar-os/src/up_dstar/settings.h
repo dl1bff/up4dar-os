@@ -77,8 +77,6 @@ typedef struct {
 	int32_t init_value;
 } limits_t;
 
-
-
 extern settings_t settings;
 
 extern const limits_t long_values_limits[NUM_LONG_VALUES];
@@ -132,6 +130,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_REF_TYPE					18
 #define C_REF_SOURCE_MODULE_CHAR	19
 #define C_RMU_ENABLED				20
+#define C_REF_TIMER					21
 
 
 // BOOL values
@@ -150,6 +149,8 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 	(settings.s.long_values[(a) >> 5] & (~(1 << ((a) & 0x1F)))) | (((b) ? 1 : 0) << ((a) & 0x1F)) )
 
 void settings_init(void);
+void settings_get_home_ref(void);
+void settings_set_home_ref(void);
 void settings_write(void);
 
 

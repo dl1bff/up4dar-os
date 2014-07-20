@@ -39,6 +39,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 settings_t settings;
 
+static struct
+{
+	short server_num;
+	char module_char;
+	char type;
+	int dcs_connect_after_boot;
+} ref_home;
+
 const limits_t long_values_limits[NUM_LONG_VALUES] = {
 	{  0,  0,  0  },
 	{  0,  0,  0  },
@@ -112,6 +120,12 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_DCS_CONNECT_AFTER_BOOT		17
 	{  0,		1,		0	  },
 	// #define C_REF_TYPE					18
+	{  0,		1,		0	  },
+	// #define C_REF_SOURCE_MODULE_CHAR		19
+	{  0,		1,		0	  },
+	// #define C_RMU_ENABLED				20
+	{  0,		1,		0	  },
+	// #define C_REF_TIMER					21
 	{  0,		1,		0	  }
 };
 
@@ -174,6 +188,22 @@ void settings_init(void)
 	}
 }
 
+void settings_get_home_ref(void)
+{
+	SETTING_SHORT(S_REF_SERVER_NUM) = ref_home.server_num;
+	SETTING_CHAR(C_REF_MODULE_CHAR) = ref_home.module_char;
+	SETTING_CHAR(C_REF_TYPE) = ref_home.type;
+	SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = ref_home.dcs_connect_after_boot;
+}
+
+void settings_set_home_ref(void)
+{
+	ref_home.server_num = SETTING_SHORT(S_REF_SERVER_NUM);
+	ref_home.module_char = SETTING_CHAR(C_REF_MODULE_CHAR);
+	ref_home.type = SETTING_CHAR(C_REF_TYPE);
+	ref_home.dcs_connect_after_boot = SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT);
+}
+
 void settings_write(void)
 {
 	uint32_t chk = get_crc();
@@ -186,7 +216,6 @@ void settings_write(void)
 		flashc_memcpy(AVR32_FLASHC_USER_PAGE, & settings, 512, TRUE);
 	}
 }
-
 
 int snmp_get_flashstatus (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
@@ -218,6 +247,8 @@ int snmp_set_flashstatus (int32_t arg, const uint8_t * req, int req_len)
 			settings.settings_words[BOOT_LOADER_CONFIGURATION] = 0x929E1424; // boot loader config word
 			
 			flashc_memcpy(AVR32_FLASHC_USER_PAGE, & settings, 512, TRUE);
+		
+			settings_set_home_ref();
 		}
 	}
 	

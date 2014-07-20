@@ -345,6 +345,10 @@ static void dstarStateChange(unsigned char n)
 	{
 
 		case 2:
+			if (hotspot_mode || repeater_mode)
+			{
+				ambe_ref_timer_break(1);
+			}
 			voicePackets = 0;
 			syncPackets = 0;
 			sdHeaderPos = 0;
@@ -367,6 +371,10 @@ static void dstarStateChange(unsigned char n)
 			break;
 			
 		case 1:
+			if (hotspot_mode || repeater_mode)
+			{
+				ambe_ref_timer_break(0);
+			}
 		
 			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
 		

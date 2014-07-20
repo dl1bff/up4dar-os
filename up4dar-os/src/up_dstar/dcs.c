@@ -241,7 +241,7 @@ void dcs_service (void)
 	}
 	
 	
-	vd_prints_xy( VDISP_REF_LAYER, 20, 36, VDISP_FONT_6x8, 0, 
+	vd_prints_xy( VDISP_REF_LAYER, 20, 48, VDISP_FONT_6x8, 0, 
 		  dcs_state_text[  (dcs_mode != 0) ? dcs_state : 0 ]);
 	
 	switch (dcs_state)
@@ -409,6 +409,28 @@ void dcs_off(void)
 	}
 }
 
+void dcs_home(void)
+{
+	if (dcs_state == DCS_CONNECTED)
+	{
+		dcs_link_to(' ');
+		dcs_state = DCS_DISCONNECTED;
+	}
+
+	settings_get_home_ref();
+
+	dcs_select_reflector((int)SETTING_SHORT(S_REF_SERVER_NUM), (char)SETTING_CHAR(C_REF_MODULE_CHAR), (char)SETTING_CHAR(C_REF_TYPE));
+
+	if (SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)
+	{
+		dcs_set_dns_name();
+			
+		dcs_state = DCS_DNS_REQ;
+		dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
+		dcs_timeout_timer = DCS_DNS_TIMEOUT;
+	}
+}
+
 static void dcs_keepalive_response (int request_size);
 
 
@@ -504,12 +526,14 @@ void dcs_select_reflector (short server_num, char module, char server_type)
 {
 	if (dcs_state != DCS_DISCONNECTED)  // only when disconnected
 		return;
-		
+
 	current_server_type = server_type;
 	current_server = server_num;
 	current_module = module;
 	
 	set_ref_params(server_num, module, server_type);
+	
+	return;
 }
 
 
