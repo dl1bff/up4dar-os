@@ -666,7 +666,7 @@ static void ref_print_status (void)
 	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
 		0x20);
 		
-	vd_clear_rect(VDISP_REF_LAYER, 0, 36, 145, 12);
+	vd_clear_rect(VDISP_REF_LAYER, 0, 36, 120, 12);
 
 	if (repeater_mode || hotspot_mode)
 	{
