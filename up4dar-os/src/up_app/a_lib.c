@@ -876,7 +876,8 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				{
 					ref_selected_item = REF_SELECTION_SPECIAL;
 					dcs_on();
-					ambe_set_ref_timer(1);
+					if (repeater_mode || hotspot_mode)
+						ambe_set_ref_timer(1);
 					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 1;
 				}
 				break;
@@ -888,7 +889,8 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				if (dcs_mode != 0)
 				{
 					dcs_off();
-					ambe_set_ref_timer(1);
+					if (repeater_mode || hotspot_mode)
+						ambe_set_ref_timer(1);
 					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 0;
 				}
 				break;
