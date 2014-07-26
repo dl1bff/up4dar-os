@@ -684,7 +684,7 @@ static void vServiceTask( void *pvParameters )
 		vdisp_prints_xy( 70, 27, VDISP_FONT_4x6,
 			automute % 2, mute_status );
 			
-		if (ambe_get_ref_timer() == 0)
+		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
 		{
 			dcs_home();
 				

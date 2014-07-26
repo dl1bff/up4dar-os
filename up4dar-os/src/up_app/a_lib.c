@@ -888,7 +888,7 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				{
 					dcs_off();
 					if (repeater_mode || hotspot_mode)
-						ambe_set_ref_timer(1);
+						ambe_set_ref_timer(0);
 					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 0;
 				}
 				break;

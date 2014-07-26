@@ -182,7 +182,7 @@ static int silence_counter = 0;
 #define AUTOMUTE_VALUE	120
 
 static int automute = 0;
-static int ref_timer = 0;
+static int ref_timer = -1;
 bool ref_timer_break = false;
 
 void ambe_set_automute(int enable)
