@@ -470,7 +470,16 @@ void dstar_print_diagram(void)
 	
 	for (i=0; i < FRAMESYNC_LEN; i++)
 	{
-		int d = (diagram_mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
+		int d = 0;
+		
+		if (rmu_enabled)
+		{
+			d = (diagram_mean_value - frameSync[i]) >> 2;
+		}
+		else
+		{
+			d = (diagram_mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
+		}
 					
 		if ((d > -20) && (d < 20))
 		{
@@ -1226,7 +1235,14 @@ static void processPacket(void)
 					frameSync[i] = dp.data[i+2];
 				}			
 				
-				set_diagram(dp.data[0], dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR));	
+				if (rmu_enabled)
+				{
+					set_diagram(dp.data[0], (dp.data[1] * 35 ) >> 1 );
+				}
+				else
+				{
+					set_diagram(dp.data[0], dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR));
+				}
 				
 				
 				
