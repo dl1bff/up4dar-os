@@ -126,6 +126,8 @@ const limits_t char_values_limits[NUM_CHAR_VALUES] = {
 	// #define C_RMU_ENABLED				20
 	{  0,		1,		0	  },
 	// #define C_REF_TIMER					21
+	{  0,		1,		0	  },
+	// #define C_RMU_QRG_STEP				22
 	{  0,		1,		0	  }
 };
 

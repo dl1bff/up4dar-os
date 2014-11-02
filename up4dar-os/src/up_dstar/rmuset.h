@@ -29,7 +29,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define RMUSET_LINE_LENGTH 11
 #define RMUSET_MAX_REF 4
-#define RMUSET_MAX_FELD 6
+#define RMUSET_MAX_STEP_REF 4
+#define RMUSET_MAX_FELD 7
 
 extern bool rmu_enabled;
 

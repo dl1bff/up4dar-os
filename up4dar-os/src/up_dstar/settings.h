@@ -131,6 +131,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_REF_SOURCE_MODULE_CHAR	19
 #define C_RMU_ENABLED				20
 #define C_REF_TIMER					21
+#define C_RMU_QRG_STEP              22
 
 
 // BOOL values
