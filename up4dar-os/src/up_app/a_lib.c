@@ -172,6 +172,7 @@ static int num_apps = 4;
 */
 static int help_layer_timer = 0;
 static int help_layer;
+bool key_douple_function = false;
 
 // static int app_manager_key_state = 0;
 
@@ -427,6 +428,7 @@ char dcs_mode = 0;
 char hotspot_mode = 0;
 char repeater_mode = 0;
 char parrot_mode = 0;
+int key_lock = 0;
 
 static char snmp_reset_cmnty = 0;
 
@@ -434,6 +436,8 @@ bool refresh_main_menu = false;
 
 void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 {
+	if ((key_lock) && (key_num != A_KEY_BUTTON_2)) return;
+	
 	if (key_num == A_KEY_BUTTON_APP_MANAGER)
 	{
 		if (key_event == A_KEY_PRESSED)
@@ -996,18 +1000,37 @@ static int main_app_key_event_handler (void * app_context, int key_num, int even
 		software_ptt = 0;
 		return 1;
 	}
-	else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
+	else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_RELEASED))
 	{
-		if (ambe_get_automute() != 0) // automute is currently on
+		if ((!key_douple_function) && (key_lock == 0))
 		{
-			ambe_set_automute(0);
+			if (ambe_get_automute() != 0) // automute is currently on
+			{
+				ambe_set_automute(0);
+			}
+			else
+			{
+				ambe_set_automute(1);
+			}
 		}
 		else
 		{
-			ambe_set_automute(1);
+			key_douple_function = false;
 		}
 		
 		return 1;
+	}
+	else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_HOLD_2S))
+	{
+		key_douple_function = true;
+		if (key_lock != 0)
+		{
+			key_lock = 0;
+		}
+		else
+		{
+			key_lock = 1;
+		}
 	}
 	else if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_PRESSED))
 	{

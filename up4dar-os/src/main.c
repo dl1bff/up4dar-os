@@ -672,17 +672,24 @@ static void vServiceTask( void *pvParameters )
 			
 		ambe_service();
 		
-		const char * mute_status = "      ";
-		
 		int automute = ambe_get_automute();
 		
-		if (automute != 0)
+		if (key_lock == 1)
 		{
-			mute_status = " MUTE ";
+			if (automute % 2)
+				vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 1, " MUTE " );
+			else
+				vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 1, " LOCK " );
+		}
+		else if (automute != 0)
+		{
+			vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, automute % 2, " MUTE " );				
+		}
+		else
+		{
+			vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 0, "      " );
 		}
 		
-		vdisp_prints_xy( 70, 27, VDISP_FONT_4x6,
-			automute % 2, mute_status );
 			
 		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
 		{
