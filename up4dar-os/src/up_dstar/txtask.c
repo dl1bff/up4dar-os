@@ -632,6 +632,7 @@ static void dtmf_cmd_exec(void)
 			
 			if (reflector >= 0)
 			{
+				dcs_over();
 				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
 				dcs_on();
@@ -651,6 +652,7 @@ static void dtmf_cmd_exec(void)
 			
 			if (reflector >= 0)
 			{
+				dcs_over();
 				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, last_char, SERVER_TYPE_DEXTRA);
 				dcs_on();
@@ -830,12 +832,14 @@ static void vTXTask( void *pvParameters )
 									{
 										if (memcmp("DCS", rx_header+19, 3) == 0)
 										{
+											dcs_over();
 											ambe_set_ref_timer(1);
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DCS);
 											dcs_on();
 										}
 										else if (memcmp("XRF", rx_header+19, 3) == 0)
 										{
+											dcs_over();
 											ambe_set_ref_timer(1);
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DEXTRA);
 											dcs_on();

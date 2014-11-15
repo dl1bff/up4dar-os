@@ -411,11 +411,7 @@ void dcs_off(void)
 
 void dcs_home(void)
 {
-	if (dcs_state == DCS_CONNECTED)
-	{
-		dcs_link_to(' ');
-		dcs_state = DCS_DISCONNECTED;
-	}
+	dcs_over();
 
 	settings_get_home_ref();
 
@@ -428,6 +424,15 @@ void dcs_home(void)
 		dcs_state = DCS_DNS_REQ;
 		dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
 		dcs_timeout_timer = DCS_DNS_TIMEOUT;
+	}
+}
+
+void dcs_over(void)
+{
+	if (dcs_state == DCS_CONNECTED)
+	{
+		dcs_link_to(' ');
+		dcs_state = DCS_DISCONNECTED;
 	}
 }
 
