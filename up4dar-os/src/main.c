@@ -402,6 +402,11 @@ static void show_dcs_state(void)
 	buf[9] = 0;
 	vdisp_prints_xy( 95, 27, VDISP_FONT_4x6, 
 		dcs_is_connected(), buf );
+		
+	if (dcs_changed() && ((repeater_mode != 0) || (hotspot_mode != 0)))
+	{
+		send_dcs_state();
+	}
 }		
 
 
@@ -694,6 +699,7 @@ static void vServiceTask( void *pvParameters )
 		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
 		{
 			dcs_home();
+			send_dcs_state();
 				
 			ambe_set_ref_timer(0);
 		}

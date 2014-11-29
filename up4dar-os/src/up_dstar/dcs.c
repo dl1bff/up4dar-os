@@ -82,8 +82,6 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
 static int dcs_udp_local_port;
 
-static int dcs_state;
-
 #define DCS_KEEPALIVE_TIMEOUT  100
 #define DCS_CONNECT_REQ_TIMEOUT  6
 #define DCS_CONNECT_RETRIES		  3
@@ -104,6 +102,8 @@ static int dcs_retry_counter;
 #define DCS_DNS_REQ				6
 #define DCS_WAIT				7
 
+static int dcs_state;
+static int dcs_state_history = DCS_DISCONNECTED;
 
 #define DEXTRA_UDP_PORT            30001
 #define DEXTRA_CONNECT_SIZE        11
@@ -243,7 +243,7 @@ void dcs_service (void)
 	
 	vd_prints_xy( VDISP_REF_LAYER, 20, 48, VDISP_FONT_6x8, 0, 
 		  dcs_state_text[  (dcs_mode != 0) ? dcs_state : 0 ]);
-	
+		  
 	switch (dcs_state)
 	{
 		case DCS_CONNECTED:
@@ -433,8 +433,22 @@ void dcs_over(void)
 	{
 		dcs_link_to(' ');
 		dcs_state = DCS_DISCONNECTED;
+		dcs_state_history = DCS_DISCONNECTED;
 	}
 }
+
+bool dcs_changed(void)
+{
+	if (dcs_mode != 0 && dcs_state_history != dcs_state && (dcs_state == DCS_CONNECTED || dcs_state == DCS_DISCONNECTED))
+	{
+		dcs_state_history = dcs_state;
+		
+		return true;
+	}
+	
+	return false;
+}
+
 
 static void dcs_keepalive_response (int request_size);
 

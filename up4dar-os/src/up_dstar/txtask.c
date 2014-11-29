@@ -348,8 +348,6 @@ static void phy_send_response(uint8_t * rx_header)
 		
 		send_cmd(send_data, 4);
 	}
-	
-	
 }
 
 
@@ -492,6 +490,11 @@ static uint8_t dtmf_counter = 0;
 #define DTMF_DETECT_TIME 250
 static uint8_t dtmf_tone_detected = 0;
 
+void send_dcs_state(void)
+{
+	phy_send_response( rx_header );
+}
+
 
 static void dtmf_decode_init(void)
 {
@@ -601,11 +604,11 @@ static void dtmf_cmd_exec(void)
 		{
 			ambe_set_ref_timer(1);
 			dcs_off();
-			if (header_crc_result == DSTAR_HEADER_OK)
-			{
-				vTaskDelay(950); // wait before sending ACK
-				phy_send_response( rx_header );
-			}
+			//if (header_crc_result == DSTAR_HEADER_OK)
+			//{
+				//vTaskDelay(950); // wait before sending ACK
+				//phy_send_response( rx_header );
+			//}
 		}
 		else if (dtmf_cmd_string[0] == '0')
 		{
@@ -637,11 +640,11 @@ static void dtmf_cmd_exec(void)
 				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
 				dcs_on();
 			
-				if (header_crc_result == DSTAR_HEADER_OK)
-				{
-					vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
-					phy_send_response( rx_header );
-				}
+				//if (header_crc_result == DSTAR_HEADER_OK)
+				//{
+					//vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
+					//phy_send_response( rx_header );
+				//}
 			}
 		}
 		else if ((dtmf_cmd_string[0] >= '1') && (dtmf_cmd_string[0] <= '9') &&
@@ -657,11 +660,11 @@ static void dtmf_cmd_exec(void)
 				dcs_select_reflector(reflector, last_char, SERVER_TYPE_DEXTRA);
 				dcs_on();
 				
-				if (header_crc_result == DSTAR_HEADER_OK)
-				{
-					vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
-					phy_send_response( rx_header );
-				}
+				//if (header_crc_result == DSTAR_HEADER_OK)
+				//{
+					//vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
+					//phy_send_response( rx_header );
+				//}
 			}
 		}
 	}	
@@ -1099,16 +1102,16 @@ static void vTXTask( void *pvParameters )
 			{
 				tx_state = 0;
 			
-				if (hotspot_mode || repeater_mode)
-				{
-					if (last_rx_source == SOURCE_PHY) // rx comes over PHY
-					{
-						// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
-						
-						vTaskDelay(250); // wait before sending ACK
-						phy_send_response( rx_header );
-					}
-				}
+				//if (hotspot_mode || repeater_mode)
+				//{
+					//if (last_rx_source == SOURCE_PHY) // rx comes over PHY
+					//{
+						//// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
+						//
+						//vTaskDelay(250); // wait before sending ACK
+						//phy_send_response( rx_header );
+					//}
+				//}
 			}
 			else
 			{
