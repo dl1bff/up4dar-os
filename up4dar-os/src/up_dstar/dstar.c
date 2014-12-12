@@ -71,6 +71,7 @@ int ppm_buf[PPM_BUFSIZE];
 int ppm_ptr;
 int ppm_display_active;
 bool mode_refresh = false;
+bool roger_call = false;
 
 static void mkPrintableString (char * data, int len)
 {
@@ -820,6 +821,8 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 			break;
 			
 		case SOURCE_STOP:
+			if (((hotspot_mode || repeater_mode)) && (last_valid_source == SOURCE_PHY))
+				roger_call = true;	
 			current_source = 0; // switch off
 			num_written = 0; // stop processing
 			rx_q_buf[current_pos].source = 0; 
@@ -915,13 +918,22 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 	return last_valid_source;
 }
 
-
+bool dstarRogerCall(void)
+{
+	if (roger_call)
+	{
+		roger_call = false;
+		return true;
+	}
+		
+	return false;
+}
 
 static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos ) 
 {
 	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
-	
+		
 	if ((source == current_source) && (session == current_session))
 	{
 		// current_source = 0;

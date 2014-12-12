@@ -59,6 +59,7 @@ void dstarRMUEnable(void);
 void dstarRMUStatus(void);
 void dstarChangeMode(int m);
 bool dstarRefreshMode(void);
+bool dstarRogerCall(void);
 
 void dstarResetCounters(void);
 
