@@ -120,6 +120,7 @@ static void send_cmd(const char* Befehl, const short size){
 
 static const char tx_on[1] = {0x10};
 static char header[40];
+static const char feedback_tx_on[1] = {0x12};
 
 static char send_voice[11];
 static char send_data [ 4];
@@ -352,63 +353,71 @@ static void phy_send_response(uint8_t * rx_header)
 
 static void phy_send_feedback(uint8_t * rx_header)
 {
-	//vTaskDelay(500); // wait 500ms
-//
-	//// Schalte UP4DAR auf Senden um
+	vTaskDelay(400); // wait 400ms
+	
+	// Schalte UP4DAR auf Senden um
 	//
-	//send_cmd(tx_on, 1);
-	//
-	//// Bereite einen Header vor
-	//
-	//header[0] = 0x20;
-	//header[1] = (SETTING_CHAR(C_DV_DIRECT) == 1) ? 0 :	// "1st control byte"
-					//(1 << 6)	// Setze den Repeater-Flag
-				//;
-	//
-	//header[2] = 0x0;				// "2nd control byte"
-	//header[3] = 0x0;				// "3rd control byte"
-	//
-	//for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		//if (SETTING_CHAR(C_DV_DIRECT) == 1)
-		//{
-			//header[4+i] = direct_callsign[i];
-		//}
-		//else
-		//{
-			//header[4+i] = settings.s.rpt2[ ((SETTING_CHAR(C_DV_USE_RPTR_SETTING) - 1)*CALLSIGN_LENGTH) + i];
-		//}
-	//}
-	//
-	//for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		//if (SETTING_CHAR(C_DV_DIRECT) == 1)
-		//{
-			//header[12+i] = direct_callsign[i];
-		//}
-		//else
-		//{
-			//header[12+i] = settings.s.rpt1[ ((SETTING_CHAR(C_DV_USE_RPTR_SETTING) - 1)*CALLSIGN_LENGTH) + i];
-		//}
-	//}
-	//
-	//for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		//header[20+i] = rx_header[27+i];
-	//}
-	//
-	//for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		//header[28+i] = settings.s.my_callsign[i];
-	//}
-	//
-	//for (short i=0; i<CALLSIGN_EXT_LENGTH; ++i){
-		//header[36+i] = settings.s.my_ext[i];
-	//}
-	//
-	//// Bis zu 70ms kann man sich Zeit lassen, bevor die Header-Daten uebergeben werden.
-	//// Die genaue Wartezeit ist natruerlich von TX-DELAY abhaengig.
-	////usleep(70000);
-	//
-	//// vTaskDelay (50); // 50ms
-	//
-	//send_cmd(header, 40);
+	
+	if (hotspot_mode)
+		send_cmd(tx_on, 1);
+	else if (repeater_mode)
+		send_cmd(feedback_tx_on, 1);
+	
+	// Bereite den Header vor
+	header[0] = 0x20;
+	
+	header[1] = 0x01;				// Das steht in den Bestaetigungsdurchgaengen von ICOM-Repeater. Evtl. benoetigt man das nicht.
+	header[2] = 0x0;				// "2nd control byte"
+	header[3] = 0x0;				// "3rd control byte"
+	
+	memcpy(header+4, settings.s.my_callsign,CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
+	
+	memcpy(header+12, settings.s.my_callsign,CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
+	header[19] = 0x47;													// Trage "G" als RPT1 Modul ein
+	
+	
+	memcpy(header+20, rx_header+27,CALLSIGN_LENGTH);					// YOUR <== MY
+	
+	memcpy(header+28, settings.s.my_callsign,CALLSIGN_LENGTH-1);		// MY1
+	header[35] = 0x47;													// Trage "G" als MY-Modul ein
+	
+	memset(header+36,0x20,4);											// MY2 sind 4 Leerzeichen
+	
+	// Sende den Headerbefehl
+	send_cmd(header, 40);
+	
+	char feedback_MSG[20];
+	
+	// bereite Tx-Message vor
+	if (dstarFeedbackHeader())
+	{
+		// ==================11111111112222222222==
+		memcpy(feedback_MSG,"Header CRC is OK.",20);
+	}
+	else
+	{
+		// ==================11111111112222222222==
+		memcpy(feedback_MSG,"Header CRC is wrong!",20);
+	}
+	
+	// Bereite Voice-NOP vor
+	const char Voice_NOP_cmd[11] ={0x21, 0x01,    0x9e, 0x8d, 0x32, 0x88, 0x26, 0x1a, 0x3f, 0x61, 0xe8};
+	
+	send_data[0] = 0x22;
+	
+	send_cmd(Voice_NOP_cmd,11);
+	
+	for (int i=0; i<4; ++i)
+	{
+		send_cmd(Voice_NOP_cmd,11);
+		send_data[1] = 0x40 + i;
+		memcpy(send_data+2,feedback_MSG+5*i,2);
+		send_cmd(send_data,4);
+		
+		send_cmd(Voice_NOP_cmd,11);
+		memcpy(send_data+1,feedback_MSG+5*i+2,3);
+		send_cmd(send_data,4);
+	}
 }
 
 
@@ -552,6 +561,7 @@ static uint8_t dtmf_tone_detected = 0;
 
 void send_dcs_state(void)
 {
+	vTaskDelay(800);
 	phy_send_response( rx_header );
 }
 
@@ -1193,7 +1203,7 @@ static void vTXTask( void *pvParameters )
 			break;
 		}
 		
-		if (dstarRogerCall())
+		if (dstarFeedbackCall())
 		{
 			phy_send_feedback(rx_header);
 		}

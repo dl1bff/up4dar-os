@@ -71,7 +71,8 @@ int ppm_buf[PPM_BUFSIZE];
 int ppm_ptr;
 int ppm_display_active;
 bool mode_refresh = false;
-bool roger_call = false;
+bool feedback_call = false;
+bool feedback_header = false;
 
 static void mkPrintableString (char * data, int len)
 {
@@ -822,7 +823,7 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 			
 		case SOURCE_STOP:
 			if (((hotspot_mode || repeater_mode)) && (last_valid_source == SOURCE_PHY))
-				roger_call = true;	
+				feedback_call = true;	
 			current_source = 0; // switch off
 			num_written = 0; // stop processing
 			rx_q_buf[current_pos].source = 0; 
@@ -918,15 +919,20 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 	return last_valid_source;
 }
 
-bool dstarRogerCall(void)
+bool dstarFeedbackCall(void)
 {
-	if (roger_call)
+	if (feedback_call)
 	{
-		roger_call = false;
+		feedback_call = false;
 		return true;
 	}
 		
 	return false;
+}
+
+bool dstarFeedbackHeader(void)
+{
+	return feedback_header;
 }
 
 static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos ) 
@@ -1121,7 +1127,8 @@ static void processPacket(void)
 				vdisp_i2s (buf, 2, 16, 1, dp.data[3]);
 				vd_prints_xy(VDISP_DEBUG_LAYER, 116, 0, VDISP_FONT_6x8, 0, buf);
 				
-			}						
+			}					
+			feedback_header = false;
 			pos_in_frame = POS_LAST;
 			break;
 			
@@ -1229,6 +1236,7 @@ static void processPacket(void)
 			break;
 		case 0x34:
 			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
+			feedback_header = true;
 			break;
 			
 		case 0x35:
