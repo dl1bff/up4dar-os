@@ -704,6 +704,10 @@ static void vServiceTask( void *pvParameters )
 			ambe_set_ref_timer(0);
 		}
 		
+		if (dstarFeedbackCall())
+		{
+			send_feedback();
+		}
 		
 		dhcp_service();				
 			

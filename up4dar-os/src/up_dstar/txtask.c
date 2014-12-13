@@ -280,7 +280,7 @@ static void phy_send_response(uint8_t * rx_header)
 	// Bereite einen Header vor
 	
 	header[0] = 0x20;  // send header command
-	header[1] = 0x00;
+	header[1] = 0x01;
 	header[2] = 0x00;				// "2nd control byte"
 	header[3] = 0x00;				// "3rd control byte"
 	
@@ -353,8 +353,6 @@ static void phy_send_response(uint8_t * rx_header)
 
 static void phy_send_feedback(uint8_t * rx_header)
 {
-	vTaskDelay(400); // wait 400ms
-	
 	// Schalte UP4DAR auf Senden um
 	//
 	
@@ -573,6 +571,13 @@ void send_dcs_state(void)
 {
 	vTaskDelay(950);
 	phy_send_response( rx_header );
+}
+
+void send_feedback(void)
+{
+	vTaskDelay(400); // wait 400ms
+	if (dstarPhyRX()) return;	
+	phy_send_feedback( rx_header );
 }
 
 
@@ -1211,11 +1216,6 @@ static void vTXTask( void *pvParameters )
 				}
 			}
 			break;
-		}
-		
-		if (dstarFeedbackCall())
-		{
-			phy_send_feedback(rx_header);
 		}
 		
 		vdisp_i2s( buf, 5, 10, 0, tx_state );
