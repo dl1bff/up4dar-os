@@ -397,15 +397,10 @@ static void phy_send_feedback(uint8_t * rx_header)
 		// ==================11111111112222222222==
 		memcpy(feedback_MSG,"Header CRC is wrong!",20);
 	}
-	else if (dstarFeedbackHeader() == 2)
+	else if ((dstarFeedbackHeader() == 2) || (dstarFeedbackHeader() == 3))
 	{
 		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"RCVD Voice failed!",20);
-	}
-	else if (dstarFeedbackHeader() == 3)
-	{
-		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"RCVD Data failed!",20);
+		memcpy(feedback_MSG,"TermFlag missing!",20);
 	}
 	
 	// Bereite Voice-NOP vor
