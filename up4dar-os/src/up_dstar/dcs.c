@@ -439,6 +439,8 @@ void dcs_over(void)
 
 bool dcs_changed(void)
 {
+	if (dstarPhyRX()) return false;
+	
 	if (dcs_mode != 0 && dcs_state_history != dcs_state && (dcs_state == DCS_CONNECTED || dcs_state == DCS_DISCONNECTED))
 	{
 		dcs_state_history = dcs_state;

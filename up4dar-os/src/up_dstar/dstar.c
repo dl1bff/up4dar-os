@@ -72,7 +72,9 @@ int ppm_ptr;
 int ppm_display_active;
 bool mode_refresh = false;
 bool feedback_call = false;
-bool feedback_header = false;
+int feedback_header = 0;
+
+bool phy_rx = false;
 
 static void mkPrintableString (char * data, int len)
 {
@@ -819,11 +821,19 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 		case SOURCE_PHY:
 			num_empty = 0;
 			last_valid_source = rx_q_buf[current_pos].source;
+			if (((hotspot_mode || repeater_mode)) && (last_valid_source == SOURCE_PHY))
+			{
+				feedback_call = false;
+				phy_rx = true;
+			}
 			break;
 			
 		case SOURCE_STOP:
 			if (((hotspot_mode || repeater_mode)) && (last_valid_source == SOURCE_PHY))
+			{
 				feedback_call = true;	
+				phy_rx = false;
+			}
 			current_source = 0; // switch off
 			num_written = 0; // stop processing
 			rx_q_buf[current_pos].source = 0; 
@@ -930,7 +940,12 @@ bool dstarFeedbackCall(void)
 	return false;
 }
 
-bool dstarFeedbackHeader(void)
+bool dstarPhyRX(void)
+{
+	return phy_rx;
+}
+
+int dstarFeedbackHeader(void)
 {
 	return feedback_header;
 }
@@ -1128,7 +1143,7 @@ static void processPacket(void)
 				vd_prints_xy(VDISP_DEBUG_LAYER, 116, 0, VDISP_FONT_6x8, 0, buf);
 				
 			}					
-			feedback_header = false;
+			feedback_header = 1;
 			pos_in_frame = POS_LAST;
 			break;
 			
@@ -1166,6 +1181,7 @@ static void processPacket(void)
 					}
 				}				
 			}				
+			feedback_header = 2;
 			break;
 			
 		case 0x32:
@@ -1210,6 +1226,7 @@ static void processPacket(void)
 					// vdisp_prints_xy( 20, 0, VDISP_FONT_5x8, 0, "ppm" );
 				}
 			}				
+			feedback_header = 3;
 			break;
 		case 0x33:
 			if (dp.dataLen == 4)
@@ -1236,7 +1253,7 @@ static void processPacket(void)
 			break;
 		case 0x34:
 			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
-			feedback_header = true;
+			feedback_header = 0;
 			break;
 			
 		case 0x35:

@@ -389,15 +389,25 @@ static void phy_send_feedback(uint8_t * rx_header)
 	char feedback_MSG[20];
 	
 	// bereite Tx-Message vor
-	if (dstarFeedbackHeader())
+	if (dstarFeedbackHeader() == 0)
 	{
 		// ==================11111111112222222222==
 		memcpy(feedback_MSG,"Header CRC is OK.",20);
 	}
-	else
+	else if (dstarFeedbackHeader() == 1)
 	{
 		// ==================11111111112222222222==
 		memcpy(feedback_MSG,"Header CRC is wrong!",20);
+	}
+	else if (dstarFeedbackHeader() == 2)
+	{
+		// ==================11111111112222222222==
+		memcpy(feedback_MSG,"RCVD Voice failed!",20);
+	}
+	else if (dstarFeedbackHeader() == 3)
+	{
+		// ==================11111111112222222222==
+		memcpy(feedback_MSG,"RCVD Data failed!",20);
 	}
 	
 	// Bereite Voice-NOP vor
@@ -561,7 +571,7 @@ static uint8_t dtmf_tone_detected = 0;
 
 void send_dcs_state(void)
 {
-	vTaskDelay(800);
+	vTaskDelay(950);
 	phy_send_response( rx_header );
 }
 

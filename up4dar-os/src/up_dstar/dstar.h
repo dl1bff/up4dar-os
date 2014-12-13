@@ -60,7 +60,8 @@ void dstarRMUStatus(void);
 void dstarChangeMode(int m);
 bool dstarRefreshMode(void);
 bool dstarFeedbackCall(void);
-bool dstarFeedbackHeader(void);
+bool dstarPhyRX(void);
+int dstarFeedbackHeader(void);
 
 void dstarResetCounters(void);
 
