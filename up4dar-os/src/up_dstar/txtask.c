@@ -575,7 +575,7 @@ void send_feedback(void)
 	phy_send_feedback( rx_header );
 	
 	if (hotspot_mode)
-		vTaskDelay((S_PHY_TXDELAY*27+5600)>>4);
+		vTaskDelay((SETTING_SHORT(S_PHY_TXDELAY)*27+5600)>>4);
 }
 
 
