@@ -390,7 +390,7 @@ static void phy_send_feedback(uint8_t * rx_header)
 	if (dstarFeedbackHeader() == 0)
 	{
 		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"Header CRC is OK.",20);
+		memcpy(feedback_MSG,"Header CRC is OK.   ",20);
 	}
 	else if (dstarFeedbackHeader() == 1)
 	{
@@ -400,7 +400,7 @@ static void phy_send_feedback(uint8_t * rx_header)
 	else if ((dstarFeedbackHeader() == 2) || (dstarFeedbackHeader() == 3))
 	{
 		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"TermFlag missing!",20);
+		memcpy(feedback_MSG,"TermFlag missing!   ",20);
 	}
 	
 	// Bereite Voice-NOP vor
@@ -573,6 +573,9 @@ void send_feedback(void)
 	vTaskDelay(400); // wait 400ms
 	if (dstarPhyRX()) return;	
 	phy_send_feedback( rx_header );
+	
+	if (hotspot_mode)
+		vTaskDelay((S_PHY_TXDELAY*27+5600)>>4);
 }
 
 
