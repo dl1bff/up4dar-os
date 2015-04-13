@@ -887,11 +887,16 @@ static void vTXTask( void *pvParameters )
 							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
 							
 							if ((header_crc_result == DSTAR_HEADER_OK)
-								&& ((rx_header[26] == 'U') || (rx_header[26] == 'L')))
+								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L')))
 							{
 								tx_state = 11; // don't forward transmission
 								
-								if (rx_header[26] == 'U')
+								if (rx_header[26] == 'I')
+								{
+									vTaskDelay(950); // wait before sending ACK
+									phy_send_response( rx_header );
+								}
+								else if (rx_header[26] == 'U')
 								{
 									ambe_set_ref_timer(1);
 									dcs_off();
