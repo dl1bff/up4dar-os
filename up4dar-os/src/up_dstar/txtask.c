@@ -274,9 +274,9 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	char txmsg[20];
 
 	// Schalte UP4DAR auf Senden um
-	if (hotspot_mode)
+	if (hotspot_mode && !repeater_mode)
 		send_cmd(tx_on, 1);
-	else if (repeater_mode)
+	else
 		send_cmd(feedback_tx_on, 1);
 	
 	// Bereite den Header vor
@@ -289,9 +289,10 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	
 	memcpy(header+12, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
 	
+	header[19] = 0x47;													// Trage "G" als RPT1 Modul ein
+
 	if (feedback)
 	{
-		header[19] = 0x47;												// Trage "G" als RPT1 Modul ein
 		memcpy(header+20, rx_header+27, CALLSIGN_LENGTH);				// YOUR <== MY
 	}
 	else
@@ -303,16 +304,11 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	
 	header[35] = 0x47;													// Trage "G" als MY-Modul ein
 
-	if (feedback)
-	{
-		memset(header+36, 0x20, 4);										// MY2 sind 4 Leerzeichen
-	}
-	
-	if (hotspot_mode)
+	if (hotspot_mode && !repeater_mode)
 	{
 		memcpy(header+36, "SPOT", 4);									// MY2 = SPOT
 	}
-	else if (repeater_mode)
+	else
 	{
 		memcpy(header+36, "RPTR", 4);									// MY2 = RPTR
 	}
@@ -832,6 +828,8 @@ static void vTXTask( void *pvParameters )
 							*/
 							
 							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
+							
+							if (repeater_mode && (header[11] != 0x47)) tx_state = 11;
 							
 							if ((header_crc_result == DSTAR_HEADER_OK)
 								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L')))
