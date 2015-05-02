@@ -269,93 +269,11 @@ static void phy_start_tx_hotspot(uint8_t crc_result, uint8_t * rx_header)
 	send_cmd(header, 40);
 }
 
-
-static void phy_send_response(uint8_t * rx_header)
+static void phy_send_response(bool feedback, uint8_t * rx_header)
 {
-
-	// Schalte UP4DAR auf Senden um
-	
-	send_cmd(tx_on, 1);
-	
-	// Bereite einen Header vor
-	
-	header[0] = 0x20;  // send header command
-	header[1] = 0x01;
-	header[2] = 0x00;				// "2nd control byte"
-	header[3] = 0x00;				// "3rd control byte"
-	
-	// RPT1 and RPT2
-	for (short i=0; i<CALLSIGN_LENGTH; i++)
-	{
-		header[4+i] = settings.s.my_callsign[i];
-	}
-	
-	for (short i=0; i<CALLSIGN_LENGTH; i++)
-	{
-		header[12+i] = settings.s.my_callsign[i];
-	}
-	
-	
-	for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		header[20+i] = "CQCQCQ  "[i]; // UR is calling station
-	}
-	
-	for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		header[28+i] = settings.s.my_callsign[i]; // MY
-	}
-	
-	for (short i=0; i<CALLSIGN_EXT_LENGTH; ++i){
-		header[36+i] = "RPTR"[i];
-	}
-	
-	send_cmd(header, 40);
-	
-	send_voice[0] = 0x21;
-	send_voice[1] = 0x01;
-	memcpy(send_voice+2, ambe_silence_data, 9);
-	
-	send_data[0] = 0x22;
-	
-	send_cmd(send_voice, 11);
-	
 	char txmsg[20];
-	
-	dcs_get_current_reflector_name(txmsg);
-	
-	txmsg[6] = txmsg[7];
-	txmsg[7] = ' ';
-	
-	dcs_get_current_statustext(txmsg + 8);
-	
-	int j;
 
-	for (j=0; j < 8; j++)
-	{
-		send_cmd(send_voice, 11);
-		
-		int i = j >> 1;
-		if ((j & 1) == 0)
-		{
-			send_data[1] = 0x40 + i;
-			send_data[2] = txmsg[ i * 5 + 0 ];
-			send_data[3] = txmsg[ i * 5 + 1 ];
-		}
-		else
-		{
-			send_data[1] = txmsg[ i * 5 + 2 ];
-			send_data[2] = txmsg[ i * 5 + 3 ];
-			send_data[3] = txmsg[ i * 5 + 4 ];
-		}
-		
-		send_cmd(send_data, 4);
-	}
-}
-
-static void phy_send_feedback(uint8_t * rx_header)
-{
 	// Schalte UP4DAR auf Senden um
-	//
-	
 	if (hotspot_mode)
 		send_cmd(tx_on, 1);
 	else if (repeater_mode)
@@ -363,63 +281,92 @@ static void phy_send_feedback(uint8_t * rx_header)
 	
 	// Bereite den Header vor
 	header[0] = 0x20;
-	
 	header[1] = 0x01;				// Das steht in den Bestaetigungsdurchgaengen von ICOM-Repeater. Evtl. benoetigt man das nicht.
-	header[2] = 0x0;				// "2nd control byte"
-	header[3] = 0x0;				// "3rd control byte"
+	header[2] = 0x00;				// "2nd control byte"
+	header[3] = 0x00;				// "3rd control byte"
 	
-	memcpy(header+4, settings.s.my_callsign,CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
+	memcpy(header+4, settings.s.my_callsign, CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
 	
-	memcpy(header+12, settings.s.my_callsign,CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
-	header[19] = 0x47;													// Trage "G" als RPT1 Modul ein
+	memcpy(header+12, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
 	
+	if (feedback)
+	{
+		header[19] = 0x47;												// Trage "G" als RPT1 Modul ein
+		memcpy(header+20, rx_header+27, CALLSIGN_LENGTH);				// YOUR <== MY
+	}
+	else
+	{
+		memcpy(header+20, "CQCQCQ  ", CALLSIGN_LENGTH);					// YOUR
+	}
 	
-	memcpy(header+20, rx_header+27,CALLSIGN_LENGTH);					// YOUR <== MY
+	memcpy(header+28, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// MY1
 	
-	memcpy(header+28, settings.s.my_callsign,CALLSIGN_LENGTH-1);		// MY1
 	header[35] = 0x47;													// Trage "G" als MY-Modul ein
+
+	if (feedback)
+	{
+		memset(header+36, 0x20, 4);										// MY2 sind 4 Leerzeichen
+	}
 	
-	memset(header+36,0x20,4);											// MY2 sind 4 Leerzeichen
+	if (hotspot_mode)
+	{
+		memcpy(header+36, "SPOT", 4);									// MY2 = SPOT
+	}
+	else if (repeater_mode)
+	{
+		memcpy(header+36, "RPTR", 4);									// MY2 = RPTR
+	}
 	
 	// Sende den Headerbefehl
 	send_cmd(header, 40);
 	
-	char feedback_MSG[20];
+	send_voice[0] = 0x21;
+	send_voice[1] = 0x01;
+	memcpy(send_voice+2, ambe_silence_data, 9);
+		
+	if (feedback)
+	{
+		// bereite Tx-Message vor
+		if (dstarFeedbackHeader() == 0)
+		{
+			// ===========11111111112222222222==
+			memcpy(txmsg,"Header CRC is OK.   ", 20);
+		}
+		else if (dstarFeedbackHeader() == 1)
+		{
+			// ===========11111111112222222222==
+			memcpy(txmsg,"Header CRC is wrong!", 20);
+		}
+		else if ((dstarFeedbackHeader() == 2) || (dstarFeedbackHeader() == 3))
+		{
+			// ===========11111111112222222222==
+			memcpy(txmsg,"TermFlag missing!   ", 20);
+		}
+	}
+	else
+	{
+		dcs_get_current_reflector_name(txmsg);
 	
-	// bereite Tx-Message vor
-	if (dstarFeedbackHeader() == 0)
-	{
-		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"Header CRC is OK.   ",20);
-	}
-	else if (dstarFeedbackHeader() == 1)
-	{
-		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"Header CRC is wrong!",20);
-	}
-	else if ((dstarFeedbackHeader() == 2) || (dstarFeedbackHeader() == 3))
-	{
-		// ==================11111111112222222222==
-		memcpy(feedback_MSG,"TermFlag missing!   ",20);
-	}
+		txmsg[6] = txmsg[7];
+		txmsg[7] = ' ';
 	
-	// Bereite Voice-NOP vor
-	const char Voice_NOP_cmd[11] ={0x21, 0x01,    0x9e, 0x8d, 0x32, 0x88, 0x26, 0x1a, 0x3f, 0x61, 0xe8};
+		dcs_get_current_statustext(txmsg + 8);
+	}
 	
 	send_data[0] = 0x22;
 	
-	send_cmd(Voice_NOP_cmd,11);
+	send_cmd(send_voice, 11);
 	
 	for (int i=0; i<4; ++i)
 	{
-		send_cmd(Voice_NOP_cmd,11);
+		send_cmd(send_voice, 11);
 		send_data[1] = 0x40 + i;
-		memcpy(send_data+2,feedback_MSG+5*i,2);
-		send_cmd(send_data,4);
+		memcpy(send_data+2, txmsg+5*i, 2);
+		send_cmd(send_data, 4);
 		
-		send_cmd(Voice_NOP_cmd,11);
-		memcpy(send_data+1,feedback_MSG+5*i+2,3);
-		send_cmd(send_data,4);
+		send_cmd(send_voice, 11);
+		memcpy(send_data+1, txmsg+5*i+2, 3);
+		send_cmd(send_data, 4);
 	}
 }
 
@@ -565,14 +512,14 @@ static uint8_t dtmf_tone_detected = 0;
 void send_dcs_state(void)
 {
 	vTaskDelay(950);
-	phy_send_response( rx_header );
+	phy_send_response(false, rx_header);
 }
 
 void send_feedback(void)
 {
 	vTaskDelay(400); // wait 400ms
 	if (dstarPhyRX()) return;	
-	phy_send_feedback( rx_header );
+	phy_send_response(true, rx_header);
 	
 	if (hotspot_mode)
 		vTaskDelay((SETTING_SHORT(S_PHY_TXDELAY)*27+5600)>>4);
@@ -698,7 +645,7 @@ static void dtmf_cmd_exec(void)
 			if (header_crc_result == DSTAR_HEADER_OK)
 			{
 				vTaskDelay(950); // wait before sending ACK
-				phy_send_response( rx_header );
+				phy_send_response(false, rx_header);
 			}
 	    }
 		else if (dtmf_cmd_string[0] == 'D')
@@ -894,7 +841,7 @@ static void vTXTask( void *pvParameters )
 								if (rx_header[26] == 'I')
 								{
 									vTaskDelay(950); // wait before sending ACK
-									phy_send_response( rx_header );
+									phy_send_response(false, rx_header);
 								}
 								else if (rx_header[26] == 'U')
 								{
