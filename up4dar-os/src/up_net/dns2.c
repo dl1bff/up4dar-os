@@ -237,7 +237,7 @@ int dns2_req_A (const char * name)
 		}
 	}
 	
-	if (strcmp(name, "tst002.mdx.de") == 0)
+	if (strcmp(name, "tst002.reflector.up4dar.de") == 0)
 	{
 		memcpy (cur->result_data, tst002addr, sizeof tst002addr);
 		cur->result_data_len = sizeof tst002addr;

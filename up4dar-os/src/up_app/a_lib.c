@@ -40,6 +40,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_io\wm8510.h"
 #include "up_dstar\ambe.h"
 #include "up_net\dhcp.h"
+#include "up_dstar\dvset.h"
+#include "up_dstar\r2cs.h"
+#include "up_dstar\rmuset.h"
+#include "up_dstar\urcall.h"
 
 
 char software_ptt = 0;
@@ -55,7 +59,7 @@ typedef struct a_app_context {
 	
 	char name[MAX_APP_NAME_LENGTH + 1]; // app name
 	
-	char button_text[3][MAX_BUTTON_TEXT_LENGTH + 1];
+	char button_text[4][MAX_BUTTON_TEXT_LENGTH + 1];
 	
 	int (*key_event_handler) (void * a, int key_num, int key_event);  // function to be called on key events
 	
@@ -68,6 +72,9 @@ typedef struct a_app_context {
 
 static app_context_t * current_app = NULL;
 static app_context_t * app_list_head = NULL;
+static app_context_t * main_screen = NULL;
+static bool r2cs_flag = false;
+static int r2cs_idx = 0;
 
 void * a_new_app ( const char * app_name, char screen_num)
 {
@@ -105,17 +112,27 @@ void * a_new_app ( const char * app_name, char screen_num)
 }
 
 void a_set_button_text ( void * app_context, const char * button1,
-    const char * button2, const char * button3)
+    const char * button2, const char * button3, const char * button4)
 {
 	app_context_t * a = (app_context_t *) app_context;
 	
 	strncpy(a->button_text[0], button1, MAX_BUTTON_TEXT_LENGTH);
 	strncpy(a->button_text[1], button2, MAX_BUTTON_TEXT_LENGTH);
 	strncpy(a->button_text[2], button3, MAX_BUTTON_TEXT_LENGTH);
+	strncpy(a->button_text[3], button4, MAX_BUTTON_TEXT_LENGTH);
 	
 	a->button_text[0][MAX_BUTTON_TEXT_LENGTH] = 0;
 	a->button_text[1][MAX_BUTTON_TEXT_LENGTH] = 0;
 	a->button_text[2][MAX_BUTTON_TEXT_LENGTH] = 0;
+	a->button_text[3][MAX_BUTTON_TEXT_LENGTH] = 0;
+}
+
+void a_set_button_text_pos ( void * app_context, const char * button, int button_pos)
+{
+	app_context_t * a = (app_context_t *) app_context;
+	
+	strncpy(a->button_text[button_pos], button, MAX_BUTTON_TEXT_LENGTH);
+	a->button_text[button_pos][MAX_BUTTON_TEXT_LENGTH] = 0;
 }
 
 void a_set_key_event_handler ( void * app_context, 
@@ -155,6 +172,7 @@ static int num_apps = 4;
 */
 static int help_layer_timer = 0;
 static int help_layer;
+bool key_douple_function = false;
 
 // static int app_manager_key_state = 0;
 
@@ -204,6 +222,93 @@ static const app_context_t debug_app_context = {
 
 */
 
+bool tx_info = false;
+
+void tx_info_on(void)
+{
+	if ((!tx_info)  && (!r2cs_flag) && (current_app->screen_num == VDISP_MAIN_LAYER))
+	{
+		char str[22];
+
+		lcd_show_menu_layer(help_layer);
+		help_layer_timer = 0; // display permanent
+	
+		vd_clear_rect(help_layer, 0, 12, 146, 43);	
+
+		for (int i = 8; i < 66; i++)
+		{
+			vd_set_pixel(help_layer, i, 19, 0, 1, 1);
+			vd_set_pixel(help_layer, i, 30, 0, 1, 1);
+			vd_set_pixel(help_layer, i + 1, 31, 0, 1, 1);
+		}
+		for (int i = 19; i < 30; i++)
+		{
+			vd_set_pixel(help_layer, 8, i, 0, 1, 1);
+			vd_set_pixel(help_layer, 65, i, 0, 1, 1);
+			vd_set_pixel(help_layer, 66, i + 1, 0, 1, 1);
+		}
+	
+		for (int i = 8; i < 112; i++)
+		{
+			vd_set_pixel(help_layer, i, 37, 0, 1, 1);
+			vd_set_pixel(help_layer, i, 48, 0, 1, 1);
+			vd_set_pixel(help_layer, i + 1, 49, 0, 1, 1);
+		}
+		for (int i = 37; i < 49; i++)
+		{
+			vd_set_pixel(help_layer, 8, i, 0, 1, 1);
+			vd_set_pixel(help_layer, 112, i, 0, 1, 1);
+			vd_set_pixel(help_layer, 113, i + 1, 0, 1, 1);
+		}
+
+		memset(str, '\0', 22);
+		memcpy(str, getURCALL(), CALLSIGN_LENGTH);
+	
+		vd_prints_xy(help_layer, 10, 21, VDISP_FONT_5x8, 0, "ur");
+		vd_prints_xy(help_layer, 20, 21, VDISP_FONT_5x8, 0, str);
+	
+		vd_prints_xy(help_layer, 70, 18, VDISP_FONT_4x6, 0, "R1");
+		vd_prints_xy(help_layer, 70, 26, VDISP_FONT_4x6, 0, "R2");
+		
+		if (SETTING_CHAR(C_DV_DIRECT) != 1)
+		{
+			memset(str, '\0', 22);
+		
+			memcpy(str, settings.s.rpt1 + ((SETTING_CHAR(C_DV_USE_RPTR_SETTING) - 1)*CALLSIGN_LENGTH), CALLSIGN_LENGTH);
+		
+			vd_prints_xy(help_layer, 80, 18, VDISP_FONT_4x6, 0, str);
+		
+			memset(str, '\0', 22);
+		
+			memcpy(str, settings.s.rpt2 + ((SETTING_CHAR(C_DV_USE_RPTR_SETTING) - 1)*CALLSIGN_LENGTH), CALLSIGN_LENGTH);
+		
+			vd_prints_xy(help_layer, 80, 26, VDISP_FONT_4x6, 0, str);
+		}
+		else
+		{
+			vd_prints_xy(help_layer, 80, 18, VDISP_FONT_4x6, 0, "DIRECT  ");
+			vd_prints_xy(help_layer, 80, 26, VDISP_FONT_4x6, 0, "DIRECT  ");
+		}
+	
+		memset(str, '\0', 22);
+		memcpy(str, settings.s.txmsg, TXMSG_LENGTH);
+	
+		vd_prints_xy(help_layer, 10, 40, VDISP_FONT_5x8, 0, str);
+
+		tx_info = true;
+	}
+}
+
+void tx_info_off(void)
+{
+	if (tx_info)
+	{
+		tx_info = false;
+		lcd_show_menu_layer(help_layer);
+		help_layer_timer = 3; // approx 2 seconds
+	}
+}
+
 static void set_help_text (void)
 {
 	const app_context_t * a = current_app;
@@ -211,14 +316,17 @@ static void set_help_text (void)
 	vd_clear_rect(help_layer, 0, 0, 40, 6); // name
 	vd_prints_xy(help_layer, 0, 0, VDISP_FONT_4x6, 0, a->name);
 	
-	vd_clear_rect(help_layer, 0, 58, 32, 6); // button 1
+	vd_clear_rect(help_layer, 0, 58, 25, 6); // button 1
 	vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, a->button_text[0]);
 	
-	vd_clear_rect(help_layer, 39, 58, 32, 6); // button 2
-	vd_prints_xy(help_layer, 39, 58, VDISP_FONT_4x6, 0, a->button_text[1]);
+	vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+	vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, a->button_text[1]);
 	
-	vd_clear_rect(help_layer, 76, 58, 32, 6); // button 3
-	vd_prints_xy(help_layer, 76, 58, VDISP_FONT_4x6, 0, a->button_text[2]);
+	vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+	vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, a->button_text[2]);
+	
+	vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+	vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, a->button_text[3]);
 	
 	/*
 	vd_clear_rect(help_layer, 91, 14, 32, 6); // button UP
@@ -261,8 +369,6 @@ static void app_manager_select_next(void)
 	set_help_text();
 	
 	lcd_show_layer(current_app->screen_num);
-	
-	
 }
 
 
@@ -304,8 +410,14 @@ static void set_speaker_volume (int up)
 			buf[0] = '+';
 		}
 		
+		lcd_show_menu_layer(help_layer);
+		help_layer_timer = 0; // display permanent
+		
+		vd_clear_rect(help_layer, 0, 12, 146, 43);
+
 		vdisp_i2s(buf + 1, 2, 10, 1, new_volume);
-		vd_prints_xy(help_layer, 115, 58, VDISP_FONT_4x6, 0, buf);
+		vd_prints_xy(help_layer, 30, 30, VDISP_FONT_6x8, 0, "Volume");
+		vd_prints_xy(help_layer, 70, 30, VDISP_FONT_6x8, 0, buf);
 		
 		lcd_show_help_layer(help_layer);
 		help_layer_timer = 3; // approx 2 seconds
@@ -315,15 +427,88 @@ static void set_speaker_volume (int up)
 char dcs_mode = 0;
 char hotspot_mode = 0;
 char repeater_mode = 0;
+char parrot_mode = 0;
+int key_lock = 0;
 
 static char snmp_reset_cmnty = 0;
 
+bool refresh_main_menu = false;
+
 void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 {
+	if ((key_lock) && (key_num != A_KEY_BUTTON_2)) return;
+	
 	if (key_num == A_KEY_BUTTON_APP_MANAGER)
 	{
 		if (key_event == A_KEY_PRESSED)
 		{
+			if (dvset_isedit())
+			{
+				dvset_cursor(1);
+				dvset_print();
+				
+				return;
+			}
+			else if (dvset_isselected())
+			{
+				a_set_button_text_pos(main_screen, "SELECT", 0);
+				vd_clear_rect(help_layer, 0, 58, 24, 6); // button 1
+				vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, main_screen->button_text[0]);
+
+				a_set_button_text_pos(main_screen, "", 1);
+				vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+				vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, main_screen->button_text[1]);
+				
+				a_set_button_text_pos(main_screen, "", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+				
+				a_set_button_text_pos(main_screen, "MENU", 3);
+				vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+				vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, main_screen->button_text[3]);
+
+				settings_init();
+				dvset_cancel();
+				dvset_print();
+				
+				refresh_main_menu = true;
+			
+				return;
+			}
+			else if (r2cs_flag)
+			{
+				r2cs_flag = false;
+				lcd_show_menu_layer(help_layer);
+				help_layer_timer = 3; // approx 2 seconds
+			
+				a_set_button_text_pos(main_screen, "R>CS", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+			
+				return;
+			}
+			
+			if (refresh_main_menu)
+			{
+				a_set_button_text_pos(main_screen, "PTT", 0);
+				vd_clear_rect(help_layer, 0, 58, 24, 6); // button 1
+				vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, main_screen->button_text[0]);
+
+				a_set_button_text_pos(main_screen, "MUTE", 1);
+				vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+				vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, main_screen->button_text[1]);
+				
+				a_set_button_text_pos(main_screen, "R>CS", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+				
+				a_set_button_text_pos(main_screen, "MENU", 3);
+				vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+				vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, main_screen->button_text[3]);
+
+				refresh_main_menu = false;
+			}
+		
 			snmp_reset_cmnty = 0;
 			
 			software_ptt = 0; // prevent TXing forever...
@@ -331,9 +516,17 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 			app_manager_select_next();
 			lcd_show_help_layer(help_layer);
 			
-			if (current_app->screen_num == VDISP_REF_LAYER)
+			if ((current_app->screen_num == VDISP_REF_LAYER) ||
+				(current_app->screen_num == VDISP_DVSET_LAYER) ||
+				(current_app->screen_num == VDISP_MAIN_LAYER && r2csURCALL()))
 			{
 				help_layer_timer = 0; // show help forever..
+			}
+			else if (current_app->screen_num == VDISP_RMUSET_LAYER)
+			{
+				help_layer_timer = 0; // show help forever..
+
+				rmuset_print();				
 			}
 			else
 			{
@@ -406,10 +599,9 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 			}
 		}
 		
-		
 		if (res == 0) // handler didn't use this event
 		{
-			if ((key_event == A_KEY_PRESSED) || (key_event == A_KEY_REPEAT))
+			if (((key_event == A_KEY_PRESSED) || (key_event == A_KEY_REPEAT)) && (!r2cs_flag))
 			{
 				switch (key_num)
 				{
@@ -424,26 +616,28 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 			}				
 		}
 	}			
-		
 }
 
-#define REF_NUM_ITEMS 6
-#define REF_SELECTION_SPECIAL 6
+#define REF_NUM_ITEMS 8
+#define REF_SELECTION_SPECIAL 8
 static char ref_selected_item = 0;
-static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 3, 2, 9, 9, 9, 25 };
-static const char * const ref_modes[4] = { "D-STAR Modem",
+static char ref_items[REF_NUM_ITEMS] = { 0, 3, 0, 0, 0, 1, 2, 0 };
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 4, 4, 2, 9, 9, 9, 25, 6 };
+static const char * const ref_modes[5] = { "D-STAR Modem",
 										   "IP Reflector",
 										   "Hotspot     ",
-										   "Repeater    "};
+										   "Repeater    ",
+										   "Parrot (DVR)" };
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
-
+static const char * const ref_timer[7] = { "off", "5 min.", "10 min.", "15 min.", "20 min.", "30 min.", "40 min." };
+	
 
 static void set_mode_vars(void)
 {
-	dcs_mode = (ref_items[0] != 0); // "IP Reflector" "Hotspot" "Repeater"
+	dcs_mode = ((ref_items[0] != 0) && (ref_items[0] != 4)); // "IP Reflector" "Hotspot" "Repeater"
 	hotspot_mode = (ref_items[0] == 2); //  "Hotspot"
 	repeater_mode = (ref_items[0] == 3); //  "Repeater"
+	parrot_mode = (ref_items[0] == 4); // "Parrot"
 }
 
 
@@ -453,24 +647,38 @@ static void ref_print_status (void)
 	vd_prints_xy(VDISP_REF_LAYER, 36, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
 		ref_modes[(int) ref_items[0]]);
 	
-	#define XPOS 10
-	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
-		ref_types[(int) ref_items[1]]);
+	vd_printc_xy(VDISP_REF_LAYER, 0, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
+		ref_items[1] + 0x41);
 	
+	vd_prints_xy(VDISP_REF_LAYER, 10, 24, VDISP_FONT_6x8, 0, "==>");
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
-		ref_items[2] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
+	#define XPOS 30
+	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
+		ref_types[(int) ref_items[2]]);
+	
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
 		ref_items[3] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
 		ref_items[4] + 0x30);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+		ref_items[5] + 0x30);
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
 		0x20);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
-		ref_items[5] + 0x41);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
+		ref_items[6] + 0x41);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
 		0x20);
+		
+	vd_clear_rect(VDISP_REF_LAYER, 0, 36, 120, 12);
+
+	if (repeater_mode || hotspot_mode)
+	{
+		vd_prints_xy(VDISP_REF_LAYER, 0, 36, VDISP_FONT_6x8, 0, "Hometimer");
+	
+		vd_prints_xy(VDISP_REF_LAYER, 60, 36, VDISP_FONT_6x8, (ref_selected_item == 7),
+			ref_timer[(int) ref_items[7]]);
+	}
 	
 	#undef XPOS
 }
@@ -479,17 +687,180 @@ void set_ref_params (int ref_num, int ref_letter, int ref_type)
 {
 	int n = ref_num;
 	
+	ref_items[5] = n % 10;
+	n /= 10;
 	ref_items[4] = n % 10;
 	n /= 10;
 	ref_items[3] = n % 10;
-	n /= 10;
-	ref_items[2] = n % 10;
 	
-	ref_items[5] = ref_letter - 0x41;
+	ref_items[6] = ref_letter - 0x41;
 	
-	ref_items[1] = ref_type;
+	ref_items[2] = ref_type;
 	
 	ref_print_status();
+}
+
+static int dvset_app_key_event_handler (void * app_context, int key_num, int event_type)
+{
+	// app_context_t * a = (app_context_t *) app_context;
+	
+	if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_PRESSED))
+	{
+		refresh_main_menu = true;
+
+		if (dvset_isedit())
+		{
+			a_set_button_text_pos(main_screen, "WRITE", 0);
+			vd_clear_rect(help_layer, 0, 58, 24, 6); // button 1
+			vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, main_screen->button_text[0]);
+			
+			a_set_button_text_pos(main_screen, "CLEAR", 1);
+			vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+			vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, main_screen->button_text[1]);
+			
+			a_set_button_text_pos(main_screen, "EDIT", 2);
+			vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+			vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+			
+			a_set_button_text_pos(main_screen, "CANCEL", 3);
+			vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+			vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, main_screen->button_text[3]);
+			
+			dvset_store();
+		}
+		else
+		{
+			if (!dvset_isselected())
+			{
+				a_set_button_text_pos(main_screen, "WRITE", 0);
+				vd_clear_rect(help_layer, 0, 58, 24, 6); // button 1
+				vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, main_screen->button_text[0]);
+			
+				a_set_button_text_pos(main_screen, "CLEAR", 1);
+				vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+				vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, main_screen->button_text[1]);
+			
+				a_set_button_text_pos(main_screen, "EDIT", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+			
+				a_set_button_text_pos(main_screen, "CANCEL", 3);
+				vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+				vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, main_screen->button_text[3]);
+			
+				dvset_select(true);
+			}
+			else
+			{
+				a_set_button_text_pos(main_screen, "SELECT", 0);
+				vd_clear_rect(help_layer, 0, 58, 24, 6); // button 1
+				vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, main_screen->button_text[0]);
+			
+				a_set_button_text_pos(main_screen, "", 1);
+				vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+				vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, main_screen->button_text[1]);
+			
+				a_set_button_text_pos(main_screen, "", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+			
+				a_set_button_text_pos(main_screen, "MENU", 3);
+				vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+				vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, main_screen->button_text[3]);
+			
+				dvset_select(false);
+			}
+		}
+			
+		dvset_print();
+	}
+	else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
+	{
+		if (dvset_isedit())
+		{
+			dvset_backspace();
+		}
+		else
+		{
+			dvset_clear();
+		}
+
+		dvset_print();
+	}
+	else if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_PRESSED))
+	{
+		if (dvset_isedit())
+		{
+			dvset_cursor(0);
+		}
+		else
+		{
+			refresh_main_menu = true;
+
+			a_set_button_text_pos(main_screen, "STORE", 0);
+			vd_clear_rect(help_layer, 0, 58, 24, 6); // button 1
+			vd_prints_xy(help_layer, 0, 58, VDISP_FONT_4x6, 0, main_screen->button_text[0]);
+			
+			a_set_button_text_pos(main_screen, "BS", 1);
+			vd_clear_rect(help_layer, 34, 58, 24, 6); // button 2
+			vd_prints_xy(help_layer, 34, 58, VDISP_FONT_4x6, 0, main_screen->button_text[1]);
+			
+			a_set_button_text_pos(main_screen, "   <", 2);
+			vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+			vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+			
+			a_set_button_text_pos(main_screen, "   >", 3);
+			vd_clear_rect(help_layer, 98, 58, 24, 6); // button 4
+			vd_prints_xy(help_layer, 98, 58, VDISP_FONT_4x6, 0, main_screen->button_text[3]);
+			
+			dvset_goedit();
+		}
+		
+		dvset_print();
+	}
+	else if ((key_num == A_KEY_BUTTON_DOWN) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
+	{
+		dvset_field(1);
+			
+		dvset_print();
+		
+		return 1;
+	}
+	else if ((key_num == A_KEY_BUTTON_UP) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
+	{
+		dvset_field(0);
+			
+		dvset_print();
+		
+		return 1;
+	}
+	
+	return 1;
+}
+
+static int rmuset_app_key_event_handler (void * app_context, int key_num, int event_type)
+{
+	// app_context_t * a = (app_context_t *) app_context;
+
+	if ((event_type == A_KEY_PRESSED) || (event_type == A_KEY_REPEAT))
+	{
+		if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_PRESSED))
+		{
+			rmuset_feld();
+		}
+		else if ((key_num == A_KEY_BUTTON_DOWN) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
+		{
+			rmuset_ref(0);
+		}
+		else if ((key_num == A_KEY_BUTTON_UP) && (event_type == A_KEY_PRESSED || event_type == A_KEY_REPEAT))
+		{
+			rmuset_ref(1);
+		}
+		
+		rmuset_print();
+	}
+	
+	return 1;
 }
 
 static int ref_app_key_event_handler (void * app_context, int key_num, int key_event)
@@ -507,6 +878,8 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				{
 					ref_selected_item = REF_SELECTION_SPECIAL;
 					dcs_on();
+					if (repeater_mode || hotspot_mode)
+						ambe_set_ref_timer(1);
 					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 1;
 				}
 				break;
@@ -518,6 +891,8 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 				if (dcs_mode != 0)
 				{
 					dcs_off();
+					if (repeater_mode || hotspot_mode)
+						ambe_set_ref_timer(0);
 					SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) = 0;
 				}
 				break;
@@ -525,8 +900,12 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 			case A_KEY_BUTTON_3:  // select button
 				if (!dcs_is_connected())
 				{
+					int num_items = REF_NUM_ITEMS;
+					
+					num_items -= (repeater_mode || hotspot_mode) ? 0 : 1;
+					
 					ref_selected_item ++;
-					if (ref_selected_item >= REF_NUM_ITEMS)
+					if (ref_selected_item >= num_items)
 					{
 						ref_selected_item = 0;
 					}
@@ -569,16 +948,20 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 		set_mode_vars();
 	
 		
-		int n = ref_items[2] * 100 +
-				ref_items[3] * 10 +
-				ref_items[4];
+		int n = ref_items[3] * 100 +
+				ref_items[4] * 10 +
+				ref_items[5];
 				
-		dcs_select_reflector( n, ref_items[5] + 0x41, ref_items[1] );
+		dcs_select_reflector( n, ref_items[6] + 0x41, ref_items[2]);
 		
-		SETTING_CHAR(C_REF_TYPE) = ref_items[1];
+		SETTING_CHAR(C_REF_TYPE) = ref_items[2];
 		SETTING_SHORT(S_REF_SERVER_NUM) = n;
-		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[5] + 0x41;
+		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[6] + 0x41;
+		SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) = ref_items[1] + 0x41;
 		SETTING_CHAR(C_DCS_MODE) = ref_items[0];
+		SETTING_CHAR(C_REF_TIMER) = ref_items[7];
+		
+		//settings_set_home_ref();
 		
 		ref_print_status();
 		
@@ -612,23 +995,101 @@ static int main_app_key_event_handler (void * app_context, int key_num, int even
 		software_ptt = 1;
 		return 1;
 	}
-	
-	if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_RELEASED))
+	else if ((key_num == A_KEY_BUTTON_1) && (event_type == A_KEY_RELEASED))
 	{
 		software_ptt = 0;
 		return 1;
 	}
-	
-	if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_PRESSED))
+	else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_RELEASED))
 	{
-		if (ambe_get_automute() != 0) // automute is currently on
+		if ((!key_douple_function) && (key_lock == 0))
 		{
-			ambe_set_automute(0);
+			if (ambe_get_automute() != 0) // automute is currently on
+			{
+				ambe_set_automute(0);
+			}
+			else
+			{
+				ambe_set_automute(1);
+			}
 		}
 		else
 		{
-			ambe_set_automute(1);
+			key_douple_function = false;
 		}
+		
+		return 1;
+	}
+	else if ((key_num == A_KEY_BUTTON_2) && (event_type == A_KEY_HOLD_2S))
+	{
+		key_douple_function = true;
+		if (key_lock != 0)
+		{
+			key_lock = 0;
+		}
+		else
+		{
+			key_lock = 1;
+		}
+	}
+	else if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_PRESSED))
+	{
+		if (r2cs_count() >= 0)
+		{
+			if (!r2cs_flag)
+			{
+				r2cs_flag = true;
+				r2cs_idx = 0;
+
+				lcd_show_menu_layer(help_layer);
+				help_layer_timer = 0; // display permanent
+			
+				a_set_button_text_pos(main_screen, "SET", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+				
+				r2cs_print(help_layer, r2cs_idx);
+			}
+			else
+			{
+				lcd_show_menu_layer(help_layer);
+				help_layer_timer = 3; // approx 2 seconds
+
+				a_set_button_text_pos(main_screen, "R>CS", 2);
+				vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+				vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+
+				r2cs_flag = false;
+				r2cs(help_layer, r2cs_idx);
+			}
+		}
+		
+		return 1;
+	}
+	else if ((key_num == A_KEY_BUTTON_3) && (event_type == A_KEY_HOLD_2S))
+	{
+		r2cs_flag = false;
+		lcd_show_menu_layer(help_layer);
+		help_layer_timer = 3; // approx 2 seconds
+		r2cs(help_layer, -1);
+		
+		a_set_button_text_pos(main_screen, "R>CS", 2);
+		vd_clear_rect(help_layer, 66, 58, 24, 6); // button 3
+		vd_prints_xy(help_layer, 66, 58, VDISP_FONT_4x6, 0, main_screen->button_text[2]);
+		
+		return 1;
+	}
+	else if ((key_num == A_KEY_BUTTON_DOWN) && (event_type == A_KEY_PRESSED) && (r2cs_flag) && (r2cs_idx < r2cs_count()))
+	{
+		r2cs_idx++;
+		r2cs_print(help_layer, r2cs_idx);
+		
+		return 1;
+	}
+	else if ((key_num == A_KEY_BUTTON_UP) && (event_type == A_KEY_PRESSED) && (r2cs_flag) && (r2cs_idx > 0))
+	{
+		r2cs_idx--;
+		r2cs_print(help_layer, r2cs_idx);
 		
 		return 1;
 	}
@@ -643,21 +1104,31 @@ void a_app_manager_init(void)
 	app_context_t * a;
 	
 	a = a_new_app( "DSTAR", VDISP_MAIN_LAYER);
-	a_set_button_text(a, "PTT", "MUTE", "");
+	a_set_button_text(a, "PTT", "MUTE", "R>CS", "MENU");
 	a_set_key_event_handler(a, main_app_key_event_handler);
+	main_screen = a;
+	
+	a = a_new_app( "RMU SET", VDISP_RMUSET_LAYER);
+	a_set_button_text(a, "", "", "SELECT", "MENU");
+	a_set_key_event_handler(a, rmuset_app_key_event_handler);
+	
+	a = a_new_app( "DV SET", VDISP_DVSET_LAYER);
+	a_set_button_text(a, "SELECT", "", "", "MENU");
+	a_set_key_event_handler(a, dvset_app_key_event_handler);
 	
 	a = a_new_app( "GPS", VDISP_GPS_LAYER);
+	a_set_button_text(a, "", "", "", "MENU");
 	
-	a = a_new_app( "REFLECTOR", VDISP_REF_LAYER);
-	a_set_button_text(a, "CONNECT", "DISC", "SELECT");
+	a = a_new_app( "MODE SET", VDISP_REF_LAYER);
+	a_set_button_text(a, "CONNECT", "DISC", "SELECT", "MENU");
 	a_set_key_event_handler(a, ref_app_key_event_handler);
 	
 	a = a_new_app( "AUDIO", VDISP_AUDIO_LAYER);
-	// a_set_button_text(a, "", "", "");
+	a_set_button_text(a, "", "", "", "MENU");
 	// a_set_key_event_handler(a, debug_app_key_event_handler);
 	
 	a = a_new_app( "DEBUG", VDISP_DEBUG_LAYER);
-	a_set_button_text(a, "", "REBOOT", "");
+	a_set_button_text(a, "", "REBOOT", "", "MENU");
 	a_set_key_event_handler(a, debug_app_key_event_handler);
 	
 	
@@ -668,21 +1139,33 @@ void a_app_manager_init(void)
 	{
 		int n = SETTING_SHORT(S_REF_SERVER_NUM);
 		
+		ref_items[5] = n % 10;
+		n /= 10;
 		ref_items[4] = n % 10;
 		n /= 10;
 		ref_items[3] = n % 10;
-		n /= 10;
-		ref_items[2] = n % 10;
 	}
 	
 	if ((SETTING_CHAR(C_REF_MODULE_CHAR) >= 'A') &&
 		(SETTING_CHAR(C_REF_MODULE_CHAR) <= 'Z'))
 	{
-		ref_items[5] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
+		ref_items[6] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
+	}
+	
+	if ((SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) >= 'A') &&
+		(SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) <= 'E'))
+	{
+		ref_items[1] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) - 0x41;
+	}
+	
+	if ((SETTING_CHAR(C_REF_TIMER) >= 0) &&
+		(SETTING_CHAR(C_REF_TIMER) <= 7))
+	{
+		ref_items[7] = SETTING_CHAR(C_REF_TIMER);
 	}
 	
 	if ((SETTING_CHAR(C_DCS_MODE) >= 0) &&
-		(SETTING_CHAR(C_DCS_MODE) <= 3))
+		(SETTING_CHAR(C_DCS_MODE) <= 5))
 	{
 		ref_items[0] = SETTING_CHAR(C_DCS_MODE);
 	}		
@@ -690,17 +1173,16 @@ void a_app_manager_init(void)
 	if ((SETTING_CHAR(C_REF_TYPE) >= 0) &&
 		(SETTING_CHAR(C_REF_TYPE) <= 2))
 	{
-		ref_items[1] = SETTING_CHAR(C_REF_TYPE);
+		ref_items[2] = SETTING_CHAR(C_REF_TYPE);
 	}
 	
-		
 	set_mode_vars();
 	
-	int n = ref_items[2] * 100 +
-	ref_items[3] * 10 +
-	ref_items[4];
+	int n = ref_items[3] * 100 +
+	ref_items[4] * 10 +
+	ref_items[5];
 	
-	dcs_select_reflector( n, ref_items[5] + 0x41,  ref_items[1] );
+	dcs_select_reflector( n, ref_items[6] + 0x41,  ref_items[2]);
 	
 	if ((dcs_mode != 0)  && 
 		(SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)) 
@@ -709,7 +1191,7 @@ void a_app_manager_init(void)
 		dcs_on();
 	}
 	
-	
+	settings_set_home_ref();
 	
 	// TODO error handling
 	
@@ -717,7 +1199,7 @@ void a_app_manager_init(void)
 	
 	int i;
 	
-	for (i=0; i < 112; i++)
+	for (i=0; i < 128; i++)
 	{
 		vd_set_pixel(help_layer, i, 56, 0, 1, 1);
 	}
@@ -731,9 +1213,9 @@ void a_app_manager_init(void)
 	
 	for (i=0; i < 7; i++)
 	{
-		vd_set_pixel(help_layer, 37, 57+i, 0, 1, 1);
-		vd_set_pixel(help_layer, 74, 57+i, 0, 1, 1);
-		vd_set_pixel(help_layer, 111, 57+i, 0, 1, 1);
+		vd_set_pixel(help_layer, 32, 57+i, 0, 1, 1);
+		vd_set_pixel(help_layer, 64, 57+i, 0, 1, 1);
+		vd_set_pixel(help_layer, 96, 57+i, 0, 1, 1);
 		vd_set_pixel(help_layer, SIDEBOX_WIDTH - 1, i, 0, 1, 1);
 	}
 
@@ -757,6 +1239,12 @@ void a_app_manager_init(void)
 	
 	vd_printc_xy(VDISP_REF_LAYER, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
 	vd_printc_xy(VDISP_REF_LAYER, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up
+	
+	vd_printc_xy(VDISP_DVSET_LAYER, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
+	vd_printc_xy(VDISP_DVSET_LAYER, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up
+	
+	vd_printc_xy(VDISP_RMUSET_LAYER, 120, 13, VDISP_FONT_8x12, 0, 0x1e); // arrow up
+	vd_printc_xy(VDISP_RMUSET_LAYER, 120, 39, VDISP_FONT_8x12, 0, 0x1f); // arrow up
 	
 	set_help_text();
 }

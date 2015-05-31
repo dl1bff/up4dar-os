@@ -34,6 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dstar.h"
 
 #include <string.h>
+#include <stdio.h>
 
 #include "rx_dstar_crc_header.h"
 
@@ -49,6 +50,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/snmp.h"
 #include "settings.h"
 #include "up_app/a_lib_internal.h"
+#include "up_dstar/r2cs.h"
 
 
 static xQueueHandle dstarQueue;
@@ -68,6 +70,11 @@ static int repeater_msg;
 int ppm_buf[PPM_BUFSIZE];
 int ppm_ptr;
 int ppm_display_active;
+bool mode_refresh = false;
+bool feedback_call = false;
+int feedback_header = 0;
+
+bool phy_rx = false;
 
 static void mkPrintableString (char * data, int len)
 {
@@ -131,7 +138,6 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 	memcpy(buf, header_data + 27, 8);
 	mkPrintableString(buf,8);
 	
-	
 	if ((crc_result == 0) && (ypos == 5))
 	{
 		if ((header_data[0] & 0x07) == 0)
@@ -155,7 +161,6 @@ static void printHeader( int ypos, unsigned char crc_result, const unsigned char
 		vd_prints_xy(VDISP_DEBUG_LAYER, 50, 58, VDISP_FONT_4x6, crc_result, "RX:");
 		vd_prints_xy(VDISP_DEBUG_LAYER, 62, 58, VDISP_FONT_4x6, crc_result, buf);
 	}
-	
 	
 	memcpy(buf, header_data + 35, 4);
 	mkPrintableString(buf,4);
@@ -344,6 +349,10 @@ static void dstarStateChange(unsigned char n)
 	{
 
 		case 2:
+			if (hotspot_mode || repeater_mode)
+			{
+				ambe_ref_timer_break(1);
+			}
 			voicePackets = 0;
 			syncPackets = 0;
 			sdHeaderPos = 0;
@@ -366,6 +375,10 @@ static void dstarStateChange(unsigned char n)
 			break;
 			
 		case 1:
+			if (hotspot_mode || repeater_mode)
+			{
+				ambe_ref_timer_break(0);
+			}
 		
 			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
 		
@@ -461,7 +474,16 @@ void dstar_print_diagram(void)
 	
 	for (i=0; i < FRAMESYNC_LEN; i++)
 	{
-		int d = (diagram_mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
+		int d = 0;
+		
+		if (rmu_enabled)
+		{
+			d = (diagram_mean_value - frameSync[i]) >> 2;
+		}
+		else
+		{
+			d = (diagram_mean_value - frameSync[i]) * SETTING_SHORT(S_PHY_RXDEVFACTOR) / 70;
+		}
 					
 		if ((d > -20) && (d < 20))
 		{
@@ -485,6 +507,69 @@ void dstarResetCounters(void)
 	syncPackets = 0;
 }
 
+void dstarRMUSetQRG(void)
+{
+	char str[QRG_LENGTH];
+	
+	int qrgRX = 0;
+	int qrgTX = 0;
+	
+	memcpy(str, settings.s.qrg_rx, QRG_LENGTH);
+	qrgRX = atoi(str);
+	
+	memcpy(str, settings.s.qrg_tx, QRG_LENGTH);
+	qrgTX = atoi(str);
+	
+	buf[0] = 0xD3;
+	buf[1] = 0x01;
+	
+	phyCommSendCmd(buf, 2);
+
+	buf[0] = SET_QRG;
+	buf[1] = ((unsigned int)qrgRX >> 24) & 0xFF;
+	buf[2] = ((unsigned int)qrgRX >> 16) & 0xFF;
+	buf[3] = ((unsigned int)qrgRX >> 8) & 0xFF;
+	buf[4] = ((unsigned int)qrgRX >> 0) & 0xFF;
+	buf[5] = ((unsigned int)qrgTX >> 24) & 0xFF;
+	buf[6] = ((unsigned int)qrgTX >> 16) & 0xFF;
+	buf[7] = ((unsigned int)qrgTX >> 8) & 0xFF;
+	buf[8] = ((unsigned int)qrgTX >> 0) & 0xFF;
+	
+	phyCommSendCmd(buf, 9);
+	
+	mode_refresh = true;
+}
+
+void dstarRMUEnable(void)
+{
+	buf[0] = 0xD3;
+	buf[1] = 0x01;
+	
+	phyCommSendCmd(buf, 2);
+
+	buf[0] = SET_RMU;
+	buf[1] = SETTING_CHAR(C_RMU_ENABLED) == 1 ? 0x01 : 0x02;
+				
+	phyCommSendCmd(buf, 2);
+	
+	mode_refresh = true;
+}
+
+void dstarRMUStatus(void)
+{
+	buf[0] = 0xD3;
+	buf[1] = 0x01;
+	
+	phyCommSendCmd(buf, 2);
+
+	buf[0] = SET_RMU;
+	buf[1] = 0x00;
+	
+	phyCommSendCmd(buf, 2);
+	
+	mode_refresh = true;
+}
+
 void dstarChangeMode(int m)
 {
 	char buf[7] = { 0x00, 0x10, 0x02, 0xD3, m, 0x10, 0x03 };
@@ -492,6 +577,17 @@ void dstarChangeMode(int m)
 	phyCommSend( buf, sizeof buf );
 	
 	dstarResetCounters();
+}
+
+bool dstarRefreshMode()
+{
+	if (mode_refresh)
+	{
+		mode_refresh = false;
+		return true;
+	}
+	
+	return false;
 }
 
 static void dstarGetPHYVersion(void)
@@ -725,9 +821,19 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 		case SOURCE_PHY:
 			num_empty = 0;
 			last_valid_source = rx_q_buf[current_pos].source;
+			if (((hotspot_mode || repeater_mode)) && (last_valid_source == SOURCE_PHY))
+			{
+				feedback_call = false;
+				phy_rx = true;
+			}
 			break;
 			
 		case SOURCE_STOP:
+			if (((hotspot_mode || repeater_mode)) && (last_valid_source == SOURCE_PHY))
+			{
+				feedback_call = true;	
+				phy_rx = false;
+			}
 			current_source = 0; // switch off
 			num_written = 0; // stop processing
 			rx_q_buf[current_pos].source = 0; 
@@ -823,13 +929,32 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 	return last_valid_source;
 }
 
+bool dstarFeedbackCall(void)
+{
+	if (feedback_call)
+	{
+		feedback_call = false;
+		return true;
+	}
+		
+	return false;
+}
 
+bool dstarPhyRX(void)
+{
+	return phy_rx;
+}
+
+int dstarFeedbackHeader(void)
+{
+	return feedback_header;
+}
 
 static void rx_q_input_stop( uint8_t source, uint16_t session, uint8_t pos ) 
 {
 	if (dcs_mode && (!(hotspot_mode || repeater_mode)) && (source == SOURCE_PHY))
 		return;
-	
+		
 	if ((source == current_source) && (session == current_session))
 	{
 		// current_source = 0;
@@ -966,22 +1091,22 @@ static void processPacket(void)
 				memcpy(sysinfo, dp.data, dp.dataLen);
 				sysinfo_len = dp.dataLen;
 				
-#define QRG_TX  430375000
-#define QRG_RX  430375000
-
-				char buf[12];
-				
-				buf[0] = 0x44;
-				buf[1] = (QRG_RX >> 24) & 0xFF;
-				buf[2] = (QRG_RX >> 16) & 0xFF;
-				buf[3] = (QRG_RX >> 8) & 0xFF;
-				buf[4] = (QRG_RX >> 0) & 0xFF;
-				buf[5] = (QRG_TX >> 24) & 0xFF;
-				buf[6] = (QRG_TX >> 16) & 0xFF;
-				buf[7] = (QRG_TX >> 8) & 0xFF;
-				buf[8] = (QRG_TX >> 0) & 0xFF;
- 				
-				phyCommSendCmd(buf, 9);
+//#define QRG_TX  430375000
+//#define QRG_RX  430375000
+//
+				//char buf[12];
+				//
+				//buf[0] = 0x44;
+				//buf[1] = (QRG_RX >> 24) & 0xFF;
+				//buf[2] = (QRG_RX >> 16) & 0xFF;
+				//buf[3] = (QRG_RX >> 8) & 0xFF;
+				//buf[4] = (QRG_RX >> 0) & 0xFF;
+				//buf[5] = (QRG_TX >> 24) & 0xFF;
+				//buf[6] = (QRG_TX >> 16) & 0xFF;
+				//buf[7] = (QRG_TX >> 8) & 0xFF;
+				//buf[8] = (QRG_TX >> 0) & 0xFF;
+				//
+				//phyCommSendCmd(buf, 9);
 			}
 			
 			
@@ -1017,7 +1142,8 @@ static void processPacket(void)
 				vdisp_i2s (buf, 2, 16, 1, dp.data[3]);
 				vd_prints_xy(VDISP_DEBUG_LAYER, 116, 0, VDISP_FONT_6x8, 0, buf);
 				
-			}						
+			}					
+			feedback_header = 1;
 			pos_in_frame = POS_LAST;
 			break;
 			
@@ -1055,6 +1181,7 @@ static void processPacket(void)
 					}
 				}				
 			}				
+			feedback_header = 2;
 			break;
 			
 		case 0x32:
@@ -1099,6 +1226,7 @@ static void processPacket(void)
 					// vdisp_prints_xy( 20, 0, VDISP_FONT_5x8, 0, "ppm" );
 				}
 			}				
+			feedback_header = 3;
 			break;
 		case 0x33:
 			if (dp.dataLen == 4)
@@ -1125,6 +1253,7 @@ static void processPacket(void)
 			break;
 		case 0x34:
 			rx_q_input_stop ( SOURCE_PHY, 0, pos_in_frame );
+			feedback_header = 0;
 			break;
 			
 		case 0x35:
@@ -1143,7 +1272,14 @@ static void processPacket(void)
 					frameSync[i] = dp.data[i+2];
 				}			
 				
-				set_diagram(dp.data[0], dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR));	
+				if (rmu_enabled)
+				{
+					set_diagram(dp.data[0], (dp.data[1] * 35 ) >> 1 );
+				}
+				else
+				{
+					set_diagram(dp.data[0], dp.data[1] * SETTING_SHORT(S_PHY_RXDEVFACTOR));
+				}
 				
 				
 				
@@ -1182,6 +1318,47 @@ static void processPacket(void)
 				}
 				
 				xQueueSend ( snmpReqQueue, & sr, 0 );
+			}
+			break;
+			
+		case IND_QRG:
+			if (dp.dataLen > 0)
+			{
+				struct snmpReq sr;
+				sr.param = dp.data[0];
+
+				if (sr.param == 0)
+				{
+					char str[QRG_LENGTH];
+	
+					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[1] << 24) |
+															(dp.data[2] << 16) |
+															(dp.data[3] << 8) |
+															(dp.data[4] << 0));
+					memcpy(settings.s.qrg_rx, str, QRG_LENGTH);
+	
+					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[5] << 24) |
+															(dp.data[6] << 16) |
+															(dp.data[7] << 8) |
+															(dp.data[8] << 0));
+					memcpy(settings.s.qrg_tx, str, QRG_LENGTH);
+				}
+				else
+				{
+					memcpy(settings.s.qrg_tx, "430375000", QRG_LENGTH);
+					memcpy(settings.s.qrg_rx, "430375000", QRG_LENGTH);
+				}
+			}
+			break;
+			
+		case IND_RMU:
+			if (dp.dataLen > 0)
+			{
+				struct snmpReq sr;
+				sr.param = dp.data[0];
+
+				//SETTING_CHAR(C_RMU_ENABLED) = sr.param == 1 ? 1 : 0;
+				rmu_enabled = sr.param == 1 ? true : false;
 			}
 			break;
 			
@@ -1240,6 +1417,9 @@ void dstar_get_header(uint8_t rx_source, uint8_t * crc_result, uint8_t * header_
 	{
 		repeater_msg = 0;
 		printHeader (5, rx_q_header[rx_source].crc_result, rx_q_header[rx_source].data );
+		memcpy(buf, rx_q_header[rx_source].data + 27, 8);
+		mkPrintableString(buf, CALLSIGN_LENGTH);
+		r2cs_append(buf);
 		rx_q_header[rx_source].crc_result = DSTAR_HEADER_OK; // mark as "seen"
 	}
 	
