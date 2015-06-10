@@ -1131,6 +1131,9 @@ void a_app_manager_init(void)
 	a_set_button_text(a, "", "REBOOT", "", "MENU");
 	a_set_key_event_handler(a, debug_app_key_event_handler);
 	
+	a = a_new_app( "NODE INFO", VDISP_NODEINFO_LAYER);
+	a_set_button_text(a, "", "", "", "MENU");
+	// a_set_key_event_handler(a, debug_app_key_event_handler);
 	
 	help_layer = vd_new_screen();
 	

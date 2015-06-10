@@ -1113,6 +1113,11 @@ int main (void)
 		// error handling..
 	}
 	
+	if (vd_new_screen() != VDISP_NODEINFO_LAYER)
+	{
+		// error handling..
+	}
+	
 	lcd_init();
 	
 	vdisp_prints_xy(0, 6, VDISP_FONT_8x12, 0,  "Universal");
