@@ -165,12 +165,12 @@ size_t build_position_report(char* buffer, const char** parameters)
 size_t build_aprs_call(char* buffer)
 {
   size_t number;
-  for (number = 0; (number < CALLSIGN_LENGTH) && (settings.s.my_callsign[number] > ' '); number ++)
+  for (number = 0; (number < (CALLSIGN_LENGTH - 1)) && (settings.s.my_callsign[number] > ' '); number ++)
   {
     buffer[number] = settings.s.my_callsign[number];
   }
   
-  if (number < CALLSIGN_LENGTH-1)
+  if ((number < (CALLSIGN_LENGTH - 1)) && (settings.s.my_callsign[7] > ' '))
   {
 	  buffer[number++] = '-';
 	  buffer[number++] = settings.s.my_callsign[7];  
@@ -348,10 +348,11 @@ const uint8_t* dns_cache_aprs(void)
 	static const uint8_t aprs_dstar_su_rolling_poll[SERVER_NUMBER][4] = { { 195, 211,  23, 244 },
 																          { 185,  79,  71,  91 }
 																	    };
+	
 	*/
 	
-	static const uint8_t aprs_dstar_su_rolling_poll[SERVER_NUMBER][4] = { { 192, 168, 3, 10 },
-																		  { 192, 168, 3, 10 }
+	static const uint8_t aprs_dstar_su_rolling_poll[SERVER_NUMBER][4] = { { 192, 168, 2, 101 },
+																		  { 192, 168, 2, 101 }
 																		};
 	
 	
@@ -359,13 +360,10 @@ const uint8_t* dns_cache_aprs(void)
 	
 	if (index == SERVER_NUMBER)
 	{
-		return aprs_dstar_su_rolling_poll[SERVER_NUMBER-1];
 		index = 0;
 	}
-	else
-	{
-		return aprs_dstar_su_rolling_poll[index++];
-	}
+	
+	return aprs_dstar_su_rolling_poll[index++];
 } 
 
 
@@ -401,7 +399,7 @@ void aprs_send_beacon(void)
 	calculate_aprs_password((char *) p);
 	p += 5;
 		
-	memcpy(p, " vers UP4DAR S.1.00.39e \r\n", 26);
+	memcpy(p, " vers UP4DAR S.1.01.39e \r\n", 26);
 	p += 26;
 		
 	memcpy(p, aprs_call, aprs_call_size);	//build_aprs_call(data);
@@ -422,8 +420,8 @@ void aprs_send_beacon(void)
 		
 	if (hotspot_mode)
 	{
-		memcpy(p, " Hotspot", 8);
-		p += 8;
+		memcpy(p, " Hotspot ", 9);
+		p += 9;
 	}
 	else if (repeater_mode)
 	{
