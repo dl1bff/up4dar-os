@@ -509,6 +509,7 @@ void dstarResetCounters(void)
 
 void dstarRMUSetQRG(void)
 {
+	/*
 	char str[QRG_LENGTH];
 	
 	int qrgRX = 0;
@@ -519,6 +520,20 @@ void dstarRMUSetQRG(void)
 	
 	memcpy(str, settings.s.qrg_tx, QRG_LENGTH);
 	qrgTX = atoi(str);
+	*/
+	
+	int qrgRX = 0;
+	int qrgTX = 0;
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgRX = (qrgRX * 10) + (settings.s.qrg_rx[i] & 0x0F);
+	}
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgTX = (qrgTX * 10) + (settings.s.qrg_tx[i] & 0x0F);
+	}
 	
 	buf[0] = 0xD3;
 	buf[1] = 0x01;
