@@ -81,7 +81,7 @@ static unsigned char vdisp_frame[1024 + 42 + 320] =
 */
 
 
-#define RECV_BUF_COUNT  64
+#define RECV_BUF_COUNT  48
 #define RECV_BUF_SIZE	128
 
 static unsigned char rx_mem[(RECV_BUF_COUNT * RECV_BUF_SIZE) + 1540];  // 64 * 128  + 1 Frame

@@ -76,5 +76,6 @@ extern struct vdisp_font vdisp_fonts[];
 #define VDISP_AUDIO_LAYER 5
 #define VDISP_DVSET_LAYER 6
 #define VDISP_RMUSET_LAYER 7
+#define VDISP_NODEINFO_LAYER 8
 
 #endif /* VDISP_H_ */
