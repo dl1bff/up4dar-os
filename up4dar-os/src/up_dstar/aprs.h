@@ -45,6 +45,6 @@ void aprs_init(void);
 
 void calculate_aprs_password(char* password);
 void send_aprs_udp_report(void);
-void aprs_send_user_report(void);
 
+void aprs_send_user_report(uint8_t * gps_a_data, uint16_t gps_a_len);
 #endif
