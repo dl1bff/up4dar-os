@@ -1344,19 +1344,21 @@ static void processPacket(void)
 
 				if (sr.param == 0)
 				{
-					char str[QRG_LENGTH];
+					/*
+					char str[QRG_LENGTH+1];
 	
-					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[1] << 24) |
+					vdisp_i2s(str, QRG_LENGTH, 10, 1, (int)(dp.data[1] << 24) |
 															(dp.data[2] << 16) |
 															(dp.data[3] << 8) |
 															(dp.data[4] << 0));
-					memcpy(settings.s.qrg_rx, str, QRG_LENGTH);
+					// memcpy(settings.s.qrg_rx, str, QRG_LENGTH);
 	
-					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[5] << 24) |
+					vdisp_i2s(str, QRG_LENGTH, 10, 1, (int)(dp.data[5] << 24) |
 															(dp.data[6] << 16) |
 															(dp.data[7] << 8) |
 															(dp.data[8] << 0));
-					memcpy(settings.s.qrg_tx, str, QRG_LENGTH);
+					// memcpy(settings.s.qrg_tx, str, QRG_LENGTH);
+					*/
 				}
 				else
 				{
