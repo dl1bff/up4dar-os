@@ -19,11 +19,11 @@
     <AsfFrameworkConfig>
       <framework-data>
   <options>
-    <option id="com.atmel.avr32.sf.uc3a.drivers.pm" value="Add" config="" content-id="" />
-    <option id="com.atmel.avr32.sf.uc3a.drivers.gpio" value="Add" config="" content-id="" />
-    <option id="com.atmel.avr32.sf.uc3a.drivers.tc" value="Add" config="" content-id="" />
-    <option id="com.atmel.avr32.sf.uc3a.common.boards" value="Add" config="" content-id="" />
-    <option id="com.atmel.avr32.sf.uc3a.drivers.cpu.cycle_counter" value="Add" config="" content-id="" />
+    <option id="avr32.drivers.tc" value="Add" config="" content-id="Atmel.ASF" />
+    <option id="avr32.drivers.pm" value="Add" config="" content-id="Atmel.ASF" />
+    <option id="common.boards" value="Add" config="" content-id="Atmel.ASF" />
+    <option id="avr32.drivers.gpio" value="Add" config="" content-id="Atmel.ASF" />
+    <option id="avr32.drivers.cpu.cycle_counter" value="Add" config="" content-id="Atmel.ASF" />
   </options>
   <configurations />
   <files>
@@ -66,18 +66,18 @@
   <documentation help="" />
   <offline-documentation help="" />
   <dependencies>
-    <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.10.1" />
+    <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.15.0" />
   </dependencies>
 </framework-data>
     </AsfFrameworkConfig>
     <AsfVersion>2.11.1</AsfVersion>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
-    <OverrideVtorValue />
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <CacheFlash>true</CacheFlash>
     <ProgFlashFromRam>true</ProgFlashFromRam>
-    <RamSnippetAddress />
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
     <UncachedRange />
     <BootSegment>2</BootSegment>
     <preserveEEPROM>true</preserveEEPROM>
@@ -396,6 +396,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\ambe_q.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\aprs.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\aprs.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\audio_q.c">

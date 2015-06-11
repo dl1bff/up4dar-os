@@ -77,6 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto_init.h"
 #include "up_net/dns2.h"
 
+#include "up_dstar/aprs.h"
 
 #include "software_version.h"
 #include "up_dstar/sw_update.h"
@@ -695,6 +696,13 @@ static void vServiceTask( void *pvParameters )
 			vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 0, "      " );
 		}
 		
+		if (ambe_get_autoaprs() == 0)
+		{
+			aprs_send_beacon();
+			
+			ambe_set_autoaprs(1);
+		}
+		
 			
 		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
 		{
@@ -1195,6 +1203,7 @@ int main (void)
 	
 	dns2_init();
 	
+	aprs_init();
 	ntp_init();
 	
 	if (eth_txmem_init() != 0)
