@@ -38,7 +38,7 @@ void vApplicationTickHook( void );
 
 
 void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
-const char* rtclock_get_time( void );
+void rtclock_get_time( char * );
 unsigned long rtclock_get_ticks( void );
 long rtclock_get_tx_ticks( void );
 void rtclock_reset_tx_ticks( void );

@@ -1,6 +1,7 @@
 /*
 
 Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
+Copyright (C) 2015   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -56,7 +57,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define BUFFER_COUNT             2
 
 // Aux. functions
-uint8_t* dns_cache_aprs(void);
+const uint8_t* dns_cache_aprs(void);
 
 struct buffer
 {
@@ -65,7 +66,7 @@ struct buffer
   char data[APRS_BUFFER_SIZE];
 };
 
-#pragma mark APRS and D-PRS packet building functions
+// #pragma mark APRS and D-PRS packet building functions
 
 static xSemaphoreHandle lock;
 
@@ -89,7 +90,7 @@ static const char* const symbols[] =
     "/v"  // Van
   };
 
-#pragma mark APRS packet building
+// #pragma mark APRS packet building
 
 size_t build_altitude_extension(char* buffer)
 {
@@ -178,7 +179,7 @@ size_t build_aprs_call(char* buffer)
   return number;
 }
 
-#pragma mark Buffered operations
+// #pragma mark Buffered operations
 
 void build_packet(const char** parameters)
 {
@@ -205,7 +206,7 @@ void build_packet(const char** parameters)
   // Update CRC in D-PRS header
   data = buffers[OPERATIONAL_BUFFER].data;
   length -= TNC2_POSITION + 1; // Length from TNC-2 header to CR
-  uint16_t sum = rx_dstar_crc_data(data + TNC2_POSITION, length);
+  uint16_t sum = rx_dstar_crc_data((unsigned char *) (data + TNC2_POSITION), length);
   vdisp_i2s(data + CRC_POSITION, 4, 16, 1, sum);
   data[DPRS_SIGN_LENGTH - 1] = ',';
 }
@@ -217,7 +218,7 @@ int has_packet_data(void)
     (buffers[OPERATIONAL_BUFFER].length > 0);
 }
 
-#pragma mark GPS data handling
+// #pragma mark GPS data handling
 
 int parse_digits(const char* data, size_t length)
 {
@@ -282,18 +283,21 @@ void aprs_process_gps_data(const char** parameters, size_t count)
   }
 }
 
-#pragma mark DV-A reporting
+// #pragma mark DV-A reporting
 
 uint8_t aprs_get_slow_data(uint8_t* data)
 {
   int count = 0;
+  
+  
   if (xSemaphoreTake(lock, portTICK_RATE_MS * 2) == pdTRUE)
   {
     if (has_packet_data() == 0)
     {
       xSemaphoreGive(lock);
-      return;
+      return count;
     }
+	
 
     if ((position == 0) &&
         (buffers[OUTGOING_BUFFER].version != buffers[OPERATIONAL_BUFFER].version))
@@ -309,12 +313,14 @@ uint8_t aprs_get_slow_data(uint8_t* data)
     if (position >= buffers[OUTGOING_BUFFER].length)
       position = 0;
 
+
     xSemaphoreGive(lock);
   }
+  
   return count;
 }
 
-#pragma mark APRS-IS reporting
+// #pragma mark APRS-IS reporting
 
 void calculate_aprs_password(char* password)
 {
@@ -336,7 +342,7 @@ void calculate_aprs_password(char* password)
 
 
 #define SERVER_NUMBER	2
-uint8_t* dns_cache_aprs(void)
+const uint8_t* dns_cache_aprs(void)
 {
 	/*
 	static const uint8_t aprs_dstar_su_rolling_poll[SERVER_NUMBER][4] = { { 195, 211,  23, 244 },
@@ -368,7 +374,7 @@ void aprs_send_beacon(void)
 	uint16_t udp_payload_size = 0;
 	
 	uint8_t aprs_call[8];
-	uint8_t aprs_call_size = build_aprs_call(aprs_call);
+	uint8_t aprs_call_size = build_aprs_call((char *)aprs_call);
 	
 	// gruener Bereich (APRS-IS-Header)
 	udp_payload_size += 5 + aprs_call_size + 6 + 5 + 26;
@@ -392,7 +398,7 @@ void aprs_send_beacon(void)
 	memcpy(p, " pass ", 6);
 	p += 6;
 		
-	calculate_aprs_password(p);
+	calculate_aprs_password((char *) p);
 	p += 5;
 		
 	memcpy(p, " vers UP4DAR S.1.00.39e \r\n", 26);
@@ -407,8 +413,8 @@ void aprs_send_beacon(void)
 	memcpy(p, ">APD401,qAR,DL2MRB-B:/", 22);
 	p += 22;
 		
-	// HHMMSSh = Zulu time
-	memcpy(p, rtclock_get_time(), 6);
+	// HHMMSS = Zulu time
+	rtclock_get_time((char *) p);
 	p += 6;
 		
 	memcpy(p, "h4803.63ND01137.34E&UP4DAR based", 32);
@@ -434,7 +440,7 @@ void aprs_send_user_report(void)
 	uint16_t udp_payload_size = 0;
 	
 	uint8_t aprs_call[8];
-	uint8_t aprs_call_size = build_aprs_call(aprs_call);
+	uint8_t aprs_call_size = build_aprs_call((char *) aprs_call);
 	
 	// gruener Bereich (APRS-IS-Header)
 	udp_payload_size += 5 + aprs_call_size + 6 + 5 + 26;
@@ -456,7 +462,7 @@ void aprs_send_user_report(void)
 	memcpy(p, " pass ", 6);
 	p += 6;
 		
-	calculate_aprs_password(p);
+	calculate_aprs_password((char *) p);
 	p += 5;
 		
 	memcpy(p, " vers UP4DAR S.1.00.39e \r\n", 26);
@@ -477,7 +483,7 @@ void aprs_send_user_report(void)
 	udp4_calc_chksum_and_send(packet, ipv4_aprs_addr);
 }
 
-#pragma mark Routine
+// #pragma mark Routine
 
 void aprs_reset(void)
 {
@@ -496,13 +502,14 @@ void aprs_handle_cache_event(void)
 void aprs_init(void)
 {
   aprs_local_port = udp_get_new_srcport();
-  //lock = xSemaphoreCreateMutex();
-//
-  //for (int index = 0; index < BUFFER_COUNT; index ++)
-  //{
-    //buffers[index].version = 0;
-    //buffers[index].length = 0;
-  //}
+  
+  lock = xSemaphoreCreateMutex();
+
+  for (int index = 0; index < BUFFER_COUNT; index ++)
+  {
+    buffers[index].version = 0;
+    buffers[index].length = 0;
+  }
 
   //dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "aprs.dstar.su", aprs_handle_cache_event);
 }

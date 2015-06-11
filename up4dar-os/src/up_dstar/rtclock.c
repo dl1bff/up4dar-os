@@ -122,23 +122,19 @@ void rtclock_disp_xy(int x, int y, int dots, int display_seconds)
 	}
 }
 
-const char* rtclock_get_time( void )
+void rtclock_get_time( char * buf )
 {
 	unsigned int m = the_clock / 60;
 	unsigned int minutes = m % 60;
 	unsigned int h = m / 60;
 	unsigned int hours = h % 24;
 	unsigned int seconds = the_clock % 60;
-
-	const char buf[6];
 	
 	vdisp_i2s(buf, 2, 10, 1, hours);
 	
 	vdisp_i2s(buf+2, 2, 10, 1, minutes);
 
 	vdisp_i2s(buf+4, 2, 10, 1, seconds);
-	
-	return buf;
 }
 
 void rtclock_set_time(unsigned long time)
