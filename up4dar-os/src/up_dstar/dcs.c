@@ -435,6 +435,11 @@ void dcs_over(void)
 		dcs_state = DCS_DISCONNECTED;
 		dcs_state_history = DCS_DISCONNECTED;
 	}
+	else
+	{
+		dcs_state = DCS_DISCONNECTED;
+		udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+	}
 }
 
 bool dcs_changed(void)
