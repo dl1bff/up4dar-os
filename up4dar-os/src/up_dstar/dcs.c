@@ -69,9 +69,9 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<font size=\"1\">Universal Platform for Digital Amateur Radio</font></br>"
 
-                              "<font size=\"2\"><b>www.UP4DAR.de</b>&nbsp;</font>"
+                              "<font size=\"2\"><b><a href=\"http://www.UP4DAR.de\">www.UP4DAR.de</a></b>&nbsp;</font>"
 							  
-							 // "<font size=\"1\">Version: X.0.00.00 </font>"
+							  //"<font size=\"1\">Version: X.0.00.00 </font>"
 		 
                               "</td>"
 
@@ -81,8 +81,6 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
 
 static int dcs_udp_local_port;
-
-static int dcs_state;
 
 #define DCS_KEEPALIVE_TIMEOUT  100
 #define DCS_CONNECT_REQ_TIMEOUT  6
@@ -104,6 +102,8 @@ static int dcs_retry_counter;
 #define DCS_DNS_REQ				6
 #define DCS_WAIT				7
 
+static int dcs_state;
+static int dcs_state_history = DCS_DISCONNECTED;
 
 #define DEXTRA_UDP_PORT            30001
 #define DEXTRA_CONNECT_SIZE        11
@@ -241,9 +241,9 @@ void dcs_service (void)
 	}
 	
 	
-	vd_prints_xy( VDISP_REF_LAYER, 20, 36, VDISP_FONT_6x8, 0, 
+	vd_prints_xy( VDISP_REF_LAYER, 20, 48, VDISP_FONT_6x8, 0, 
 		  dcs_state_text[  (dcs_mode != 0) ? dcs_state : 0 ]);
-	
+		  
 	switch (dcs_state)
 	{
 		case DCS_CONNECTED:
@@ -409,6 +409,54 @@ void dcs_off(void)
 	}
 }
 
+void dcs_home(void)
+{
+	dcs_over();
+
+	settings_get_home_ref();
+
+	dcs_select_reflector((int)SETTING_SHORT(S_REF_SERVER_NUM), (char)SETTING_CHAR(C_REF_MODULE_CHAR), (char)SETTING_CHAR(C_REF_TYPE));
+
+	if (SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)
+	{
+		dcs_set_dns_name();
+			
+		dcs_state = DCS_DNS_REQ;
+		dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
+		dcs_timeout_timer = DCS_DNS_TIMEOUT;
+	}
+}
+
+void dcs_over(void)
+{
+	if (dcs_state == DCS_CONNECTED)
+	{
+		dcs_link_to(' ');
+		dcs_state = DCS_DISCONNECTED;
+		dcs_state_history = DCS_DISCONNECTED;
+	}
+	else
+	{
+		dcs_state = DCS_DISCONNECTED;
+		udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+	}
+}
+
+bool dcs_changed(void)
+{
+	if (dstarPhyRX()) return false;
+	
+	if (dcs_mode != 0 && dcs_state_history != dcs_state && (dcs_state == DCS_CONNECTED || dcs_state == DCS_DISCONNECTED))
+	{
+		dcs_state_history = dcs_state;
+		
+		return true;
+	}
+	
+	return false;
+}
+
+
 static void dcs_keepalive_response (int request_size);
 
 
@@ -504,12 +552,14 @@ void dcs_select_reflector (short server_num, char module, char server_type)
 {
 	if (dcs_state != DCS_DISCONNECTED)  // only when disconnected
 		return;
-		
+
 	current_server_type = server_type;
 	current_server = server_num;
 	current_module = module;
 	
 	set_ref_params(server_num, module, server_type);
+	
+	return;
 }
 
 
@@ -554,8 +604,6 @@ static void infocpy ( uint8_t * mem )
 	}
 }
 
-#define DCS_REGISTER_MODULE  'D'
-
 // #define DCS_CONNECT_FRAME_SIZE	19
 #define DCS_CONNECT_FRAME_SIZE		519
 
@@ -584,7 +632,7 @@ static void dcs_link_to (char module)
 	d[8] = settings.s.my_callsign[7];
 	if ((d[8] < 'A') || (d[8] > 'Z'))
 	{
-		d[8] = DCS_REGISTER_MODULE; // my repeater module
+		d[8] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	d[9] = module; // module to link to
 	d[10] = 0;
@@ -593,9 +641,9 @@ static void dcs_link_to (char module)
 	{
 		dcs_get_current_reflector_name(buf);
 		memcpy(d + 11, buf, 7);
-		// d[18] = ' ';
+		d[18] = ' ';
 		d[18] = '@';
-		// memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
+		memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
 		infocpy(d + 19);
 	}
 
@@ -632,7 +680,7 @@ static void dcs_keepalive_response(int request_size)
 				d[7] = settings.s.my_callsign[7];
 				if ((d[7] < 'A') || (d[7] > 'Z'))
 				{
-					d[7] = DCS_REGISTER_MODULE; // my repeater module
+					d[7] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 				}
 				d[8] = current_module;
 				d[9] = 0;
@@ -644,7 +692,7 @@ static void dcs_keepalive_response(int request_size)
 		d[7] = settings.s.my_callsign[7];
 		if ((d[7] < 'A') || (d[7] > 'Z'))
 		{
-			d[7] = DCS_REGISTER_MODULE; // my repeater module
+			d[7] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 		}
 		d[8] = 0;
 		dcs_get_current_reflector_name((char *) (d + 9));
@@ -784,7 +832,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = DCS_REGISTER_MODULE; // my repeater module
+		d[22] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8); 
 	memcpy (d + 31, settings.s.my_callsign, 8);
@@ -965,7 +1013,7 @@ static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = DCS_REGISTER_MODULE; // my repeater module
+		d[22] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy (d + 31, rx_header + 27, 8);

@@ -180,10 +180,14 @@ static int silence_counter = 0;
 
 
 #define AUTOMUTE_VALUE	120
+#define AUTOAPRS_VALUE	120
 
 static int automute = 0;
+static int autoaprs = 10;
+static int ref_timer = -1;
+bool ref_timer_break = false;
 
-void ambe_set_automute (int enable)
+void ambe_set_automute(int enable)
 {
 	if (enable != 0)
 	{
@@ -200,11 +204,83 @@ int ambe_get_automute(void)
 	return automute;
 }
 
+void ambe_set_autoaprs(int enable)
+{
+	if (enable != 0)
+	{
+		autoaprs = AUTOAPRS_VALUE;
+	}
+	else
+	{
+		autoaprs = 0;
+	}
+}
+
+int ambe_get_autoaprs(void)
+{
+	return autoaprs;
+}
+
+int ambe_get_ref_timer(void)
+{
+	return ref_timer;
+}
+
+void ambe_set_ref_timer(int enable)
+{
+	if (enable != 0)
+	{
+		if (SETTING_CHAR(C_REF_TIMER) == 0)
+			ref_timer = -1;
+		else if (SETTING_CHAR(C_REF_TIMER) == 1)
+			ref_timer = (5 * 60) * 2;
+		else if (SETTING_CHAR(C_REF_TIMER) == 2)
+			ref_timer = (10 * 60) * 2;
+		else if (SETTING_CHAR(C_REF_TIMER) == 3)
+			ref_timer = (15 * 60) * 2;
+		else if (SETTING_CHAR(C_REF_TIMER) == 4)
+			ref_timer = (20 * 60) * 2;
+		else if (SETTING_CHAR(C_REF_TIMER) == 5)
+			ref_timer = (30 * 60) * 2;
+		else if (SETTING_CHAR(C_REF_TIMER) == 6)
+			ref_timer = (40 * 60) * 2;
+	}
+	else
+	{
+		ref_timer = -1;
+	}
+}
+
+void ambe_ref_timer_break(int enable)
+{
+	if ((enable != 0) && (ref_timer > 0) && (!ref_timer_break))
+	{
+		ref_timer_break = true;
+		ambe_set_ref_timer(0);
+	}
+	else if (ref_timer_break)
+	{
+		ref_timer_break = false;
+	
+		ambe_set_ref_timer(1);
+	}
+}
+
 void ambe_service(void)
 {
 	if (automute > 0)
 	{
 		automute --;
+	}
+	
+	if (autoaprs > 0)
+	{
+		autoaprs --;
+	}
+	
+	if (ref_timer > 0)
+	{
+		ref_timer --;
 	}
 }
 

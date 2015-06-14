@@ -40,6 +40,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define CALLSIGN_EXT_LENGTH		4
 #define DPRS_MSG_LENGTH		13
 #define TXMSG_LENGTH		20
+#define QRG_LENGTH			9
 
 #define NUM_RPT_SETTINGS	5
 #define NUM_URCALL_SETTINGS		10
@@ -63,6 +64,8 @@ typedef union settings_union
 		char txmsg[TXMSG_LENGTH];
 		char dprs_msg[DPRS_MSG_LENGTH];
 		char snmp_cmnty[SNMP_CMNTY_LENGTH];
+		char qrg_tx[QRG_LENGTH];
+		char qrg_rx[QRG_LENGTH];
 	} s;
 	
 } settings_t;
@@ -73,8 +76,6 @@ typedef struct {
 	int32_t max_value;
 	int32_t init_value;
 } limits_t;
-
-
 
 extern settings_t settings;
 
@@ -127,6 +128,10 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DCS_MODE					16
 #define C_DCS_CONNECT_AFTER_BOOT	17
 #define C_REF_TYPE					18
+#define C_REF_SOURCE_MODULE_CHAR	19
+#define C_RMU_ENABLED				20
+#define C_REF_TIMER					21
+#define C_RMU_QRG_STEP              22
 
 
 // BOOL values
@@ -145,6 +150,9 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 	(settings.s.long_values[(a) >> 5] & (~(1 << ((a) & 0x1F)))) | (((b) ? 1 : 0) << ((a) & 0x1F)) )
 
 void settings_init(void);
+void settings_get_home_ref(void);
+void settings_set_home_ref(void);
+void settings_write(void);
 
 
 #endif /* SETTINGS_H_ */

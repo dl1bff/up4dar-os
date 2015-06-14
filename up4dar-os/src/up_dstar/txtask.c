@@ -56,14 +56,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_app\a_lib_internal.h"
 #include "up_crypto\up_crypto.h"
 #include "gpio.h"
-
+#include "up_dstar/urcall.h"
 #include "ambe_fec.h"
+#include "up_dstar/slowdata.h"
+
 
 
 static ambe_q_t * microphone;
-
-
-
 
 void set_phy_parameters(void)
 {
@@ -123,6 +122,7 @@ static void send_cmd(const char* Befehl, const short size){
 
 static const char tx_on[1] = {0x10};
 static char header[40];
+static const char feedback_tx_on[1] = {0x12};
 
 static char send_voice[11];
 static char send_data [ 4];
@@ -162,6 +162,8 @@ static void phy_start_tx(void)
 				  (1 << 6)	// Setze den Repeater-Flag
 				;
 				
+	char* urcall = getURCALL();
+				
 	
 	
 	header[2] = 0x0;				// "2nd control byte"
@@ -190,7 +192,7 @@ static void phy_start_tx(void)
 	}
 	
 	for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		header[20+i] = settings.s.urcall[ ((SETTING_CHAR(C_DV_USE_URCALL_SETTING  ) - 1)*CALLSIGN_LENGTH) + i];
+		header[20+i] = urcall[i];
 	}
 	
 	for (short i=0; i<CALLSIGN_LENGTH; ++i){
@@ -269,90 +271,102 @@ static void phy_start_tx_hotspot(uint8_t crc_result, uint8_t * rx_header)
 	send_cmd(header, 40);
 }
 
-
-static void phy_send_response(uint8_t * rx_header)
+static void phy_send_response(bool feedback, uint8_t * rx_header)
 {
+	char txmsg[20];
 
 	// Schalte UP4DAR auf Senden um
+	if (repeater_mode)
+		send_cmd(feedback_tx_on, 1);
+	else
+		send_cmd(tx_on, 1);
 	
-	send_cmd(tx_on, 1);
-	
-	// Bereite einen Header vor
-	
-	header[0] = 0x20;  // send header command
-	header[1] = 0x00;
+	// Bereite den Header vor
+	header[0] = 0x20;
+	header[1] = 0x01;				// Das steht in den Bestaetigungsdurchgaengen von ICOM-Repeater. Evtl. benoetigt man das nicht.
 	header[2] = 0x00;				// "2nd control byte"
 	header[3] = 0x00;				// "3rd control byte"
 	
-	// RPT1 and RPT2
-	for (short i=0; i<CALLSIGN_LENGTH; i++)
+	memcpy(header+4, settings.s.my_callsign, CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
+	
+	memcpy(header+12, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
+	
+	header[19] = 0x47;													// Trage "G" als RPT1 Modul ein
+
+	if (feedback)
 	{
-		header[4+i] = settings.s.my_callsign[i];
+		memcpy(header+20, rx_header+27, CALLSIGN_LENGTH);				// YOUR <== MY
 	}
-	
-	for (short i=0; i<CALLSIGN_LENGTH; i++)
+	else
 	{
-		header[12+i] = settings.s.my_callsign[i];
+		memcpy(header+20, "CQCQCQ  ", CALLSIGN_LENGTH);					// YOUR
 	}
 	
+	memcpy(header+28, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// MY1
 	
-	for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		header[20+i] = rx_header[27+i]; // UR is calling station
+	header[35] = 0x47;													// Trage "G" als MY-Modul ein
+
+	if (hotspot_mode)
+	{
+		memcpy(header+36, "SPOT", 4);									// MY2 = SPOT
+	}
+	else
+	{
+		memcpy(header+36, "RPTR", 4);									// MY2 = RPTR
 	}
 	
-	for (short i=0; i<CALLSIGN_LENGTH; ++i){
-		header[28+i] = settings.s.my_callsign[i]; // MY
-	}
-	
-	for (short i=0; i<CALLSIGN_EXT_LENGTH; ++i){
-		header[36+i] = "RPTR"[i];
-	}
-	
+	// Sende den Headerbefehl
 	send_cmd(header, 40);
 	
 	send_voice[0] = 0x21;
 	send_voice[1] = 0x01;
 	memcpy(send_voice+2, ambe_silence_data, 9);
+		
+	if (feedback)
+	{
+		// bereite Tx-Message vor
+		if (dstarFeedbackHeader() == 0)
+		{
+			// ===========11111111112222222222==
+			memcpy(txmsg,"Header CRC is OK.   ", 20);
+		}
+		else if (dstarFeedbackHeader() == 1)
+		{
+			// ===========11111111112222222222==
+			memcpy(txmsg,"Header CRC is wrong!", 20);
+		}
+		else if ((dstarFeedbackHeader() == 2) || (dstarFeedbackHeader() == 3))
+		{
+			// ===========11111111112222222222==
+			memcpy(txmsg,"TermFlag missing!   ", 20);
+		}
+	}
+	else
+	{
+		dcs_get_current_reflector_name(txmsg);
+	
+		txmsg[6] = txmsg[7];
+		txmsg[7] = ' ';
+	
+		dcs_get_current_statustext(txmsg + 8);
+	}
 	
 	send_data[0] = 0x22;
 	
 	send_cmd(send_voice, 11);
 	
-	char txmsg[20];
-	
-	dcs_get_current_reflector_name(txmsg);
-	
-	txmsg[6] = txmsg[7];
-	txmsg[7] = ' ';
-	
-	dcs_get_current_statustext(txmsg + 8);
-	
-	int j;
-
-	for (j=0; j < 8; j++)
+	for (int i=0; i<4; ++i)
 	{
 		send_cmd(send_voice, 11);
+		send_data[1] = 0x40 + i;
+		memcpy(send_data+2, txmsg+5*i, 2);
+		send_cmd(send_data, 4);
 		
-		int i = j >> 1;
-		if ((j & 1) == 0)
-		{
-			send_data[1] = 0x40 + i;
-			send_data[2] = txmsg[ i * 5 + 0 ];
-			send_data[3] = txmsg[ i * 5 + 1 ];
-		}
-		else
-		{
-			send_data[1] = txmsg[ i * 5 + 2 ];
-			send_data[2] = txmsg[ i * 5 + 3 ];
-			send_data[3] = txmsg[ i * 5 + 4 ];
-		}
-		
+		send_cmd(send_voice, 11);
+		memcpy(send_data+1, txmsg+5*i+2, 3);
 		send_cmd(send_data, 4);
 	}
-	
-	
 }
-
 
 
 
@@ -493,6 +507,22 @@ static uint8_t dtmf_counter = 0;
 #define DTMF_DETECT_TIME 250
 static uint8_t dtmf_tone_detected = 0;
 
+void send_dcs_state(void)
+{
+	vTaskDelay(950);
+	phy_send_response(false, rx_header);
+}
+
+void send_feedback(void)
+{
+	vTaskDelay(400); // wait 400ms
+	if (dstarPhyRX()) return;	
+	phy_send_response(true, rx_header);
+	
+	if (hotspot_mode)
+		vTaskDelay((SETTING_SHORT(S_PHY_TXDELAY)*27+5600)>>4);
+}
+
 
 static void dtmf_decode_init(void)
 {
@@ -600,19 +630,20 @@ static void dtmf_cmd_exec(void)
 		
 		if (dtmf_cmd_string[0] == '#') // unlink
 		{
+			ambe_set_ref_timer(1);
 			dcs_off();
-			if (header_crc_result == DSTAR_HEADER_OK)
-			{
-				vTaskDelay(950); // wait before sending ACK
-				phy_send_response( rx_header );
-			}
+			//if (header_crc_result == DSTAR_HEADER_OK)
+			//{
+				//vTaskDelay(950); // wait before sending ACK
+				//phy_send_response( rx_header );
+			//}
 		}
 		else if (dtmf_cmd_string[0] == '0')
 		{
 			if (header_crc_result == DSTAR_HEADER_OK)
 			{
 				vTaskDelay(950); // wait before sending ACK
-				phy_send_response( rx_header );
+				phy_send_response(false, rx_header);
 			}
 	    }
 		else if (dtmf_cmd_string[0] == 'D')
@@ -632,14 +663,16 @@ static void dtmf_cmd_exec(void)
 			
 			if (reflector >= 0)
 			{
+				dcs_over();
+				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
 				dcs_on();
 			
-				if (header_crc_result == DSTAR_HEADER_OK)
-				{
-					vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
-					phy_send_response( rx_header );
-				}
+				//if (header_crc_result == DSTAR_HEADER_OK)
+				//{
+					//vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
+					//phy_send_response( rx_header );
+				//}
 			}
 		}
 		else if ((dtmf_cmd_string[0] >= '1') && (dtmf_cmd_string[0] <= '9') &&
@@ -650,14 +683,16 @@ static void dtmf_cmd_exec(void)
 			
 			if (reflector >= 0)
 			{
+				dcs_over();
+				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, last_char, SERVER_TYPE_DEXTRA);
 				dcs_on();
 				
-				if (header_crc_result == DSTAR_HEADER_OK)
-				{
-					vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
-					phy_send_response( rx_header );
-				}
+				//if (header_crc_result == DSTAR_HEADER_OK)
+				//{
+					//vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
+					//phy_send_response( rx_header );
+				//}
 			}
 		}
 	}	
@@ -688,7 +723,7 @@ static void vTXTask( void *pvParameters )
 	vdisp_clear_rect(0,0,128,64);
 	gps_reset_slow_data();
 	
-#define PTT_CONDITION  ((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1))
+#define PTT_CONDITION  (((gpio_get_pin_value(AVR32_PIN_PA28) == 0) || (software_ptt == 1)) && (!parrot_mode))
 
 	
 	short tx_min_count = 0;
@@ -704,6 +739,9 @@ static void vTXTask( void *pvParameters )
 		switch(tx_state)
 		{
 		case 0:  // PTT off
+			tx_info_off();
+			ambe_ref_timer_break(0);
+			
 			if (PTT_CONDITION  // PTT pressed
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
@@ -782,6 +820,7 @@ static void vTXTask( void *pvParameters )
 						}
 						else if (last_rx_source == SOURCE_PHY) // rx comes over PHY
 						{
+
 							/* 
 							buf[0] = rx_header[24];
 							buf[1] = rx_header[25];
@@ -794,12 +833,18 @@ static void vTXTask( void *pvParameters )
 							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
 							
 							if ((header_crc_result == DSTAR_HEADER_OK)
-								&& ((rx_header[26] == 'U') || (rx_header[26] == 'L')))
+								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47))  ))
 							{
 								tx_state = 11; // don't forward transmission
 								
-								if (rx_header[26] == 'U')
+								if (rx_header[26] == 'I')
 								{
+									vTaskDelay(950); // wait before sending ACK
+									phy_send_response(false, rx_header);
+								}
+								else if (rx_header[26] == 'U')
+								{
+									ambe_set_ref_timer(1);
 									dcs_off();
 								}
 								else if ((rx_header[26] == 'L') && (rx_header[25] >= 'A') && (rx_header[25] <= 'Z'))
@@ -824,11 +869,15 @@ static void vTXTask( void *pvParameters )
 									{
 										if (memcmp("DCS", rx_header+19, 3) == 0)
 										{
+											dcs_over();
+											ambe_set_ref_timer(1);
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DCS);
 											dcs_on();
 										}
 										else if (memcmp("XRF", rx_header+19, 3) == 0)
 										{
+											dcs_over();
+											ambe_set_ref_timer(1);
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DEXTRA);
 											dcs_on();
 										}
@@ -854,6 +903,8 @@ static void vTXTask( void *pvParameters )
 			break;
 			
 		case 1:  // PTT on
+			tx_info_on();
+			ambe_ref_timer_break(1);
 			if ((!PTT_CONDITION) && (tx_min_count <= 0))  // PTT released
 			{
 				tx_state = 2;
@@ -1030,6 +1081,11 @@ static void vTXTask( void *pvParameters )
 					{
 						memcpy(rx_voice, ambe_silence_data, 9); // silence DTMF on DCS connection
 					}
+					
+					if (hotspot_mode || repeater_mode)
+					{
+						slowdata_analyze_stream();
+					}
 				}
 				
 				if (hotspot_mode || repeater_mode)
@@ -1085,19 +1141,23 @@ static void vTXTask( void *pvParameters )
 			{
 				tx_state = 0;
 			
-				if (hotspot_mode || repeater_mode)
-				{
-					if (last_rx_source == SOURCE_PHY) // rx comes over PHY
-					{
-						// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
-						
-						vTaskDelay(250); // wait before sending ACK
-						phy_send_response( rx_header );
-					}
-				}
+				//if (hotspot_mode || repeater_mode)
+				//{
+					//if (last_rx_source == SOURCE_PHY) // rx comes over PHY
+					//{
+						//// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "OFF" );
+						//
+						//vTaskDelay(250); // wait before sending ACK
+						//phy_send_response( rx_header );
+					//}
+				//}
 			}
 			else
 			{
+				if (hotspot_mode || repeater_mode)
+				{
+					slowdata_analyze_stream();
+				}
 				
 				curr_tx_ticks += 20; // rx/tx AMBE data every 20ms
 				

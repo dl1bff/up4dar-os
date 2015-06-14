@@ -63,6 +63,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_net/dhcp.h"
 #include "up_dstar/gps.h"
+#include "up_dstar/dvset.h"
+#include "up_dstar/r2cs.h"
+#include "up_dstar/rmuset.h"
 
 #include "up_io/lcd.h"
 #include "up_dstar/settings.h"
@@ -74,6 +77,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto_init.h"
 #include "up_net/dns2.h"
 
+#include "up_dstar/aprs.h"
 
 #include "software_version.h"
 #include "up_dstar/sw_update.h"
@@ -81,7 +85,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/txtask.h"
 #include "up_net/ntp.h"
 
-
+#include "up_dstar/slowdata.h"
 
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
@@ -399,6 +403,11 @@ static void show_dcs_state(void)
 	buf[9] = 0;
 	vdisp_prints_xy( 95, 27, VDISP_FONT_4x6, 
 		dcs_is_connected(), buf );
+		
+	if (dcs_changed() && ((repeater_mode != 0) || (hotspot_mode != 0)))
+	{
+		send_dcs_state();
+	}
 }		
 
 
@@ -550,7 +559,10 @@ static void vServiceTask( void *pvParameters )
 	int last_backlight = -1;
 	int last_contrast = -1;
 	char last_repeater_mode = 0;
+	char last_parrot_mode = 0;
 	char dcs_boot_timer = 8;
+	bool update = true;
+	bool last_rmu_enabled = false;
 
 	for (;;)
 	{	
@@ -619,6 +631,15 @@ static void vServiceTask( void *pvParameters )
 			AVR32_MACB.man = 0x60C20000; // read register 0x10
 			break;
 		}
+		
+		dvset();
+				
+		if (last_rmu_enabled != rmu_enabled)
+		{
+			rmuset_print();
+			last_rmu_enabled = rmu_enabled;
+		}
+
 			
 		const char * net_status = "     ";
 			
@@ -657,17 +678,45 @@ static void vServiceTask( void *pvParameters )
 			
 		ambe_service();
 		
-		const char * mute_status = "      ";
+		int automute = ambe_get_automute();
 		
-		int i = ambe_get_automute();
-		
-		if (i != 0)
+		if (key_lock == 1)
 		{
-			mute_status = " MUTE ";
+			if (automute % 2)
+				vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 1, " MUTE " );
+			else
+				vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 1, " LOCK " );
+		}
+		else if (automute != 0)
+		{
+			vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, automute % 2, " MUTE " );				
+		}
+		else
+		{
+			vdisp_prints_xy( 70, 27, VDISP_FONT_4x6, 0, "      " );
 		}
 		
-		vdisp_prints_xy( 70, 27, VDISP_FONT_4x6,
-			i % 2, mute_status );
+		if (ambe_get_autoaprs() == 0)
+		{
+			//  TODO
+			// aprs_send_beacon();
+			
+			ambe_set_autoaprs(1);
+		}
+		
+			
+		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
+		{
+			dcs_home();
+			send_dcs_state();
+				
+			ambe_set_ref_timer(0);
+		}
+		
+		if (dstarFeedbackCall())
+		{
+			send_feedback();
+		}
 		
 		dhcp_service();				
 			
@@ -722,6 +771,13 @@ static void vServiceTask( void *pvParameters )
 		a_app_manager_service();
 		
 		ntp_service();
+		
+		if (update)
+		{
+			dstarRMUEnable();
+			dstarRMUSetQRG();
+			update = false;
+		}
 			 
 			
 		if (dcs_boot_timer > 0)
@@ -732,14 +788,19 @@ static void vServiceTask( void *pvParameters )
 		{
 			dcs_service();
 		
-			if (repeater_mode != last_repeater_mode)
+			if ((parrot_mode != last_parrot_mode) || (repeater_mode != last_repeater_mode) || (dstarRefreshMode()))
 			{
-				
 				if (repeater_mode != 0)
 				{
 					dstarChangeMode(1); // Service mode
 					set_phy_parameters();
 					dstarChangeMode(3);  // Repeater mode
+				}
+				else if (parrot_mode != 0)
+				{
+					dstarChangeMode(1); // Service mode
+					set_phy_parameters();
+					dstarChangeMode(4);  // DVR mode
 				}
 				else
 				{				
@@ -749,6 +810,7 @@ static void vServiceTask( void *pvParameters )
 				}
 			
 				last_repeater_mode = repeater_mode;
+				last_parrot_mode = parrot_mode;
 			}
 		
 			if (dcs_mode != 0)
@@ -773,7 +835,6 @@ static void vServiceTask( void *pvParameters )
 		    lcd_set_contrast( SETTING_CHAR(C_DISP_CONTRAST) );
 		    last_contrast = SETTING_CHAR(C_DISP_CONTRAST);
 	    }
-		
 	}
 }
 
@@ -1031,7 +1092,6 @@ int main (void)
 		// error handling..
 	}
 	
-	
 	if (vd_new_screen() != VDISP_REF_LAYER)
 	{
 		// error handling..
@@ -1052,6 +1112,20 @@ int main (void)
 		// error handling..
 	}
 	
+	if (vd_new_screen() != VDISP_DVSET_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_RMUSET_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_NODEINFO_LAYER)
+	{
+		// error handling..
+	}
 	
 	lcd_init();
 	
@@ -1087,6 +1161,8 @@ int main (void)
 		return 0;
 	}
 	
+	
+	slowdataInit();
 	
 	eth_init();
 	
@@ -1125,10 +1201,7 @@ int main (void)
 	
 	// xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, standard_TASK_PRIORITY, ( xTaskHandle * ) NULL );
 
-
 	gps_init( externalComPort );
-	
-	
 	
 	// sdcard_init(& audio_tx_q);
 	
@@ -1137,6 +1210,7 @@ int main (void)
 	
 	dns2_init();
 	
+	aprs_init();
 	ntp_init();
 	
 	if (eth_txmem_init() != 0)
