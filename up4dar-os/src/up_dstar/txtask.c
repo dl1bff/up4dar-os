@@ -58,7 +58,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gpio.h"
 #include "up_dstar/urcall.h"
 #include "ambe_fec.h"
-#include "up_dstar/slowdata.h"
 
 
 static ambe_q_t * microphone;
@@ -275,10 +274,10 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	char txmsg[20];
 
 	// Schalte UP4DAR auf Senden um
-	if (hotspot_mode && !repeater_mode)
-		send_cmd(tx_on, 1);
-	else
+	if (repeater_mode)
 		send_cmd(feedback_tx_on, 1);
+	else
+		send_cmd(tx_on, 1);
 	
 	// Bereite den Header vor
 	header[0] = 0x20;
@@ -305,7 +304,7 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	
 	header[35] = 0x47;													// Trage "G" als MY-Modul ein
 
-	if (hotspot_mode && !repeater_mode)
+	if (hotspot_mode)
 	{
 		memcpy(header+36, "SPOT", 4);									// MY2 = SPOT
 	}
@@ -819,6 +818,7 @@ static void vTXTask( void *pvParameters )
 						}
 						else if (last_rx_source == SOURCE_PHY) // rx comes over PHY
 						{
+
 							/* 
 							buf[0] = rx_header[24];
 							buf[1] = rx_header[25];
@@ -830,10 +830,8 @@ static void vTXTask( void *pvParameters )
 							
 							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
 							
-							if (repeater_mode && (header[11] != 0x47)) tx_state = 11;
-							
 							if ((header_crc_result == DSTAR_HEADER_OK)
-								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L')))
+								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47))  ))
 							{
 								tx_state = 11; // don't forward transmission
 								
@@ -1081,8 +1079,6 @@ static void vTXTask( void *pvParameters )
 					{
 						memcpy(rx_voice, ambe_silence_data, 9); // silence DTMF on DCS connection
 					}
-					
-					slowdata_analyze_stream();
 				}
 				
 				if (hotspot_mode || repeater_mode)
