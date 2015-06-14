@@ -58,6 +58,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "gpio.h"
 #include "up_dstar/urcall.h"
 #include "ambe_fec.h"
+#include "up_dstar/slowdata.h"
+
 
 
 static ambe_q_t * microphone;
@@ -1079,6 +1081,11 @@ static void vTXTask( void *pvParameters )
 					{
 						memcpy(rx_voice, ambe_silence_data, 9); // silence DTMF on DCS connection
 					}
+					
+					if (hotspot_mode || repeater_mode)
+					{
+						slowdata_analyze_stream();
+					}
 				}
 				
 				if (hotspot_mode || repeater_mode)
@@ -1147,6 +1154,10 @@ static void vTXTask( void *pvParameters )
 			}
 			else
 			{
+				if (hotspot_mode || repeater_mode)
+				{
+					slowdata_analyze_stream();
+				}
 				
 				curr_tx_ticks += 20; // rx/tx AMBE data every 20ms
 				
