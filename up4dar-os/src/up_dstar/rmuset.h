@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2014   Ralf Ballis, DL2MRB (dl2mrb@mnet-mail.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,26 +16,32 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 /*
- * lcd.h
+ * rmuset.h
  *
- * Created: 26.05.2012 16:39:17
- *  Author: mdirska
+ * Created: 01.06.2014 13:11:26
+ *  Author: rballis
  */ 
 
 
-#ifndef LCD_H_
-#define LCD_H_
+#ifndef RMUSET_H_
+#define RMUSET_H_
 
-extern char lcd_current_layer;
-extern char lcd_update_screen;
+#define RMUSET_LINE_LENGTH 11
+#define RMUSET_MAX_REF 4
+#define RMUSET_MAX_STEP_REF 4
+#define RMUSET_MAX_FELD 7
 
-void lcd_init(void);
-void lcd_show_layer (int layer);
-void lcd_set_backlight (int v);
-void lcd_set_contrast (int v);
-void lcd_show_help_layer(int help_layer);
-void lcd_show_menu_layer(int help_layer);
+extern bool rmu_enabled;
 
-#endif /* LCD_H_ */
+void dstarRMUSetQRG(void);
+void dstarRMUEnable(void);
+void dstarRMUStatus(void);
+
+void rmuset_ref(int act);
+void rmuset_feld(void);
+bool rmuset_enabled(void);
+void rmuset_print(void);
+
+
+#endif /* RMUSET_H_ */

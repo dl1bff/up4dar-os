@@ -2,7 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <PropertyGroup>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectVersion>6.1</ProjectVersion>
+    <ProjectVersion>6.2</ProjectVersion>
     <ProjectGuid>{7572ef25-e2ae-4003-b347-6ec9c7f7b672}</ProjectGuid>
     <avrdevice>AT32UC3A1512</avrdevice>
     <avrdeviceseries>uc3a</avrdeviceseries>
@@ -19,11 +19,11 @@
     <AsfFrameworkConfig>
       <framework-data>
         <options>
-          <option id="com.atmel.avr32.sf.uc3a.drivers.pm" value="Add" config="" content-id="" />
-          <option id="com.atmel.avr32.sf.uc3a.drivers.gpio" value="Add" config="" content-id="" />
-          <option id="com.atmel.avr32.sf.uc3a.drivers.tc" value="Add" config="" content-id="" />
-          <option id="com.atmel.avr32.sf.uc3a.common.boards" value="Add" config="" content-id="" />
-          <option id="com.atmel.avr32.sf.uc3a.drivers.cpu.cycle_counter" value="Add" config="" content-id="" />
+          <option id="avr32.drivers.tc" value="Add" config="" content-id="Atmel.ASF" />
+          <option id="avr32.drivers.pm" value="Add" config="" content-id="Atmel.ASF" />
+          <option id="common.boards" value="Add" config="" content-id="Atmel.ASF" />
+          <option id="avr32.drivers.gpio" value="Add" config="" content-id="Atmel.ASF" />
+          <option id="avr32.drivers.cpu.cycle_counter" value="Add" config="" content-id="Atmel.ASF" />
         </options>
         <configurations />
         <files>
@@ -66,20 +66,21 @@
         <documentation help="" />
         <offline-documentation help="" />
         <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.3.0" />
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.15.0" />
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
     <AsfVersion>2.11.1</AsfVersion>
     <KeepTimersRunning>true</KeepTimersRunning>
     <OverrideVtor>false</OverrideVtor>
-    <OverrideVtorValue />
+    <OverrideVtorValue>exception_table</OverrideVtorValue>
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <CacheFlash>true</CacheFlash>
     <ProgFlashFromRam>true</ProgFlashFromRam>
-    <RamSnippetAddress />
+    <RamSnippetAddress>0x20000000</RamSnippetAddress>
     <UncachedRange />
     <BootSegment>2</BootSegment>
+    <preserveEEPROM>true</preserveEEPROM>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <OutputFileName>up4dar-os</OutputFileName>
@@ -397,6 +398,12 @@
     <Compile Include="src\up_dstar\ambe_q.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\aprs.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\aprs.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\audio_q.c">
       <SubType>compile</SubType>
     </Compile>
@@ -415,6 +422,12 @@
     <Compile Include="src\up_dstar\dstar.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\dvset.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\dvset.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\gps.c">
       <SubType>compile</SubType>
     </Compile>
@@ -425,6 +438,18 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\phycomm.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\r2cs.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\r2cs.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\rmuset.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\rmuset.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\rtclock.c">
@@ -451,6 +476,12 @@
     <Compile Include="src\up_dstar\settings.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\slowdata.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\slowdata.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\sw_update.c">
       <SubType>compile</SubType>
     </Compile>
@@ -467,6 +498,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\txtest.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\urcall.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\urcall.h">
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="src\up_dstar\vdisp.c">

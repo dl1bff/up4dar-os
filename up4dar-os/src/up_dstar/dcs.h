@@ -41,6 +41,8 @@ void dcs_init(void);
 void dcs_service (void);
 void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);
 void dcs_off (void);
+void dcs_over(void);
+bool dcs_changed(void);
 
 void send_dcs (int session_id, int last_frame, char dcs_frame_counter);
 void dcs_get_current_reflector_name (char * s);
@@ -49,6 +51,8 @@ void dcs_reset_tx_counters(void);
 
 void dcs_select_reflector (short server_num, char module, char server_type);
 void dcs_on(void);
+
+void dcs_home(void);
 
 
 void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter, const uint8_t * rx_data, const uint8_t * rx_voice, uint8_t crc_result, const uint8_t * rx_header);

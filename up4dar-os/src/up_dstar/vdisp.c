@@ -215,6 +215,30 @@ void vd_prints_xy ( int layer, int x, int y, struct vdisp_font * font, int disp_
 	}
 }
 
+void vd_prints_xy_inverse ( int layer, int x, int y, struct vdisp_font * font, int inverse_idx, const char * s )
+{
+	int xx = x;
+	int idx = 0;
+	int inverse = 0;
+	
+	while ( *s != 0 )
+	{
+		if(inverse_idx == -1)
+			inverse = 0;
+		if(inverse_idx == -2)
+			inverse = 1;
+		else if (idx == inverse_idx)
+			inverse = 1;
+		else
+			inverse = 0;
+			
+		vd_printc_xy( layer, xx, y, font, inverse, ((int) *s) & 0xFF );
+		s++;
+		xx += font->width;
+		idx++;
+	}
+}
+
 void vdisp_clear_rect(int x, int y, int width, int height)
 {
 	vd_clear_rect(VDISP_MAIN_LAYER, x, y, width, height);

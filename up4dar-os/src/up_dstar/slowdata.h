@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2015   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -18,24 +18,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 /*
- * lcd.h
+ * slowdata.h
  *
- * Created: 26.05.2012 16:39:17
+ * Created: 11.06.2015 14:44:55
  *  Author: mdirska
  */ 
 
 
-#ifndef LCD_H_
-#define LCD_H_
+#ifndef SLOWDATA_H_
+#define SLOWDATA_H_
 
-extern char lcd_current_layer;
-extern char lcd_update_screen;
+void slowdata_data_input( unsigned char * data, unsigned char len );
+void slowdataInit(void);
+void slowdata_analyze_stream(void);
 
-void lcd_init(void);
-void lcd_show_layer (int layer);
-void lcd_set_backlight (int v);
-void lcd_set_contrast (int v);
-void lcd_show_help_layer(int help_layer);
-void lcd_show_menu_layer(int help_layer);
-
-#endif /* LCD_H_ */
+#endif /* SLOWDATA_H_ */

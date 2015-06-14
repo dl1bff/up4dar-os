@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2014   Ralf Ballis, DL2MRB (dl2mrb@mnet-mail.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,26 +16,18 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 /*
- * lcd.h
+ * urcall.h
  *
- * Created: 26.05.2012 16:39:17
- *  Author: mdirska
+ * Created: 10.03.2014 19:40:18
+ *  Author: rballis
  */ 
 
 
-#ifndef LCD_H_
-#define LCD_H_
+#ifndef URCALL_H_
+#define URCALL_H_
 
-extern char lcd_current_layer;
-extern char lcd_update_screen;
 
-void lcd_init(void);
-void lcd_show_layer (int layer);
-void lcd_set_backlight (int v);
-void lcd_set_contrast (int v);
-void lcd_show_help_layer(int help_layer);
-void lcd_show_menu_layer(int help_layer);
+char* getURCALL(void);
 
-#endif /* LCD_H_ */
+#endif /* URCALL_H_ */

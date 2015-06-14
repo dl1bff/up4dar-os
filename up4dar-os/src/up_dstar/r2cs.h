@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2014   Ralf Ballis, DL2MRB (dl2mrb@mnet-mail.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -16,26 +16,27 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
-
 /*
- * lcd.h
+ * r2cs.h
  *
- * Created: 26.05.2012 16:39:17
- *  Author: mdirska
+ * Created: 04.03.2014 08:37:32
+ *  Author: rballis
  */ 
 
 
-#ifndef LCD_H_
-#define LCD_H_
+#ifndef R2CS_H_
+#define R2CS_H_
 
-extern char lcd_current_layer;
-extern char lcd_update_screen;
+#define  R2CS_HISTORY_DIM 5
 
-void lcd_init(void);
-void lcd_show_layer (int layer);
-void lcd_set_backlight (int v);
-void lcd_set_contrast (int v);
-void lcd_show_help_layer(int help_layer);
-void lcd_show_menu_layer(int help_layer);
+void r2cs(int layer, int position);
+bool r2csURCALL(void);
+int r2cs_count(void);
+int r2cs_position(void);
+char* r2cs_get(int position);
+void r2cs_append(const char urcall[8]);
+void r2cs_set_orig(void);
+void r2cs_print(int layer, int position);
 
-#endif /* LCD_H_ */
+
+#endif /* R2CS_H_ */
