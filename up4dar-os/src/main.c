@@ -704,7 +704,7 @@ static void vServiceTask( void *pvParameters )
 			ambe_set_autoaprs(1);
 		}
 		
-			
+		// Selbstsändiges umschalten (Homerückkehr oder init)
 		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
 		{
 			dcs_home();
@@ -713,6 +713,7 @@ static void vServiceTask( void *pvParameters )
 			ambe_set_ref_timer(0);
 		}
 		
+		// Reaktion nach Durchgang
 		if (dstarFeedbackCall())
 		{
 			send_feedback();
@@ -813,6 +814,7 @@ static void vServiceTask( void *pvParameters )
 				last_parrot_mode = parrot_mode;
 			}
 		
+			// Wenn IP-reflector; Hotspot; Repeater (wenn es mit einem Reflektor verbunden werden kann)
 			if (dcs_mode != 0)
 			{
 				show_dcs_state();
