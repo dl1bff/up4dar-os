@@ -99,7 +99,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define configMAX_PRIORITIES      ( ( unsigned portBASE_TYPE ) 8 )
 #define configMINIMAL_STACK_SIZE  ( ( unsigned short ) 128 )
 /* configTOTAL_HEAP_SIZE is not used when heap_3.c is used. */
-#define configTOTAL_HEAP_SIZE     ( ( size_t ) ( 1024*39 ) )
+#define configTOTAL_HEAP_SIZE     ( ( size_t ) ( 1024*41 ) )
 #define configMAX_TASK_NAME_LEN   ( 16 )
 #define configUSE_TRACE_FACILITY  0
 #define configUSE_16_BIT_TICKS    0

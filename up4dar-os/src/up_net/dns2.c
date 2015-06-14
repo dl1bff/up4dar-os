@@ -502,14 +502,14 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	
 	uint32_t ttl = (d[4] << 24) | (d[5] << 16) | (d[6] << 8) | d[7];
 	 
-	if (ttl < 5)
+	if (ttl < 20)
 	{
-		ttl = 5; // at least 5 seconds
+		ttl = 20; // at least 20 seconds
 	}
 	
-	if (ttl > 7200)  // 2 hours
+	if (ttl > 14400)  // 4 hours
 	{
-		ttl = 7200;
+		ttl = 14400;
 	}
 	
 	cur->ttl = ttl / (DNS_TTL_COUNTER_TIMER / 1000); // current ttl counter has tick rate of 3 seconds
@@ -621,7 +621,7 @@ static void vDNSTask( void *pvParameters )
 			ttl_check_counter = (DNS_TTL_COUNTER_TIMER / DNS_WAIT_TIME_PER_SLOT) / DNS_NUMBER_OF_ENTRIES; // decrease TTL every 3 seconds
 		}
 		
-		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 54, VDISP_FONT_4x6, 0, entry_counter);
+		// vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 54, VDISP_FONT_4x6, 0, entry_counter);
 		
 	} // while(1)
 }	

@@ -85,7 +85,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/txtask.h"
 #include "up_net/ntp.h"
 
-
+#include "up_dstar/slowdata.h"
 
 
 #define standard_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
@@ -698,7 +698,8 @@ static void vServiceTask( void *pvParameters )
 		
 		if (ambe_get_autoaprs() == 0)
 		{
-			aprs_send_beacon();
+			//  TODO
+			// aprs_send_beacon();
 			
 			ambe_set_autoaprs(1);
 		}
@@ -1086,27 +1087,12 @@ int main (void)
 		// error handling..
 	}
 	
-	//if (vd_new_screen() != VDISP_RMUSET_LAYER)
-	//{
-	//// error handling..
-	//}
-
-	if (vd_new_screen() != VDISP_DVSET_LAYER)
-	{
-		// error handling..
-	}
-	
 	if (vd_new_screen() != VDISP_GPS_LAYER)
 	{
 		// error handling..
 	}
 	
 	if (vd_new_screen() != VDISP_REF_LAYER)
-	{
-		// error handling..
-	}
-	
-	if (vd_new_screen() != VDISP_AUDIO_LAYER)
 	{
 		// error handling..
 	}
@@ -1121,6 +1107,25 @@ int main (void)
 		// error handling..
 	}
 	
+	if (vd_new_screen() != VDISP_AUDIO_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_DVSET_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_RMUSET_LAYER)
+	{
+		// error handling..
+	}
+	
+	if (vd_new_screen() != VDISP_NODEINFO_LAYER)
+	{
+		// error handling..
+	}
 	
 	lcd_init();
 	
@@ -1156,6 +1161,8 @@ int main (void)
 		return 0;
 	}
 	
+	
+	slowdataInit();
 	
 	eth_init();
 	

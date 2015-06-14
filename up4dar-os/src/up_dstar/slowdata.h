@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2015   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -17,33 +17,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-
 /*
- * rtclock.h
+ * slowdata.h
  *
- * Created: 11.06.2011 12:53:12
+ * Created: 11.06.2015 14:44:55
  *  Author: mdirska
  */ 
 
 
-#ifndef RTCLOCK_H_
-#define RTCLOCK_H_
+#ifndef SLOWDATA_H_
+#define SLOWDATA_H_
 
+void slowdata_data_input( unsigned char * data, unsigned char len );
+void slowdataInit(void);
+void slowdata_analyze_stream(void);
 
-
-#define RTCLOCK_INCR_TICK
-
-
-void vApplicationTickHook( void );
-
-
-void rtclock_disp_xy(int x, int y, int dots, int display_seconds);
-void rtclock_get_time( char * );
-unsigned long rtclock_get_ticks( void );
-long rtclock_get_tx_ticks( void );
-void rtclock_reset_tx_ticks( void );
-long rtclock_get_rx_ticks( void );
-void rtclock_reset_rx_ticks( void );
-extern unsigned long volatile the_clock;
-void rtclock_set_time(unsigned long time);
-#endif /* RTCLOCK_H_ */
+#endif /* SLOWDATA_H_ */

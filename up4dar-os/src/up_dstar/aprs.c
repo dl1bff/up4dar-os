@@ -1,6 +1,7 @@
 /*
 
 Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
+Copyright (C) 2015   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -33,7 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/ipneigh.h"
 #include "up_net/ipv4.h"
 #include "up_net/dhcp.h"
+#include "up_net/dns2.h"
 
+/*
 #define UNDEFINED_ALTITUDE       INT64_MIN
 #define DATA_VALIDITY_INTERVAL   600
 
@@ -47,7 +50,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define SLOW_DATA_CHUNK_SIZE     5
 
+*/
 #define APRS_SEND_ONLY_PORT      8080
+
+
+/*
 #define ETHERNET_PAYLOAD_OFFSET  42
 
 #define OPERATIONAL_BUFFER       0
@@ -56,7 +63,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define BUFFER_COUNT             2
 
 // Aux. functions
-uint8_t* dns_cache_aprs(void);
+const uint8_t* dns_cache_aprs(void);
 
 struct buffer
 {
@@ -65,7 +72,7 @@ struct buffer
   char data[APRS_BUFFER_SIZE];
 };
 
-#pragma mark APRS and D-PRS packet building functions
+// #pragma mark APRS and D-PRS packet building functions
 
 static xSemaphoreHandle lock;
 
@@ -76,9 +83,11 @@ static int64_t altitude = UNDEFINED_ALTITUDE;
 static struct buffer buffers[BUFFER_COUNT];
 
 static int position = 0;
+*/
 
 static int aprs_local_port;
 
+/*
 static const char* const symbols[] =
   {
     "/[", // Jogger
@@ -89,8 +98,11 @@ static const char* const symbols[] =
     "/v"  // Van
   };
 
-#pragma mark APRS packet building
+*/
 
+// #pragma mark APRS packet building
+
+/*
 size_t build_altitude_extension(char* buffer)
 {
   if ((altitude != UNDEFINED_ALTITUDE) && (validity2 > the_clock))
@@ -110,6 +122,9 @@ size_t build_altitude_extension(char* buffer)
   return 0;
 }
 
+*/
+
+/*
 void copy_extension(char* buffer, const char* parameter)
 {
   memset(buffer, '0', 3);
@@ -161,15 +176,17 @@ size_t build_position_report(char* buffer, const char** parameters)
   return length;
 }
 
+*/
+
 size_t build_aprs_call(char* buffer)
 {
   size_t number;
-  for (number = 0; (number < CALLSIGN_LENGTH) && (settings.s.my_callsign[number] > ' '); number ++)
+  for (number = 0; (number < (CALLSIGN_LENGTH - 1)) && (settings.s.my_callsign[number] > ' '); number ++)
   {
     buffer[number] = settings.s.my_callsign[number];
   }
   
-  if (number < CALLSIGN_LENGTH-1)
+  if ((number < (CALLSIGN_LENGTH - 1)) && (settings.s.my_callsign[7] > ' '))
   {
 	  buffer[number++] = '-';
 	  buffer[number++] = settings.s.my_callsign[7];  
@@ -178,8 +195,9 @@ size_t build_aprs_call(char* buffer)
   return number;
 }
 
-#pragma mark Buffered operations
+// #pragma mark Buffered operations
 
+/*
 void build_packet(const char** parameters)
 {
   char* data = buffers[OPERATIONAL_BUFFER].data;
@@ -205,7 +223,7 @@ void build_packet(const char** parameters)
   // Update CRC in D-PRS header
   data = buffers[OPERATIONAL_BUFFER].data;
   length -= TNC2_POSITION + 1; // Length from TNC-2 header to CR
-  uint16_t sum = rx_dstar_crc_data(data + TNC2_POSITION, length);
+  uint16_t sum = rx_dstar_crc_data((unsigned char *) (data + TNC2_POSITION), length);
   vdisp_i2s(data + CRC_POSITION, 4, 16, 1, sum);
   data[DPRS_SIGN_LENGTH - 1] = ',';
 }
@@ -216,9 +234,12 @@ int has_packet_data(void)
     (validity1 > the_clock) &&
     (buffers[OPERATIONAL_BUFFER].length > 0);
 }
+*/
 
-#pragma mark GPS data handling
 
+// #pragma mark GPS data handling
+
+/*
 int parse_digits(const char* data, size_t length)
 {
   int outcome = 0;
@@ -236,7 +257,9 @@ long parse_time(const char* time)
       parse_digits(time + 4, 2);
   return 0;
 }
+*/
 
+/*
 void process_position_fix_data(const char** parameters)
 {
   altitude = (*parameters[9] != 0) ? 
@@ -248,6 +271,9 @@ void process_position_fix_data(const char** parameters)
     rtclock_set_time(time);
 }
 
+*/
+
+/*
 void aprs_process_gps_data(const char** parameters, size_t count)
 {
   if ((count >= 12) &&
@@ -281,19 +307,22 @@ void aprs_process_gps_data(const char** parameters, size_t count)
 	  return;
   }
 }
-
-#pragma mark DV-A reporting
-
+*/
+// #pragma mark DV-A reporting
+/*
 uint8_t aprs_get_slow_data(uint8_t* data)
 {
   int count = 0;
+  
+  
   if (xSemaphoreTake(lock, portTICK_RATE_MS * 2) == pdTRUE)
   {
     if (has_packet_data() == 0)
     {
       xSemaphoreGive(lock);
-      return;
+      return count;
     }
+	
 
     if ((position == 0) &&
         (buffers[OUTGOING_BUFFER].version != buffers[OPERATIONAL_BUFFER].version))
@@ -309,12 +338,14 @@ uint8_t aprs_get_slow_data(uint8_t* data)
     if (position >= buffers[OUTGOING_BUFFER].length)
       position = 0;
 
+
     xSemaphoreGive(lock);
   }
+  
   return count;
 }
-
-#pragma mark APRS-IS reporting
+*/
+// #pragma mark APRS-IS reporting
 
 void calculate_aprs_password(char* password)
 {
@@ -324,42 +355,74 @@ void calculate_aprs_password(char* password)
     hash[index & 1] ^= settings.s.my_callsign[index];
 
   uint16_t code = ((hash[0] << 8) | hash[1]) & 0x7fff;
-  vdisp_i2s(password, 5, 10, 0, code);
+  vdisp_i2s(password, 5, 10, 1, code);
   
+  /*
   // Patch to the original Routine of DL1BFF
   // in order TO HAVE leading zeros!
   for (int i=0; (i<5) && (password[i] == 0x20); ++i)
   {
 	  password[i] = '0';
   }
+  */
 }
 
 
-#define SERVER_NUMBER	2
-uint8_t* dns_cache_aprs(void)
+static uint8_t cached_aprs_ipv4addr[4] = { 0, 0, 0, 0 };
+
+
+static int dns_cache_aprs(uint8_t * addr)
 {
+	int handle = dns2_req_A("aprs.dstar.su");
+	
+	if (handle < 0) // request was not accepted
+	{
+		return -1;
+	}
+	
 	/*
-	static const uint8_t aprs_dstar_su_rolling_poll[SERVER_NUMBER][4] = { { 195, 211,  23, 244 },
-																          { 185,  79,  71,  91 }
-																	    };
+	char buf[5];
+	
+	vdisp_i2s(buf,3,10,1,handle);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 0, VDISP_FONT_6x8, 0, buf);
+	
+	static int counter1;
+	static int counter2;
+	
+	counter1++;
+	
+	vdisp_i2s(buf,3,10,1,counter1);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 8, VDISP_FONT_6x8, 0, buf);
+	
 	*/
 	
-	static const uint8_t aprs_dstar_su_rolling_poll[SERVER_NUMBER][4] = { { 192, 168, 3, 10 },
-																		  { 192, 168, 3, 10 }
-																		};
-	
-	
-	static uint8_t index = 0;
-	
-	if (index == SERVER_NUMBER)
+	if (dns2_result_available(handle))
 	{
-		return aprs_dstar_su_rolling_poll[SERVER_NUMBER-1];
-		index = 0;
+		uint8_t * ipv4_bytes;
+		int result = dns2_get_A_addr(handle, &ipv4_bytes);
+		
+		if (result >= 1)
+		{
+			memcpy(cached_aprs_ipv4addr, ipv4_bytes, 4);
+		}
 	}
-	else
+	
+	dns2_free(handle);
+	
+	if (memcmp(cached_aprs_ipv4addr, ipv4_zero_addr, sizeof ipv4_addr) == 0)
 	{
-		return aprs_dstar_su_rolling_poll[index++];
+		return -1;
 	}
+	
+	memcpy(addr, cached_aprs_ipv4addr, 4);
+
+	/*
+	counter2++;
+	vdisp_i2s(buf,3,10,1,counter2);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 16, VDISP_FONT_6x8, 0, buf);
+	*/
+	
+	return 0;
 } 
 
 
@@ -368,7 +431,7 @@ void aprs_send_beacon(void)
 	uint16_t udp_payload_size = 0;
 	
 	uint8_t aprs_call[8];
-	uint8_t aprs_call_size = build_aprs_call(aprs_call);
+	uint8_t aprs_call_size = build_aprs_call((char *)aprs_call);
 	
 	// gruener Bereich (APRS-IS-Header)
 	udp_payload_size += 5 + aprs_call_size + 6 + 5 + 26;
@@ -376,8 +439,12 @@ void aprs_send_beacon(void)
 	// TCP2-Payload
 	udp_payload_size += aprs_call_size + 22 + 6 + 32 + 9;
 	
+	uint8_t ipv4_aprs_addr[4];
+	if (dns_cache_aprs(ipv4_aprs_addr) != 0)
+	{
+		return;  // DNS not in cache... try next time
+	}
 	
-	const uint8_t* ipv4_aprs_addr = dns_cache_aprs();
 	eth_txmem_t * packet = udp4_get_packet_mem(udp_payload_size, aprs_local_port, APRS_SEND_ONLY_PORT, ipv4_aprs_addr);
 	
 	//memcpy(packet->data + 42, data, udp_payload_size*sizeof(uint8_t));
@@ -392,10 +459,10 @@ void aprs_send_beacon(void)
 	memcpy(p, " pass ", 6);
 	p += 6;
 		
-	calculate_aprs_password(p);
+	calculate_aprs_password((char *) p);
 	p += 5;
 		
-	memcpy(p, " vers UP4DAR S.1.00.39e \r\n", 26);
+	memcpy(p, " vers UP4DAR S.1.01.39e \r\n", 26);
 	p += 26;
 		
 	memcpy(p, aprs_call, aprs_call_size);	//build_aprs_call(data);
@@ -407,8 +474,8 @@ void aprs_send_beacon(void)
 	memcpy(p, ">APD401,qAR,DL2MRB-B:/", 22);
 	p += 22;
 		
-	// HHMMSSh = Zulu time
-	memcpy(p, rtclock_get_time(), 6);
+	// HHMMSS = Zulu time
+	rtclock_get_time((char *) p);
 	p += 6;
 		
 	memcpy(p, "h4803.63ND01137.34E&UP4DAR based", 32);
@@ -416,8 +483,8 @@ void aprs_send_beacon(void)
 		
 	if (hotspot_mode)
 	{
-		memcpy(p, " Hotspot", 8);
-		p += 8;
+		memcpy(p, " Hotspot ", 9);
+		p += 9;
 	}
 	else if (repeater_mode)
 	{
@@ -429,20 +496,25 @@ void aprs_send_beacon(void)
 }
 
 
-void aprs_send_user_report(void)
+void aprs_send_user_report(uint8_t * gps_a_data, uint16_t gps_a_len)
 {
 	uint16_t udp_payload_size = 0;
 	
 	uint8_t aprs_call[8];
-	uint8_t aprs_call_size = build_aprs_call(aprs_call);
+	uint8_t aprs_call_size = build_aprs_call((char *) aprs_call);
 	
 	// gruener Bereich (APRS-IS-Header)
 	udp_payload_size += 5 + aprs_call_size + 6 + 5 + 26;
 	
-	// TCP2-Payload
-	udp_payload_size += 8 + 36 + 40;
+	// TNC2-Payload
+	udp_payload_size += gps_a_len;
 
-	const uint8_t* ipv4_aprs_addr = dns_cache_aprs();
+	uint8_t  ipv4_aprs_addr[4];
+	if (dns_cache_aprs(ipv4_aprs_addr) != 0)
+	{
+		return;  // DNS not in cache... try next time
+	}
+	
 	eth_txmem_t * packet = udp4_get_packet_mem(udp_payload_size, aprs_local_port, APRS_SEND_ONLY_PORT, ipv4_aprs_addr);
 	
 	uint8_t* p = packet->data + 42;
@@ -456,12 +528,15 @@ void aprs_send_user_report(void)
 	memcpy(p, " pass ", 6);
 	p += 6;
 		
-	calculate_aprs_password(p);
+	calculate_aprs_password((char *) p);
 	p += 5;
 		
-	memcpy(p, " vers UP4DAR S.1.00.39e \r\n", 26);
+	memcpy(p, " vers UP4DAR S.1.01.39e \r\n", 26);
 	p += 26;
 		
+	memcpy(p, gps_a_data, gps_a_len);
+		
+	/*
 	// ==============================================================================
 	memcpy(p, "DL3OCK-7", 8);
 	p += 8;
@@ -474,11 +549,14 @@ void aprs_send_user_report(void)
 	p += 40;
 	// ==============================================================================
 	
+	*/
+	
 	udp4_calc_chksum_and_send(packet, ipv4_aprs_addr);
 }
 
-#pragma mark Routine
+// #pragma mark Routine
 
+/*
 void aprs_reset(void)
 {
   if (SETTING_CHAR(C_DPRS_ENABLED) != 0)
@@ -493,16 +571,23 @@ void aprs_handle_cache_event(void)
   //  aprs_activate_beacon();
 }
 
+*/
+
 void aprs_init(void)
 {
   aprs_local_port = udp_get_new_srcport();
-  //lock = xSemaphoreCreateMutex();
-//
-  //for (int index = 0; index < BUFFER_COUNT; index ++)
-  //{
-    //buffers[index].version = 0;
-    //buffers[index].length = 0;
-  //}
+  
+  /*
+  lock = xSemaphoreCreateMutex();
+
+  for (int index = 0; index < BUFFER_COUNT; index ++)
+  {
+    buffers[index].version = 0;
+    buffers[index].length = 0;
+  }
+*/
 
   //dns_cache_set_slot(DNS_CACHE_SLOT_APRS, "aprs.dstar.su", aprs_handle_cache_event);
+  
+  
 }

@@ -58,7 +58,7 @@ struct ipneigh_list
 };
 
 
-#define NEIGH_LIST_LEN	10
+#define NEIGH_LIST_LEN	6
 
 static struct ipneigh_list neighbors[NEIGH_LIST_LEN];
 

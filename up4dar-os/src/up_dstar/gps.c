@@ -122,10 +122,10 @@ static int gps_chksum_ok ( const char * s )
 
 struct gps_satellites
 {
-	int sat_id; // NO_SAT if satellite info is not available
-	int elevation;
-	int azimuth;
-	int snr;
+	short sat_id; // NO_SAT if satellite info is not available
+	short elevation;
+	short azimuth;
+	short snr;
 };
 
 typedef struct gps_satellites gps_satellites_t;

@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2013   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2015   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 Copyright (C) 2013   Artem Prilutskiy, R3ABM (r3abm@dstar.su)
 
@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "dstar.h"
 
 #include <string.h>
-#include <stdio.h>
+// #include <stdio.h>
 
 #include "rx_dstar_crc_header.h"
 
@@ -51,6 +51,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "settings.h"
 #include "up_app/a_lib_internal.h"
 #include "up_dstar/r2cs.h"
+
+#include "slowdata.h"
 
 
 static xQueueHandle dstarQueue;
@@ -282,7 +284,9 @@ static void processSDHeader( unsigned char len )
 
 
 
-static void processSlowData( unsigned char sdPos, const unsigned char * sd )
+
+
+static void processSlowData( unsigned char sdPos, const unsigned char * sd, unsigned char source )
 {	
 	if (sdPos & 1)
 	{	
@@ -307,6 +311,13 @@ static void processSlowData( unsigned char sdPos, const unsigned char * sd )
 		
 		switch (sdTypeFlag & 0xF0)
 		{
+			case 0x30:
+				if (source == SOURCE_PHY)
+				{
+					slowdata_data_input(sdData, len);	
+				}
+				break;
+				
 			case 0x50:
 				processSDHeader(len);
 				break;
@@ -509,6 +520,7 @@ void dstarResetCounters(void)
 
 void dstarRMUSetQRG(void)
 {
+	/*
 	char str[QRG_LENGTH];
 	
 	int qrgRX = 0;
@@ -519,6 +531,20 @@ void dstarRMUSetQRG(void)
 	
 	memcpy(str, settings.s.qrg_tx, QRG_LENGTH);
 	qrgTX = atoi(str);
+	*/
+	
+	int qrgRX = 0;
+	int qrgTX = 0;
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgRX = (qrgRX * 10) + (settings.s.qrg_rx[i] & 0x0F);
+	}
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgTX = (qrgTX * 10) + (settings.s.qrg_tx[i] & 0x0F);
+	}
 	
 	buf[0] = 0xD3;
 	buf[1] = 0x01;
@@ -878,7 +904,7 @@ int rx_q_process(uint8_t * pos, uint8_t * data, uint8_t * voice)
 		
 	if (current_pos != 0) // if not the sync position
 	{
-		processSlowData( current_pos, rx_q_buf[current_pos].data );
+		processSlowData( current_pos, rx_q_buf[current_pos].data, rx_q_buf[current_pos].source );
 	}
 	else
 	{
@@ -1329,19 +1355,21 @@ static void processPacket(void)
 
 				if (sr.param == 0)
 				{
-					char str[QRG_LENGTH];
+					/*
+					char str[QRG_LENGTH+1];
 	
-					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[1] << 24) |
+					vdisp_i2s(str, QRG_LENGTH, 10, 1, (int)(dp.data[1] << 24) |
 															(dp.data[2] << 16) |
 															(dp.data[3] << 8) |
 															(dp.data[4] << 0));
-					memcpy(settings.s.qrg_rx, str, QRG_LENGTH);
+					// memcpy(settings.s.qrg_rx, str, QRG_LENGTH);
 	
-					vdisp_i2s(str, sizeof(str), 10, 1, (int)(dp.data[5] << 24) |
+					vdisp_i2s(str, QRG_LENGTH, 10, 1, (int)(dp.data[5] << 24) |
 															(dp.data[6] << 16) |
 															(dp.data[7] << 8) |
 															(dp.data[8] << 0));
-					memcpy(settings.s.qrg_tx, str, QRG_LENGTH);
+					// memcpy(settings.s.qrg_tx, str, QRG_LENGTH);
+					*/
 				}
 				else
 				{
@@ -1691,8 +1719,7 @@ void dstarInit( xQueueHandle dq )
 	rx_q_buffers[2] = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
 	rx_q_buffers[3] = (struct rx_q_buffer * ) pvPortMalloc ( NUM_PACKETS_IN_FRAME * (sizeof (struct rx_q_buffer)));
 	
-	
-	
+
 	
 	snmpReqQueue = xQueueCreate( 3, sizeof (struct snmpReq) );
 	
