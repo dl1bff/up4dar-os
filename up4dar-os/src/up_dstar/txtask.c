@@ -63,6 +63,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 static ambe_q_t * microphone;
+static uint8_t rx_data[3];
+static uint8_t rx_voice[9];
+static uint8_t rx_header[39];
+static uint8_t header_crc_result;
+
+#define MAX_DTMF_COMMAND  6
+static char dtmf_cmd_string[MAX_DTMF_COMMAND + 1];
+static uint8_t dtmf_cmd_ptr = 0;
+#define MAX_DTMF_HISTORY  5
+static uint8_t dtmf_history[MAX_DTMF_HISTORY];
+#define DTMF_THRESHOLD  3
+#define DTMF_HISTOGRAM_SIZE  17
+static uint8_t dtmf_histogram[DTMF_HISTOGRAM_SIZE];
+static uint8_t dtmf_counter = 0;
+#define DTMF_DETECT_TIME 250
+static uint8_t dtmf_tone_detected = 0;
+static int send_as_broadcast = 1;
+static int header_reason = 1;
+static int suppress_user_feedback = 0;
+
 
 void set_phy_parameters(void)
 {
@@ -271,7 +291,7 @@ static void phy_start_tx_hotspot(uint8_t crc_result, uint8_t * rx_header)
 	send_cmd(header, 40);
 }
 
-static void phy_send_response(bool feedback, uint8_t * rx_header)
+static void phy_send_response(int send_as_broadcast, int header_reason, uint8_t * rx_header)
 {
 	char txmsg[20];
 
@@ -293,13 +313,13 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	
 	header[19] = 0x47;													// Trage "G" als RPT1 Modul ein
 
-	if (feedback)
-	{
-		memcpy(header+20, rx_header+27, CALLSIGN_LENGTH);				// YOUR <== MY
-	}
-	else
+	if (send_as_broadcast == 1) // Status via broadcast
 	{
 		memcpy(header+20, "CQCQCQ  ", CALLSIGN_LENGTH);					// YOUR
+	}
+	else // Personal feedback
+	{
+		memcpy(header+20, rx_header+27, CALLSIGN_LENGTH);				// YOUR <== MY
 	}
 	
 	memcpy(header+28, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// MY1
@@ -322,7 +342,7 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 	send_voice[1] = 0x01;
 	memcpy(send_voice+2, ambe_silence_data, 9);
 		
-	if (feedback)
+	if (header_reason == 1)
 	{
 		// bereite Tx-Message vor
 		if (dstarFeedbackHeader() == 0)
@@ -366,6 +386,9 @@ static void phy_send_response(bool feedback, uint8_t * rx_header)
 		memcpy(send_data+1, txmsg+5*i+2, 3);
 		send_cmd(send_data, 4);
 	}
+	
+	send_as_broadcast	= 1;
+	header_reason		= 1;
 }
 
 
@@ -490,37 +513,28 @@ static const gpio_map_t ext_gpio_map =
 	
 };
 
-static uint8_t rx_data[3];
-static uint8_t rx_voice[9];
-static uint8_t rx_header[39];
-static uint8_t header_crc_result;
-
-#define MAX_DTMF_COMMAND  6
-static char dtmf_cmd_string[MAX_DTMF_COMMAND + 1];
-static uint8_t dtmf_cmd_ptr = 0;
-#define MAX_DTMF_HISTORY  5
-static uint8_t dtmf_history[MAX_DTMF_HISTORY];
-#define DTMF_THRESHOLD  3
-#define DTMF_HISTOGRAM_SIZE  17
-static uint8_t dtmf_histogram[DTMF_HISTOGRAM_SIZE];
-static uint8_t dtmf_counter = 0;
-#define DTMF_DETECT_TIME 250
-static uint8_t dtmf_tone_detected = 0;
-
 void send_dcs_state(void)
 {
 	vTaskDelay(950);
-	phy_send_response(false, rx_header);
+	phy_send_response(send_as_broadcast, 0, rx_header);
 }
 
 void send_feedback(void)
 {
-	vTaskDelay(400); // wait 400ms
-	if (dstarPhyRX()) return;	
-	phy_send_response(true, rx_header);
+	if (suppress_user_feedback == 0)
+	{
+		vTaskDelay(400); // wait 400ms
+		if (dstarPhyRX()) return;
 	
-	if (hotspot_mode)
+		phy_send_response(0, header_reason, rx_header);
+	
+		if (hotspot_mode)
 		vTaskDelay((SETTING_SHORT(S_PHY_TXDELAY)*27+5600)>>4);
+	}
+	else
+	{
+		suppress_user_feedback = 0;
+	}
 }
 
 
@@ -628,6 +642,8 @@ static void dtmf_cmd_exec(void)
 		int len = strlen(dtmf_cmd_string);
 		char last_char = dtmf_cmd_string[len - 1];
 		
+		suppress_user_feedback	= 1;
+		
 		if (dtmf_cmd_string[0] == '#') // unlink
 		{
 			ambe_set_ref_timer(1);
@@ -638,12 +654,12 @@ static void dtmf_cmd_exec(void)
 				//phy_send_response( rx_header );
 			//}
 		}
-		else if (dtmf_cmd_string[0] == '0')
+		else if (dtmf_cmd_string[0] == '0') // Statusrückmeldung wie I
 		{
 			if (header_crc_result == DSTAR_HEADER_OK)
 			{
-				vTaskDelay(950); // wait before sending ACK
-				phy_send_response(false, rx_header);
+				vTaskDelay(950);
+				phy_send_response(0, 0, rx_header);
 			}
 	    }
 		else if (dtmf_cmd_string[0] == 'D')
@@ -836,11 +852,12 @@ static void vTXTask( void *pvParameters )
 								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47))  ))
 							{
 								tx_state = 11; // don't forward transmission
+								suppress_user_feedback	= 1;
 								
 								if (rx_header[26] == 'I')
 								{
-									vTaskDelay(950); // wait before sending ACK
-									phy_send_response(false, rx_header);
+									vTaskDelay(950);
+									phy_send_response(0, 0, rx_header);
 								}
 								else if (rx_header[26] == 'U')
 								{
