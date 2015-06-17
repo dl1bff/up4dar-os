@@ -45,7 +45,7 @@ static short slowDataFIFOoutPtr;
 
 #define SLOWDATA_GPSA_BUFLEN  100
 
-static char * slowDataGPSA;
+char * slowDataGPSA;
 static short slowDataGPSA_ptr;
 static short slowDataGPSA_state;
 
@@ -219,20 +219,31 @@ void slowdata_analyze_stream(void)
 						slowDataGPSA[slowDataGPSA_ptr] = d; // put last character at the end
 						slowDataGPSA_ptr ++;
 						
-						// crc[4] = 0;
-						// vd_prints_xy(VDISP_NODEINFO_LAYER, 80, 16, VDISP_FONT_6x8, 0, crc);
+						 crc[4] = 0;
+						 vd_prints_xy(VDISP_NODEINFO_LAYER, 80, 16, VDISP_FONT_6x8, 0, crc);
 						
 						unsigned short sum = rx_dstar_crc_data((unsigned char *) slowDataGPSA, slowDataGPSA_ptr);
 						char buf[5];
 						vdisp_i2s(buf, 4, 16, 1, sum);
 						
-						// buf[4] = 0;
-						// vd_prints_xy(VDISP_NODEINFO_LAYER, 80, 24, VDISP_FONT_6x8, 0, buf);
+						vd_prints_xy(VDISP_NODEINFO_LAYER, 80, 24, VDISP_FONT_6x8, 0, buf);
+						 
+						static short recvd_count;
+						static short crc_correct_count;
+						
+						recvd_count ++;
 						
 						if (memcmp(crc, buf, 4) == 0)
 						{
+							crc_correct_count ++;
 							aprs_send_user_report((unsigned char *) slowDataGPSA, slowDataGPSA_ptr -1); // send GPS-A data without trailing CR
 						}
+						
+						vdisp_i2s(buf, 4, 10, 0, recvd_count);
+						vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 0, VDISP_FONT_6x8, 0, buf);
+						vdisp_i2s(buf, 4, 10, 0, crc_correct_count);
+						vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 8, VDISP_FONT_6x8, 0, buf);
+						 
 					}
 				}
 				break;

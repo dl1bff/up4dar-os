@@ -32,4 +32,6 @@ void slowdata_data_input( unsigned char * data, unsigned char len );
 void slowdataInit(void);
 void slowdata_analyze_stream(void);
 
+extern char * slowDataGPSA;
+
 #endif /* SLOWDATA_H_ */

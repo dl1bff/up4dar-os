@@ -42,6 +42,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_crypto/up_crypto.h"
 
 
+#include "up_dstar/slowdata.h"
+
+
 #define BER_INTEGER			0x02
 #define BER_OCTETSTRING		0x04
 #define BER_NULL			0x05
@@ -265,9 +268,10 @@ static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 
 static int test_return_string (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	memcpy(res, "TESTxTEST.TEST.", 15);
-	res[4] = 0x30 | arg;
-	*res_len = 15;
+	memcpy (res,slowDataGPSA,100);
+	// memcpy(res, "TESTxTEST.TEST.", 15);
+	// res[4] = 0x30 | arg;
+	*res_len = 100;
 	return 0;
 }
 

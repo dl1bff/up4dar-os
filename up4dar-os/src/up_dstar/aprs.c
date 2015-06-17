@@ -373,6 +373,7 @@ static uint8_t cached_aprs_ipv4addr[4] = { 0, 0, 0, 0 };
 
 static int dns_cache_aprs(uint8_t * addr)
 {
+	// int handle = dns2_req_A("xh.md8.net");
 	int handle = dns2_req_A("aprs.dstar.su");
 	
 	if (handle < 0) // request was not accepted
@@ -550,6 +551,22 @@ void aprs_send_user_report(uint8_t * gps_a_data, uint16_t gps_a_len)
 	// ==============================================================================
 	
 	*/
+	static short udp_aprs_count;
+	char buf[5];
+	
+	udp_aprs_count++;
+	
+	vdisp_i2s(buf, 4, 10, 0, udp_aprs_count);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 16, VDISP_FONT_6x8, 0, buf);
+	
+	vdisp_i2s(buf, 3, 10, 0, ipv4_aprs_addr[0]);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 56, VDISP_FONT_6x8, 0, buf);
+	vdisp_i2s(buf, 3, 10, 0, ipv4_aprs_addr[1]);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 22, 56, VDISP_FONT_6x8, 0, buf);
+	vdisp_i2s(buf, 3, 10, 0, ipv4_aprs_addr[2]);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 44, 56, VDISP_FONT_6x8, 0, buf);
+	vdisp_i2s(buf, 3, 10, 0, ipv4_aprs_addr[3]);
+	vd_prints_xy(VDISP_NODEINFO_LAYER, 66, 56, VDISP_FONT_6x8, 0, buf);
 	
 	udp4_calc_chksum_and_send(packet, ipv4_aprs_addr);
 }
