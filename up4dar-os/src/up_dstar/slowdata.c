@@ -40,16 +40,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define SLOWDATA_FIFO_BYTES  15
 
 static unsigned char slowDataFIFO[SLOWDATA_FIFO_BYTES];
+static unsigned char slowDataPosFIFO[SLOWDATA_FIFO_BYTES];
+static unsigned char slowDataScrambleFIFO[SLOWDATA_FIFO_BYTES];
 static short slowDataFIFOinPtr;
 static short slowDataFIFOoutPtr;
 
 #define SLOWDATA_GPSA_BUFLEN  100
 
 char * slowDataGPSA;
+char * slowDataGPSA_Scramble;
+char * slowDataGPSA_Pos;
 static short slowDataGPSA_ptr;
 static short slowDataGPSA_state;
 
-static void slowdata_add_byte(unsigned char d)
+static const char scramble_bytes[5] = { 0x4F, 0x93, 0x70, 0x4F, 0x93 };
+
+static void slowdata_add_byte(unsigned char d, unsigned char sdPos, unsigned char posInSubFrame)
 {
 	short tmp_ptr = slowDataFIFOinPtr;
 	
@@ -66,17 +72,19 @@ static void slowdata_add_byte(unsigned char d)
 	}
 	
 	slowDataFIFO[slowDataFIFOinPtr] = d;
+	slowDataScrambleFIFO[slowDataFIFOinPtr] = d ^ scramble_bytes[posInSubFrame];
+	slowDataPosFIFO[slowDataFIFOinPtr] = sdPos;
 	slowDataFIFOinPtr = tmp_ptr;
 }
 
 
-void slowdata_data_input( unsigned char * data, unsigned char len )
+void slowdata_data_input( unsigned char * data, unsigned char len, unsigned char sdPos )
 {
 	int i;
 	
 	for (i=0; i < len; i++)
 	{
-		slowdata_add_byte(data[i]);
+		slowdata_add_byte(data[i], (i < 2) ? (sdPos - 1) : sdPos, i);
 	}
 }
 
@@ -88,6 +96,8 @@ void slowdata_analyze_stream(void)
 	while (slowDataFIFOoutPtr != slowDataFIFOinPtr)
 	{
 		char d = (char) slowDataFIFO[slowDataFIFOoutPtr];
+		char sdPos = (char) slowDataPosFIFO[slowDataFIFOoutPtr];
+		char scramble_data = (char) slowDataScrambleFIFO[slowDataFIFOoutPtr];
 		
 		slowDataFIFOoutPtr++;
 		
@@ -206,9 +216,15 @@ void slowdata_analyze_stream(void)
 					{
 						slowDataGPSA_state = 0;
 					}
+					else
+					{
+						slowDataGPSA[slowDataGPSA_ptr] = d;
+						slowDataGPSA_Pos[slowDataGPSA_ptr] = sdPos;
+						slowDataGPSA_Scramble[slowDataGPSA_ptr] = scramble_data;
+						slowDataGPSA_ptr ++;
+						slowDataGPSA_Pos[SLOWDATA_GPSA_BUFLEN-1] = slowDataGPSA_ptr;
+					}
 					
-					slowDataGPSA[slowDataGPSA_ptr] = d;
-					slowDataGPSA_ptr ++;
 				}
 				else  //  everything else including CR
 				{
@@ -217,7 +233,10 @@ void slowdata_analyze_stream(void)
 					if (slowDataGPSA_ptr < SLOWDATA_GPSA_BUFLEN) // buffer not full
 					{
 						slowDataGPSA[slowDataGPSA_ptr] = d; // put last character at the end
+						slowDataGPSA_Pos[slowDataGPSA_ptr] = sdPos;
+						slowDataGPSA_Scramble[slowDataGPSA_ptr] = scramble_data;
 						slowDataGPSA_ptr ++;
+						slowDataGPSA_Pos[SLOWDATA_GPSA_BUFLEN-1] = slowDataGPSA_ptr;
 						
 						 crc[4] = 0;
 						 vd_prints_xy(VDISP_NODEINFO_LAYER, 80, 16, VDISP_FONT_6x8, 0, crc);
@@ -233,9 +252,12 @@ void slowdata_analyze_stream(void)
 						
 						recvd_count ++;
 						
+						slowDataGPSA_Pos[SLOWDATA_GPSA_BUFLEN-2] = recvd_count & 0x1F;
+						
 						if (memcmp(crc, buf, 4) == 0)
 						{
 							crc_correct_count ++;
+							slowDataGPSA_Pos[SLOWDATA_GPSA_BUFLEN-2] |= 0x20;
 							aprs_send_user_report((unsigned char *) slowDataGPSA, slowDataGPSA_ptr -1); // send GPS-A data without trailing CR
 						}
 						
@@ -256,6 +278,8 @@ void slowdataInit(void)
 {
 	
 	slowDataGPSA = (char *) pvPortMalloc (SLOWDATA_GPSA_BUFLEN);
+	slowDataGPSA_Scramble = (char *) pvPortMalloc (SLOWDATA_GPSA_BUFLEN);
+	slowDataGPSA_Pos = (char *) pvPortMalloc (SLOWDATA_GPSA_BUFLEN);
 	
 	slowDataGPSA_ptr = 0;
 	slowDataGPSA_state = 0;

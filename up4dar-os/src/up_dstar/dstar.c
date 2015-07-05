@@ -314,7 +314,7 @@ static void processSlowData( unsigned char sdPos, const unsigned char * sd, unsi
 			case 0x30:
 				if (source == SOURCE_PHY)
 				{
-					slowdata_data_input(sdData, len);	
+					slowdata_data_input(sdData, len, sdPos);	
 				}
 				break;
 				

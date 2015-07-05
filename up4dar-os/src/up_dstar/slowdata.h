@@ -28,10 +28,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef SLOWDATA_H_
 #define SLOWDATA_H_
 
-void slowdata_data_input( unsigned char * data, unsigned char len );
+void slowdata_data_input( unsigned char * data, unsigned char len, unsigned char sdPos );
 void slowdataInit(void);
 void slowdata_analyze_stream(void);
 
 extern char * slowDataGPSA;
+extern char * slowDataGPSA_Pos;
+extern char * slowDataGPSA_Scramble;
 
 #endif /* SLOWDATA_H_ */

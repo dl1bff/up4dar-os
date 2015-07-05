@@ -268,10 +268,30 @@ static int get_callsign (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 
 static int test_return_string (int32_t arg, uint8_t * res, int * res_len, int maxlen)
 {
-	memcpy (res,slowDataGPSA,100);
-	// memcpy(res, "TESTxTEST.TEST.", 15);
-	// res[4] = 0x30 | arg;
-	*res_len = 100;
+	switch (arg)
+	{
+		case 5:
+			memcpy (res,slowDataGPSA,100);
+			*res_len = 100;
+			break;
+		
+		case 6:
+			memcpy (res,slowDataGPSA_Pos,100);
+			*res_len = 100;
+			break;
+			
+		case 7:
+			memcpy (res,slowDataGPSA_Scramble,100);
+			*res_len = 100;
+			break;
+			
+		default:
+			memcpy(res, "TESTxTEST.TEST.", 15);
+			res[4] = 0x30 | arg;
+			*res_len = 15;
+			break;
+	}
+	
 	return 0;
 }
 
@@ -324,6 +344,7 @@ static const struct snmp_table_struct {
 	{ "14121",	BER_OCTETSTRING,	test_return_string,			0		, 1},
 	{ "14122",	BER_OCTETSTRING,	test_return_string,			0		, 5},
 	{ "14123",	BER_OCTETSTRING,	test_return_string,			0		, 6},
+	{ "14124",	BER_OCTETSTRING,	test_return_string,			0		, 7},
 	
 		
 	{ "14131",	BER_INTEGER,		snmp_return_integer,		0		, 10},
