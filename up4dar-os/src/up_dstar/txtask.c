@@ -852,7 +852,11 @@ static void vTXTask( void *pvParameters )
 								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47))  ))
 							{
 								tx_state = 11; // don't forward transmission
-								suppress_user_feedback	= 1;
+								
+								if ( !(repeater_mode && (rx_header[10] != 0x47))  )		// Bei einem NUR lokalen Durchgang soll natürlich feedback auch gesendent werden.
+								{
+									suppress_user_feedback	= 1;
+								}
 								
 								if (rx_header[26] == 'I')
 								{

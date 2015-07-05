@@ -32,6 +32,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "semphr.h"
 #include "queue.h"
 
+#include "task.h"
+
 #include "gcc_builtin.h"
 
 #include "dstar.h"
@@ -215,7 +217,10 @@ static void dcs_set_dns_name(void)
 			memcpy(dcs_server_dns_name, "xrf", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			
-			if ((current_server >= 230) && (current_server < 270))
+			if ((current_server >= 230) && (current_server < 270)
+				&& (current_server != 255)		// DMR: MCC of Ukraine
+				&& (current_server != 262)		// DMR: MCC of Germany
+				)
 			{
 				memcpy(dcs_server_dns_name+6, ".dstar.su", 10);
 			}
@@ -510,6 +515,14 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			}
 		}
 	}
+	else if ((data_len == 12) && (current_server_type == SERVER_TYPE_DEXTRA)
+			&& (memcmp(data, "DISCONNECTED", 12) == 0))
+	{
+		if (dcs_state == DCS_DISCONNECT_REQ_SENT)
+		{
+			dcs_state = DCS_DISCONNECTED;
+		}
+	}
 /*	else if (data_len == 9)  // keep alive packet (old version)
 	{
 		if (dcs_state == DCS_CONNECTED)
@@ -607,6 +620,7 @@ static void infocpy ( uint8_t * mem )
 // #define DCS_CONNECT_FRAME_SIZE	19
 #define DCS_CONNECT_FRAME_SIZE		519
 
+
 static void dcs_link_to (char module)
 {
 	int size = (current_server_type == SERVER_TYPE_DEXTRA) ? DEXTRA_CONNECT_SIZE : DCS_CONNECT_FRAME_SIZE;
@@ -635,10 +649,15 @@ static void dcs_link_to (char module)
 		d[8] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
 	}
 	d[9] = module; // module to link to
-	d[10] = 0;
 
-	if (current_server_type != SERVER_TYPE_DEXTRA)
+	if (current_server_type == SERVER_TYPE_DEXTRA)
 	{
+		// DL3OCK New hidden signaling to a DExtra-Server
+		d[10] = 11;
+	}
+	else
+	{
+		d[10] = 0;
 		dcs_get_current_reflector_name(buf);
 		memcpy(d + 11, buf, 7);
 		d[18] = ' ';
@@ -646,9 +665,11 @@ static void dcs_link_to (char module)
 		memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
 		infocpy(d + 19);
 	}
-
+	
 	dcs_calc_chksum_and_send(packet, size);
 }
+
+
 
 
 #define DCS_KEEPALIVE_RESP_FRAME_SIZE		17
