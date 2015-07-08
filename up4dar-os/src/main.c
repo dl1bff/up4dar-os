@@ -719,6 +719,12 @@ static void vServiceTask( void *pvParameters )
 			send_feedback();
 		}
 		
+		if (ambe_get_header_exp_timer() == 0)
+		{
+			let_header_expire();
+			ambe_set_header_exp_timer(0);
+		}
+		
 		dhcp_service();				
 			
 		/*		

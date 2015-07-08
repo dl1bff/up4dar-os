@@ -386,9 +386,6 @@ static void phy_send_response(int send_as_broadcast, int header_reason, uint8_t 
 		memcpy(send_data+1, txmsg+5*i+2, 3);
 		send_cmd(send_data, 4);
 	}
-	
-	send_as_broadcast	= 1;
-	header_reason		= 1;
 }
 
 
@@ -515,18 +512,21 @@ static const gpio_map_t ext_gpio_map =
 
 void send_dcs_state(void)
 {
-	vTaskDelay(950);
+	vTaskDelay(500); //statt 950
 	phy_send_response(send_as_broadcast, 0, rx_header);
+	send_as_broadcast = 1;
 }
 
 void send_feedback(void)
 {
 	if (suppress_user_feedback == 0)
 	{
-		vTaskDelay(400); // wait 400ms
-		if (dstarPhyRX()) return;
+		vTaskDelay(100); // wait 100ms
+		if (dstarPhyRX()) return;	// Der laufende Durchgang ist noch nicht zu Ende.
+		vTaskDelay(300); // wait 300ms
 	
 		phy_send_response(0, header_reason, rx_header);
+		header_reason = 1;
 	
 		if (hotspot_mode)
 		vTaskDelay((SETTING_SHORT(S_PHY_TXDELAY)*27+5600)>>4);
@@ -642,24 +642,23 @@ static void dtmf_cmd_exec(void)
 		int len = strlen(dtmf_cmd_string);
 		char last_char = dtmf_cmd_string[len - 1];
 		
-		suppress_user_feedback	= 1;
-		
 		if (dtmf_cmd_string[0] == '#') // unlink
 		{
 			ambe_set_ref_timer(1);
 			dcs_off();
-			//if (header_crc_result == DSTAR_HEADER_OK)
-			//{
-				//vTaskDelay(950); // wait before sending ACK
-				//phy_send_response( rx_header );
-			//}
+			
+			suppress_user_feedback = 1;
+			if (header_crc_result == DSTAR_HEADER_OK)
+			{
+				send_as_broadcast = 0;
+			}
 		}
 		else if (dtmf_cmd_string[0] == '0') // Statusrückmeldung wie I
 		{
+			header_reason = 0;
 			if (header_crc_result == DSTAR_HEADER_OK)
 			{
-				vTaskDelay(950);
-				phy_send_response(0, 0, rx_header);
+				send_as_broadcast = 0;
 			}
 	    }
 		else if (dtmf_cmd_string[0] == 'D')
@@ -683,12 +682,12 @@ static void dtmf_cmd_exec(void)
 				ambe_set_ref_timer(1);
 				dcs_select_reflector(reflector, room_letter, SERVER_TYPE_DCS);
 				dcs_on();
-			
-				//if (header_crc_result == DSTAR_HEADER_OK)
-				//{
-					//vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
-					//phy_send_response( rx_header );
-				//}
+				
+				suppress_user_feedback = 1;
+				if (header_crc_result == DSTAR_HEADER_OK)
+				{
+					send_as_broadcast = 0;
+				}
 			}
 		}
 		else if ((dtmf_cmd_string[0] >= '1') && (dtmf_cmd_string[0] <= '9') &&
@@ -704,11 +703,11 @@ static void dtmf_cmd_exec(void)
 				dcs_select_reflector(reflector, last_char, SERVER_TYPE_DEXTRA);
 				dcs_on();
 				
-				//if (header_crc_result == DSTAR_HEADER_OK)
-				//{
-					//vTaskDelay(990); // wait before sending ACK, ist wichtig weil sonst dns Request dargestellt wird
-					//phy_send_response( rx_header );
-				//}
+				suppress_user_feedback = 1;
+				if (header_crc_result == DSTAR_HEADER_OK)
+				{
+					send_as_broadcast = 0;
+				}
 			}
 		}
 	}	
@@ -849,19 +848,19 @@ static void vTXTask( void *pvParameters )
 							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
 							
 							if ((header_crc_result == DSTAR_HEADER_OK)
-								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47))  ))
+								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47)) || (hotspot_mode && (rx_header[0] & 0x40)) ))
 							{
 								tx_state = 11; // don't forward transmission
-								
-								if ( !(repeater_mode && (rx_header[10] != 0x47))  )		// Bei einem NUR lokalen Durchgang soll natürlich feedback auch gesendent werden.
+																
+								if ( (rx_header[26] == 'U') || (rx_header[26] == 'L')  )	// Bei diesen Faellen wird der Feeback ueber eine Aenderung im DCS-Client angestossen
 								{
 									suppress_user_feedback	= 1;
+									send_as_broadcast		= 0;
 								}
 								
 								if (rx_header[26] == 'I')
 								{
-									vTaskDelay(950);
-									phy_send_response(0, 0, rx_header);
+									header_reason		= 0;
 								}
 								else if (rx_header[26] == 'U')
 								{
