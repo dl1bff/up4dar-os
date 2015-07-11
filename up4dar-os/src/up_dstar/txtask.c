@@ -847,8 +847,15 @@ static void vTXTask( void *pvParameters )
 							
 							// vd_prints_xy(VDISP_DEBUG_LAYER, 108, 22, VDISP_FONT_4x6, 0, "ON " );
 							
-							if ((header_crc_result == DSTAR_HEADER_OK)
-								&& ((rx_header[26] == 'I') || (rx_header[26] == 'U') || (rx_header[26] == 'L') || (repeater_mode && (rx_header[10] != 0x47)) || (hotspot_mode && (rx_header[0] & 0x40)) ))
+							if ((header_crc_result == DSTAR_HEADER_OK) &&
+								((rx_header[26] == 'I') ||
+								(rx_header[26] == 'U') ||
+								(rx_header[26] == 'L') ||
+								(((repeater_mode &&
+								(rx_header[10] != 0x47)) ||
+								((hotspot_mode) &&
+								(rx_header[0] & 0x40))) &&
+								((rx_header[0] & 0x08) == 0))))
 							{
 								tx_state = 11; // don't forward transmission
 																
