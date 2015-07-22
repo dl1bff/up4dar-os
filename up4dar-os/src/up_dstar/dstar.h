@@ -51,12 +51,12 @@ struct rx_q_header_struct {
 
 extern int dstar_pos_not_correct;
 
-bool rmu_enabled;
+extern bool rmu_enabled;
 
 void dstarInit(xQueueHandle dstarQueue);
 void dstarRMUSetQRG(void);
 void dstarRMUEnable(void);
-void dstarRMUStatus(void);
+// void dstarRMUStatus(void);
 void dstarChangeMode(int m);
 bool dstarRefreshMode(void);
 bool dstarFeedbackCall(void);
