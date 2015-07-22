@@ -644,19 +644,23 @@ static void dcs_link_to (char module)
 	
 	d[7] = ' ';
 	d[8] = settings.s.my_callsign[7];
-	if ((d[8] < 'A') || (d[8] > 'Z'))
-	{
-		d[8] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
-	}
 	d[9] = module; // module to link to
 
 	if (current_server_type == SERVER_TYPE_DEXTRA)
 	{
+		if ((d[8] < 'A') || (d[8] > 'E'))
+		{
+			d[8] = 'D'; // my repeater module
+		}
 		// DL3OCK New hidden signaling to a DExtra-Server
 		d[10] = 11;
 	}
 	else
 	{
+		if ((d[8] < 'A') || (d[8] > 'Z'))
+		{
+			d[8] = 'D'; // my repeater module
+		}
 		d[10] = 0;
 		dcs_get_current_reflector_name(buf);
 		memcpy(d + 11, buf, 7);
@@ -699,9 +703,9 @@ static void dcs_keepalive_response(int request_size)
 			
 			case DEXTRA_KEEPALIVE_V2_SIZE:
 				d[7] = settings.s.my_callsign[7];
-				if ((d[7] < 'A') || (d[7] > 'Z'))
+				if ((d[7] < 'A') || (d[7] > 'E'))
 				{
-					d[7] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
+					d[7] = 'D'; // my repeater module
 				}
 				d[8] = current_module;
 				d[9] = 0;
@@ -713,7 +717,7 @@ static void dcs_keepalive_response(int request_size)
 		d[7] = settings.s.my_callsign[7];
 		if ((d[7] < 'A') || (d[7] > 'Z'))
 		{
-			d[7] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
+			d[7] = 'D'; // my repeater module
 		}
 		d[8] = 0;
 		dcs_get_current_reflector_name((char *) (d + 9));
@@ -853,11 +857,14 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
+		d[22] = 'D'; // my repeater module
 	}
-	memcpy(d + 23, "CQCQCQ  ", 8); 
-	memcpy (d + 31, settings.s.my_callsign, 8);
-	memcpy (d + 39, settings.s.my_ext, 4);
+	memcpy(d + 23, "CQCQCQ  ", 8);
+	memcpy(d + 31, settings.s.my_callsign, 7);
+	
+	d[38] = 0x20; // Das persönliche Rufzeichen vom Hotspot
+	
+	memcpy(d + 39, settings.s.my_ext, 4);
 	
 	d[43] = (session_id >> 8) & 0xFF;
 	d[44] = session_id & 0xFF;
@@ -988,21 +995,31 @@ static void send_dextra_frame(int session_id, int last_frame, char dcs_frame_cou
   dcs_tx_counter ++;
 }
 
+// Sendevorgang wenn direkt an Up4Dar PTT gedrückt wird (Sysop- Durchgang)
 void send_dcs(int session_id, int last_frame, char dcs_frame_counter)
 {
-  if ((current_server_type == SERVER_TYPE_DEXTRA) &&
-      (dcs_state == DCS_CONNECTED))
-  {
-    if (dcs_frame_counter == 0)
+	if (dcs_state == DCS_CONNECTED)
 	{
-      send_dextra_header(session_id, settings.s.my_callsign, settings.s.my_ext);
-	}	  
-    send_dextra_frame(session_id, last_frame, dcs_frame_counter);
-    return;
-  }
-  send_dcs_private(session_id, last_frame, dcs_frame_counter);
+		if (current_server_type == SERVER_TYPE_DEXTRA)
+		{
+			if (dcs_frame_counter == 0)
+			{
+				char buf[8];
+				
+				memcpy(buf, settings.s.my_callsign, 7);
+				
+				buf[7] = 0x20;
+				
+				send_dextra_header(session_id, buf, settings.s.my_ext);
+			}
+			send_dextra_frame(session_id, last_frame, dcs_frame_counter);
+		}
+		else
+		{
+			send_dcs_private(session_id, last_frame, dcs_frame_counter);
+		}
+	}
 }
-
 
 
 static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_counter,
@@ -1034,7 +1051,7 @@ static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR); // my repeater module
+		d[22] = 'D'; // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy (d + 31, rx_header + 27, 8);
@@ -1114,17 +1131,18 @@ void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter,
 	if ( (  hotspot_mode &&
 			(dcs_state == DCS_CONNECTED) && // only send if connected
 			(crc_result == DSTAR_HEADER_OK) &&  // last received header was OK
-			(rx_header[0] == 0x00) &&   // no repeater flag in header
+			((rx_header[0] & 0x40) == 0) &&   // no repeater flag in header
 			(memcmp("DIRECT  ", rx_header + 3, 8) == 0) &&  // RPT1 and RPT2 contain "DIRECT  "
 			(memcmp("DIRECT  ", rx_header + 11, 8) == 0) ) 
 			||
 		 ( repeater_mode &&
 		   (dcs_state == DCS_CONNECTED) && // only send if connected
 		   (crc_result == DSTAR_HEADER_OK) &&  // last received header was OK
-		   (rx_header[0] == 0x40) &&   // repeater flag in header
-		   (memcmp(repeater_callsign, rx_header + 11, 8) == 0)  // RPT1 repeater callsign
-		    )
-		 )
+			(  (((rx_header[0] & 0x40) == 1) &&   // repeater flag in header
+			((memcmp(repeater_callsign, rx_header + 11, 8) == 0)  // RPT1 repeater callsign) 
+			|| ((rx_header[0] & 0x08) == 1))	// if Emergency bit is set.
+			))
+		))
 	{	
 		if (current_server_type == SERVER_TYPE_DEXTRA)
 		{

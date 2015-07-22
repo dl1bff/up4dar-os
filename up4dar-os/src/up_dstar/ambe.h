@@ -44,6 +44,8 @@ void ambe_set_autoaprs(int enable);
 int ambe_get_automute(void);
 int ambe_get_autoaprs(void);
 int ambe_get_ref_timer(void);
+int ambe_get_header_exp_timer(void);
+void ambe_set_header_exp_timer(int enable);
 void ambe_set_ref_timer(int enable);
 void ambe_ref_timer_break(int enable);
 void ambe_service(void);

@@ -618,11 +618,11 @@ void a_dispatch_key_event( int layer_num, int key_num, int key_event )
 	}			
 }
 
-#define REF_NUM_ITEMS 8
-#define REF_SELECTION_SPECIAL 8
+#define REF_NUM_ITEMS 7
+#define REF_SELECTION_SPECIAL 7
 static char ref_selected_item = 0;
-static char ref_items[REF_NUM_ITEMS] = { 0, 3, 0, 0, 0, 1, 2, 0 };
-static const char ref_item_max_val[REF_NUM_ITEMS] = { 4, 4, 2, 9, 9, 9, 25, 6 };
+static char ref_items[REF_NUM_ITEMS] = { 0, 0, 0, 0, 1, 2, 0 };
+static const char ref_item_max_val[REF_NUM_ITEMS] = { 4, 2, 9, 9, 9, 25, 6 };
 static const char * const ref_modes[5] = { "D-STAR Modem",
 										   "IP Reflector",
 										   "Hotspot     ",
@@ -647,27 +647,22 @@ static void ref_print_status (void)
 	vd_prints_xy(VDISP_REF_LAYER, 36, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
 		ref_modes[(int) ref_items[0]]);
 	
-	vd_printc_xy(VDISP_REF_LAYER, 0, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
-		ref_items[1] + 0x41);
+	#define XPOS 10
+	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
+		ref_types[(int) ref_items[1]]);
 	
-	vd_prints_xy(VDISP_REF_LAYER, 10, 24, VDISP_FONT_6x8, 0, "==>");
-	
-	#define XPOS 30
-	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
-		ref_types[(int) ref_items[2]]);
-	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
+		ref_items[2] + 0x30);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
 		ref_items[3] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
 		ref_items[4] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
-		ref_items[5] + 0x30);
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
 		0x20);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
-		ref_items[6] + 0x41);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 6),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+		ref_items[5] + 0x41);
+	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
 		0x20);
 		
 	vd_clear_rect(VDISP_REF_LAYER, 0, 36, 120, 12);
@@ -676,8 +671,8 @@ static void ref_print_status (void)
 	{
 		vd_prints_xy(VDISP_REF_LAYER, 0, 36, VDISP_FONT_6x8, 0, "Hometimer");
 	
-		vd_prints_xy(VDISP_REF_LAYER, 60, 36, VDISP_FONT_6x8, (ref_selected_item == 7),
-			ref_timer[(int) ref_items[7]]);
+		vd_prints_xy(VDISP_REF_LAYER, 60, 36, VDISP_FONT_6x8, (ref_selected_item == 6),
+			ref_timer[(int) ref_items[6]]);
 	}
 	
 	#undef XPOS
@@ -687,15 +682,15 @@ void set_ref_params (int ref_num, int ref_letter, int ref_type)
 {
 	int n = ref_num;
 	
-	ref_items[5] = n % 10;
-	n /= 10;
 	ref_items[4] = n % 10;
 	n /= 10;
 	ref_items[3] = n % 10;
+	n /= 10;
+	ref_items[2] = n % 10;
 	
-	ref_items[6] = ref_letter - 0x41;
+	ref_items[5] = ref_letter - 0x41;
 	
-	ref_items[2] = ref_type;
+	ref_items[1] = ref_type;
 	
 	ref_print_status();
 }
@@ -948,18 +943,17 @@ static int ref_app_key_event_handler (void * app_context, int key_num, int key_e
 		set_mode_vars();
 	
 		
-		int n = ref_items[3] * 100 +
-				ref_items[4] * 10 +
-				ref_items[5];
+		int n = ref_items[2] * 100 +
+				ref_items[3] * 10 +
+				ref_items[4];
 				
-		dcs_select_reflector( n, ref_items[6] + 0x41, ref_items[2]);
+		dcs_select_reflector( n, ref_items[5] + 0x41, ref_items[1]);
 		
-		SETTING_CHAR(C_REF_TYPE) = ref_items[2];
+		SETTING_CHAR(C_REF_TYPE) = ref_items[1];
 		SETTING_SHORT(S_REF_SERVER_NUM) = n;
-		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[6] + 0x41;
-		SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) = ref_items[1] + 0x41;
+		SETTING_CHAR(C_REF_MODULE_CHAR) = ref_items[5] + 0x41;
 		SETTING_CHAR(C_DCS_MODE) = ref_items[0];
-		SETTING_CHAR(C_REF_TIMER) = ref_items[7];
+		SETTING_CHAR(C_REF_TIMER) = ref_items[6];
 		
 		//settings_set_home_ref();
 		
@@ -1142,29 +1136,23 @@ void a_app_manager_init(void)
 	{
 		int n = SETTING_SHORT(S_REF_SERVER_NUM);
 		
-		ref_items[5] = n % 10;
-		n /= 10;
 		ref_items[4] = n % 10;
 		n /= 10;
 		ref_items[3] = n % 10;
+		n /= 10;
+		ref_items[2] = n % 10;
 	}
 	
 	if ((SETTING_CHAR(C_REF_MODULE_CHAR) >= 'A') &&
 		(SETTING_CHAR(C_REF_MODULE_CHAR) <= 'Z'))
 	{
-		ref_items[6] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
-	}
-	
-	if ((SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) >= 'A') &&
-		(SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) <= 'E'))
-	{
-		ref_items[1] = SETTING_CHAR(C_REF_SOURCE_MODULE_CHAR) - 0x41;
+		ref_items[5] = SETTING_CHAR(C_REF_MODULE_CHAR) - 0x41;
 	}
 	
 	if ((SETTING_CHAR(C_REF_TIMER) >= 0) &&
 		(SETTING_CHAR(C_REF_TIMER) <= 7))
 	{
-		ref_items[7] = SETTING_CHAR(C_REF_TIMER);
+		ref_items[6] = SETTING_CHAR(C_REF_TIMER);
 	}
 	
 	if ((SETTING_CHAR(C_DCS_MODE) >= 0) &&
@@ -1176,16 +1164,16 @@ void a_app_manager_init(void)
 	if ((SETTING_CHAR(C_REF_TYPE) >= 0) &&
 		(SETTING_CHAR(C_REF_TYPE) <= 2))
 	{
-		ref_items[2] = SETTING_CHAR(C_REF_TYPE);
+		ref_items[1] = SETTING_CHAR(C_REF_TYPE);
 	}
 	
 	set_mode_vars();
 	
-	int n = ref_items[3] * 100 +
-	ref_items[4] * 10 +
-	ref_items[5];
+	int n = ref_items[2] * 100 +
+	ref_items[3] * 10 +
+	ref_items[4];
 	
-	dcs_select_reflector( n, ref_items[6] + 0x41,  ref_items[2]);
+	dcs_select_reflector( n, ref_items[5] + 0x41,  ref_items[1]);
 	
 	if ((dcs_mode != 0)  && 
 		(SETTING_CHAR(C_DCS_CONNECT_AFTER_BOOT) == 1)) 

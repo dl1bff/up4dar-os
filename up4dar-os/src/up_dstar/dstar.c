@@ -1098,8 +1098,15 @@ static struct rx_q_header_struct  rx_q_header[SOURCE_NET + 1];
 static void rx_q_input_header( uint8_t source, uint16_t session, uint8_t crc_result, const uint8_t * data )
 {
 	rx_q_header[source].crc_result = crc_result;
-	memcpy( rx_q_header[source].data, data, 39 );		
+	memcpy( rx_q_header[source].data, data, 39 );
+
 }
+
+void let_header_expire(void)
+{
+	rx_q_header[SOURCE_PHY].crc_result = 1;	// CRC not correct
+}
+
 
 static void processPacket(void)
 {
@@ -1168,7 +1175,13 @@ static void processPacket(void)
 				vdisp_i2s (buf, 2, 16, 1, dp.data[3]);
 				vd_prints_xy(VDISP_DEBUG_LAYER, 116, 0, VDISP_FONT_6x8, 0, buf);
 				
-			}					
+			}
+			
+			if (dp.data[0] != 1)
+			{
+				ambe_set_header_exp_timer(1);
+			}
+			
 			feedback_header = 1;
 			pos_in_frame = POS_LAST;
 			break;

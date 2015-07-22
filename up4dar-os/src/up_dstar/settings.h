@@ -128,7 +128,7 @@ extern const limits_t char_values_limits[NUM_CHAR_VALUES];
 #define C_DCS_MODE					16
 #define C_DCS_CONNECT_AFTER_BOOT	17
 #define C_REF_TYPE					18
-#define C_REF_SOURCE_MODULE_CHAR	19
+#define C_REF_SOURCE_MODULE_CHAR	19 // Not in use, can be overwritten
 #define C_RMU_ENABLED				20
 #define C_REF_TIMER					21
 #define C_RMU_QRG_STEP              22

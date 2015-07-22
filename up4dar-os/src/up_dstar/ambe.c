@@ -181,10 +181,12 @@ static int silence_counter = 0;
 
 #define AUTOMUTE_VALUE	120
 #define AUTOAPRS_VALUE	120
+#define HEADER_EXP_TIMER_VALUE 600 // 5 min.
 
 static int automute = 0;
 static int autoaprs = 10;
 static int ref_timer = -1;
+static int header_exp_timer = -1;
 bool ref_timer_break = false;
 
 void ambe_set_automute(int enable)
@@ -202,6 +204,23 @@ void ambe_set_automute(int enable)
 int ambe_get_automute(void)
 {
 	return automute;
+}
+
+int ambe_get_header_exp_timer(void)
+{
+	return header_exp_timer;
+}
+
+void ambe_set_header_exp_timer(int enable)
+{
+	if (enable != 0)
+	{
+		header_exp_timer = HEADER_EXP_TIMER_VALUE;
+	}
+	else
+	{
+		header_exp_timer = -1;
+	}
 }
 
 void ambe_set_autoaprs(int enable)
@@ -281,6 +300,11 @@ void ambe_service(void)
 	if (ref_timer > 0)
 	{
 		ref_timer --;
+	}
+	
+	if (header_exp_timer > 0)
+	{
+		--header_exp_timer;
 	}
 }
 
