@@ -1138,9 +1138,9 @@ void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter,
 		 ( repeater_mode &&
 		   (dcs_state == DCS_CONNECTED) && // only send if connected
 		   (crc_result == DSTAR_HEADER_OK) &&  // last received header was OK
-			(  (((rx_header[0] & 0x40) == 1) &&   // repeater flag in header
+			(  (((rx_header[0] & 0x40) != 0) &&   // repeater flag in header
 			((memcmp(repeater_callsign, rx_header + 11, 8) == 0)  // RPT1 repeater callsign) 
-			|| ((rx_header[0] & 0x08) == 1))	// if Emergency bit is set.
+			|| ((rx_header[0] & 0x08) != 0))	// if Emergency bit is set.
 			))
 		))
 	{	
