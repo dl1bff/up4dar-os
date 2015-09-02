@@ -77,6 +77,7 @@ bool feedback_call = false;
 int feedback_header = 0;
 
 bool phy_rx = false;
+bool rmu_enabled;
 
 static void mkPrintableString (char * data, int len)
 {
@@ -533,6 +534,7 @@ void dstarRMUSetQRG(void)
 	qrgTX = atoi(str);
 	*/
 	
+	/*
 	int qrgRX = 0;
 	int qrgTX = 0;
 	
@@ -563,11 +565,14 @@ void dstarRMUSetQRG(void)
 	
 	phyCommSendCmd(buf, 9);
 	
+	*/
+	
 	mode_refresh = true;
 }
 
 void dstarRMUEnable(void)
 {
+	/*
 	buf[0] = 0xD3;
 	buf[1] = 0x01;
 	
@@ -577,10 +582,12 @@ void dstarRMUEnable(void)
 	buf[1] = SETTING_CHAR(C_RMU_ENABLED) == 1 ? 0x01 : 0x02;
 				
 	phyCommSendCmd(buf, 2);
+	*/
 	
 	mode_refresh = true;
 }
 
+/*
 void dstarRMUStatus(void)
 {
 	buf[0] = 0xD3;
@@ -594,7 +601,8 @@ void dstarRMUStatus(void)
 	phyCommSendCmd(buf, 2);
 	
 	mode_refresh = true;
-}
+} 
+*/
 
 void dstarChangeMode(int m)
 {

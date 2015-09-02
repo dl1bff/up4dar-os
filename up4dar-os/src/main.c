@@ -561,7 +561,7 @@ static void vServiceTask( void *pvParameters )
 	char last_repeater_mode = 0;
 	char last_parrot_mode = 0;
 	char dcs_boot_timer = 8;
-	bool update = true;
+	// bool update = true;
 	bool last_rmu_enabled = false;
 
 	for (;;)
@@ -779,12 +779,14 @@ static void vServiceTask( void *pvParameters )
 		
 		ntp_service();
 		
+		/*
 		if (update)
 		{
 			dstarRMUEnable();
 			dstarRMUSetQRG();
 			update = false;
 		}
+		*/
 			 
 			
 		if (dcs_boot_timer > 0)

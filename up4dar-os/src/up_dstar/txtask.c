@@ -87,6 +87,7 @@ static int suppress_user_feedback = 0;
 void set_phy_parameters(void)
 {
 	uint8_t value;
+	char buf[9];
 	
 	value = SETTING_SHORT(S_PHY_TXDELAY) & 0xFF;
 	snmp_set_phy_sysparam(1, &value, 1);
@@ -105,6 +106,36 @@ void set_phy_parameters(void)
 	value = SETTING_SHORT(S_PHY_LENGTHOFVW) & 0xFF;
 	snmp_set_phy_sysparam(6, &value, 1);
 	*/
+	
+	buf[0] = SET_RMU;
+	buf[1] = SETTING_CHAR(C_RMU_ENABLED) == 1 ? 0x01 : 0x02;
+	
+	phyCommSendCmd(buf, 2);
+	
+	int qrgRX = 0;
+	int qrgTX = 0;
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgRX = (qrgRX * 10) + (settings.s.qrg_rx[i] & 0x0F);
+	}
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgTX = (qrgTX * 10) + (settings.s.qrg_tx[i] & 0x0F);
+	}
+
+	buf[0] = SET_QRG;
+	buf[1] = ((unsigned int)qrgRX >> 24) & 0xFF;
+	buf[2] = ((unsigned int)qrgRX >> 16) & 0xFF;
+	buf[3] = ((unsigned int)qrgRX >> 8) & 0xFF;
+	buf[4] = ((unsigned int)qrgRX >> 0) & 0xFF;
+	buf[5] = ((unsigned int)qrgTX >> 24) & 0xFF;
+	buf[6] = ((unsigned int)qrgTX >> 16) & 0xFF;
+	buf[7] = ((unsigned int)qrgTX >> 8) & 0xFF;
+	buf[8] = ((unsigned int)qrgTX >> 0) & 0xFF;
+	
+	phyCommSendCmd(buf, 9);
 }
 
 #define DLE 0x10
