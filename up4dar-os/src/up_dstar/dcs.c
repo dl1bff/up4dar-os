@@ -59,6 +59,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "sw_update.h"
 #include "rx_dstar_crc_header.h"
 
+#include "ccs.h"
+
 
 
 char repeater_callsign[CALLSIGN_LENGTH];
@@ -73,7 +75,7 @@ static const char dcs_html_info[] = "<table border=\"0\" width=\"95%\"><tr>"
 
                               "<font size=\"2\"><b><a href=\"http://www.UP4DAR.de\">www.UP4DAR.de</a></b>&nbsp;</font>"
 							  
-							  //"<font size=\"1\">Version: X.0.00.00 </font>"
+							  "<font size=\"1\">Version: X.0.00.00 </font>"
 		 
                               "</td>"
 
@@ -375,6 +377,7 @@ void dcs_service (void)
 
 void dcs_on(void)
 {
+	ccs_start();
 	
 	switch (dcs_state)
 	{

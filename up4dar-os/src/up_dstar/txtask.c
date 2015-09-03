@@ -59,8 +59,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/urcall.h"
 #include "ambe_fec.h"
 #include "up_dstar/slowdata.h"
-
-
+#include "ccs.h"
 
 static ambe_q_t * microphone;
 static uint8_t rx_data[3];
@@ -791,6 +790,9 @@ static void vTXTask( void *pvParameters )
 			if (PTT_CONDITION  // PTT pressed
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
+				
+				ccs_send_info((uint8_t *) repeater_callsign, (uint8_t *) "UP4D");
+				
 				ambe_set_automute(0); // switch off automute
 				tx_state = 1;
 				ambe_start_encode();
@@ -841,6 +843,11 @@ static void vTXTask( void *pvParameters )
 					vTaskDelay(40);
 					
 					dstar_get_header(rx_source, &header_crc_result, rx_header);
+					
+					if ((rx_source == SOURCE_PHY) && (header_crc_result == DSTAR_HEADER_OK))
+					{
+						ccs_send_info(rx_header + 27, rx_header + 35); // mycall  and mycall_ext
+					}
 					
 					rtclock_disp_xy(84, 0, 2, 1);
 					
