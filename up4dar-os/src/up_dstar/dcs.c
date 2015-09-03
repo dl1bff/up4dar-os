@@ -653,7 +653,7 @@ static void dcs_link_to (char module)
 	{
 		if ((d[8] < 'A') || (d[8] > 'E'))
 		{
-			d[8] = 'D'; // my repeater module
+			d[8] = REPEATER_MODULE_CHAR; // my repeater module
 		}
 		// DL3OCK New hidden signaling to a DExtra-Server
 		d[10] = 11;
@@ -662,7 +662,7 @@ static void dcs_link_to (char module)
 	{
 		if ((d[8] < 'A') || (d[8] > 'Z'))
 		{
-			d[8] = 'D'; // my repeater module
+			d[8] = REPEATER_MODULE_CHAR; // my repeater module
 		}
 		d[10] = 0;
 		dcs_get_current_reflector_name(buf);
@@ -708,7 +708,7 @@ static void dcs_keepalive_response(int request_size)
 				d[7] = settings.s.my_callsign[7];
 				if ((d[7] < 'A') || (d[7] > 'E'))
 				{
-					d[7] = 'D'; // my repeater module
+					d[7] = REPEATER_MODULE_CHAR; // my repeater module
 				}
 				d[8] = current_module;
 				d[9] = 0;
@@ -720,7 +720,7 @@ static void dcs_keepalive_response(int request_size)
 		d[7] = settings.s.my_callsign[7];
 		if ((d[7] < 'A') || (d[7] > 'Z'))
 		{
-			d[7] = 'D'; // my repeater module
+			d[7] = REPEATER_MODULE_CHAR; // my repeater module
 		}
 		d[8] = 0;
 		dcs_get_current_reflector_name((char *) (d + 9));
@@ -860,7 +860,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = 'D'; // my repeater module
+		d[22] = REPEATER_MODULE_CHAR; // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy(d + 31, settings.s.my_callsign, 7);
@@ -1054,7 +1054,7 @@ static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_
 	memcpy (d + 15, settings.s.my_callsign, 8);
 	if ((d[22] < 'A') || (d[22] > 'Z'))
 	{
-		d[22] = 'D'; // my repeater module
+		d[22] = REPEATER_MODULE_CHAR; // my repeater module
 	}
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy (d + 31, rx_header + 27, 8);

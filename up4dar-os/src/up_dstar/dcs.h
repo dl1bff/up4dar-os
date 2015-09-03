@@ -37,6 +37,8 @@ extern uint8_t dcs_ambe_data[9];
 
 extern char repeater_callsign[];
 
+#define REPEATER_MODULE_CHAR  'B'
+
 void dcs_init(void);
 void dcs_service (void);
 void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4_src_addr);

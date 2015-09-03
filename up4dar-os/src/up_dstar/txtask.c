@@ -1293,7 +1293,7 @@ void txtask_init( ambe_q_t * mic )
 	memcpy (repeater_callsign, settings.s.my_callsign, CALLSIGN_LENGTH);
 	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'Z'))
 	{
-		repeater_callsign[7] = 'B'; // my repeater module
+		repeater_callsign[7] = REPEATER_MODULE_CHAR; // my repeater module
 	}
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, tskIDLE_PRIORITY + 1, ( xTaskHandle * ) NULL );
 	
