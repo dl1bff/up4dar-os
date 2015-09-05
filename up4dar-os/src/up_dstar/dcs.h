@@ -37,7 +37,7 @@ extern uint8_t dcs_ambe_data[9];
 
 extern char repeater_callsign[];
 
-#define REPEATER_MODULE_CHAR  'B'
+#define DEFAULT_REPEATER_MODULE_CHAR  'D'
 
 void dcs_init(void);
 void dcs_service (void);

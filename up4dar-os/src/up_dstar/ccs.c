@@ -480,7 +480,7 @@ void ccs_stop(void)
 
 
 
-void ccs_send_info(const uint8_t * mycall, const uint8_t * mycall_ext)
+void ccs_send_info(const uint8_t * mycall, const uint8_t * mycall_ext, int remove_module_char)
 {
 	if (!ccs_is_connected())
 		return;
@@ -499,5 +499,9 @@ void ccs_send_info(const uint8_t * mycall, const uint8_t * mycall_ext)
 	}
 	
 	memcpy(ccs_rx_callsign, mycall, 8);
+	if (remove_module_char != 0)
+	{
+		ccs_rx_callsign[7] = 0x20;
+	}
 	memcpy(ccs_rx_callsign_ext, mycall_ext, 4);
 }

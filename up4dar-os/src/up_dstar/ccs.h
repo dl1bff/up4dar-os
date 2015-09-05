@@ -39,5 +39,6 @@ void ccs_start (void);
 void ccs_stop(void);
 
 
-void ccs_send_info(const uint8_t * mycall, const uint8_t * mycall_ext);
+
+void ccs_send_info(const uint8_t * mycall, const uint8_t * mycall_ext, int remove_module_char);
 #endif /* CCS_H_ */

@@ -337,7 +337,7 @@ static void phy_send_response(int send_as_broadcast, int header_reason, uint8_t 
 	header[2] = 0x00;				// "2nd control byte"
 	header[3] = 0x00;				// "3rd control byte"
 	
-	memcpy(header+4, settings.s.my_callsign, CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
+	memcpy(header+4, repeater_callsign, CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
 	
 	memcpy(header+12, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
 	
@@ -791,7 +791,7 @@ static void vTXTask( void *pvParameters )
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
 				
-				ccs_send_info((uint8_t *) repeater_callsign, (uint8_t *) "UP4D");
+				ccs_send_info((uint8_t *) settings.s.my_callsign, (uint8_t *) settings.s.my_ext, 1);
 				
 				ambe_set_automute(0); // switch off automute
 				tx_state = 1;
@@ -846,7 +846,7 @@ static void vTXTask( void *pvParameters )
 					
 					if ((rx_source == SOURCE_PHY) && (header_crc_result == DSTAR_HEADER_OK))
 					{
-						ccs_send_info(rx_header + 27, rx_header + 35); // mycall  and mycall_ext
+						ccs_send_info(rx_header + 27, rx_header + 35, 0); // mycall  and mycall_ext
 					}
 					
 					rtclock_disp_xy(84, 0, 2, 1);
@@ -1293,7 +1293,7 @@ void txtask_init( ambe_q_t * mic )
 	memcpy (repeater_callsign, settings.s.my_callsign, CALLSIGN_LENGTH);
 	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'Z'))
 	{
-		repeater_callsign[7] = REPEATER_MODULE_CHAR; // my repeater module
+		repeater_callsign[7] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 	}
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, tskIDLE_PRIORITY + 1, ( xTaskHandle * ) NULL );
 	
