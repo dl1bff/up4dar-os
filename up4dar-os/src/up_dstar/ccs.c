@@ -71,11 +71,13 @@ static uint8_t ccs_state;
 static uint8_t ccs_timeout_timer;
 static uint8_t ccs_retry_counter;
 static int dns_handle;
-static uint8_t ccs_current_server;
-static const char * ccs_server_dns_name[2] = {
+// static uint8_t ccs_current_server;
+/* static const char * ccs_server_dns_name[2] = {
 		"CCS702.xreflector.net",
 		"CCS704.xreflector.net"
-};
+}; */
+
+static char ccs_server_dns_name[23]; // dns name of CCS server e.g. "ccs702.xreflector.net"
 
 static uint8_t ccs_server_ipaddr[4];
 
@@ -130,20 +132,32 @@ static void ccs_send_connect(void);
 static void ccs_send_disconnect(void);
 static void ccs_send_info_frame(void);
 
+static void ccs_set_dns_name(void)
+{
+	memcpy(ccs_server_dns_name, "CCS702.xreflector.net", 22);
+	
+	if (repeater_mode)
+	{
+		memcpy(ccs_server_dns_name, "CCS704", 6);
+	}
+}
 
 void ccs_init(void)
 {
 	ccs_state = CCS_DISCONNECTED;
 	ccs_timeout_timer = 0;
-	ccs_current_server = 0;
+	// ccs_current_server = 0;
 	ccs_rx_callsign[0] = 0;
+	ccs_set_dns_name();
 }
 
 const char * ccs_current_servername(void)
 {
-	return ccs_server_dns_name[ccs_current_server];
+	return ccs_server_dns_name;
 }
 
+
+/*
 static void ccs_next_server(void)
 {
 	int num_servers = (sizeof ccs_server_dns_name) / (sizeof (const char *));
@@ -156,7 +170,7 @@ static void ccs_next_server(void)
 	}
 }
 
-
+*/
 
 void ccs_service (void)
 {
@@ -200,7 +214,7 @@ void ccs_service (void)
 			{
 				ccs_timeout_timer = CCS_FAILURE_TIMEOUT;
 				ccs_state = CCS_WAIT;
-				ccs_next_server();
+				// ccs_next_server();
 				udp_socket_ports[UDP_SOCKET_CCS] = 0; // stop receiving frames
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 16, VDISP_FONT_6x8, 0, "RQTO");
 			}
@@ -261,7 +275,7 @@ void ccs_service (void)
 			{
 				ccs_timeout_timer = CCS_FAILURE_TIMEOUT;
 				ccs_state = CCS_WAIT;
-				ccs_next_server();
+				// ccs_next_server();
 			}
 			else
 			{
@@ -278,7 +292,7 @@ void ccs_service (void)
 			{
 				ccs_timeout_timer = CCS_FAILURE_TIMEOUT;
 				ccs_state = CCS_WAIT;
-				ccs_next_server();
+				// ccs_next_server();
 			}
 			else
 			{
@@ -420,6 +434,7 @@ void ccs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			else
 			{
 				ccs_state = CCS_DISCONNECTED;
+				udp_socket_ports[UDP_SOCKET_CCS] = 0; // stop receiving frames
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 16, VDISP_FONT_6x8, 0, "NACK");
 			} 
 		}
@@ -428,6 +443,7 @@ void ccs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			if (data[9] == ' ')
 			{
 				ccs_state = CCS_DISCONNECTED;
+				udp_socket_ports[UDP_SOCKET_CCS] = 0; // stop receiving frames
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 16, VDISP_FONT_6x8, 0, "DISC");
 			}
 		}
@@ -460,6 +476,7 @@ void ccs_start (void)
 		
 		if (memcmp(buf, "DCS", 3) == 0)
 		{
+			ccs_set_dns_name();
 			ccs_state = CCS_DNS_REQ;
 		}
 	}

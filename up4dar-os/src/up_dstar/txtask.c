@@ -1291,7 +1291,7 @@ void txtask_init( ambe_q_t * mic )
 	microphone = mic;
 	
 	memcpy (repeater_callsign, settings.s.my_callsign, CALLSIGN_LENGTH);
-	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'Z'))
+	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'E'))
 	{
 		repeater_callsign[7] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 	}

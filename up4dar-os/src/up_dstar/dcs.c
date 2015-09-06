@@ -94,6 +94,7 @@ static int dcs_udp_local_port;
 #define DCS_DNS_TIMEOUT			 2
 #define DCS_DNS_RETRIES		  3
 #define DCS_DNS_INITIAL_RETRIES		  15
+#define DCS_REJECT_TIMEOUT  60
 
 static int dcs_timeout_timer;
 static int dcs_retry_counter;
@@ -105,6 +106,8 @@ static int dcs_retry_counter;
 #define DCS_DNS_REQ_SENT		5
 #define DCS_DNS_REQ				6
 #define DCS_WAIT				7
+#define DCS_REJECTED			8
+#define DCS_REJECT_WAIT			9
 
 static int dcs_state;
 static int dcs_state_history = DCS_DISCONNECTED;
@@ -119,7 +122,7 @@ static int dcs_state_history = DCS_DISCONNECTED;
 
 
 
-static const char * const dcs_state_text[8] =
+static const char * const dcs_state_text[10] =
 {
 	"            ",
 	"disconnected",
@@ -128,7 +131,9 @@ static const char * const dcs_state_text[8] =
 	"disc request",
 	"DNS request ",
 	"DNS request ",
-	"waiting     "
+	"waiting     ",
+	"rejected    ",
+	"REJ wait 30s"
 };	
 
 static char current_module;
@@ -361,6 +366,29 @@ void dcs_service (void)
 			}
 			break;
 			
+			
+		case DCS_REJECTED:
+			if (dcs_timeout_timer == 0)
+			{
+				if (dcs_retry_counter > 0)
+				{
+					dcs_retry_counter --;
+				}
+			
+				if (dcs_retry_counter == 0)
+				{
+					dcs_state = DCS_REJECT_WAIT;
+					dcs_timeout_timer = DCS_REJECT_TIMEOUT;
+					udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+				}
+				else
+				{
+					dcs_link_to(' ');
+					dcs_timeout_timer = DCS_DISCONNECT_REQ_TIMEOUT;
+				}
+			}
+			break;
+			
 		case DCS_WAIT:
 			if (dcs_timeout_timer == 0)
 			{
@@ -368,6 +396,15 @@ void dcs_service (void)
 				dcs_timeout_timer = DCS_DNS_TIMEOUT;
 				dcs_state = DCS_DNS_REQ;
 			}				
+			break;
+			
+		case DCS_REJECT_WAIT:
+			if (dcs_timeout_timer == 0)
+			{
+				dcs_retry_counter = DCS_DNS_INITIAL_RETRIES;
+				dcs_timeout_timer = DCS_DNS_TIMEOUT;
+				dcs_state = DCS_DNS_REQ;
+			}
 			break;
 	}
 }
@@ -505,7 +542,9 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			}
 			else
 			{
-				dcs_state = DCS_DISCONNECTED;
+				dcs_state = DCS_REJECTED;
+				dcs_timeout_timer = 2;
+				dcs_retry_counter = DCS_DISCONNECT_RETRIES + 1;
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "NACK");
 			} 
 		}
@@ -514,7 +553,18 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 			if (data[9] == ' ')
 			{
 				dcs_state = DCS_DISCONNECTED;
+				udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "DISC");
+			}
+		}
+		else if (dcs_state == DCS_REJECTED)
+		{
+			if (data[9] == ' ')
+			{
+				dcs_state = DCS_REJECT_WAIT;
+				dcs_timeout_timer = DCS_REJECT_TIMEOUT;
+				udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+				vd_prints_xy(VDISP_DEBUG_LAYER, 104, 8, VDISP_FONT_6x8, 0, "REJW");
 			}
 		}
 	}
@@ -524,6 +574,13 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 		if (dcs_state == DCS_DISCONNECT_REQ_SENT)
 		{
 			dcs_state = DCS_DISCONNECTED;
+			udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
+		}
+		else if (dcs_state == DCS_REJECTED)
+		{
+			dcs_state = DCS_REJECT_WAIT;
+			dcs_timeout_timer = DCS_REJECT_TIMEOUT;
+			udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 		}
 	}
 /*	else if (data_len == 9)  // keep alive packet (old version)
@@ -546,7 +603,7 @@ void dcs_input_packet ( const uint8_t * data, int data_len, const uint8_t * ipv4
 
 int dcs_is_connected (void)
 {
-	if ((dcs_state == DCS_CONNECTED) || (dcs_state == DCS_DISCONNECT_REQ_SENT))
+	if ((dcs_state == DCS_CONNECTED) || (dcs_state == DCS_DISCONNECT_REQ_SENT) || (dcs_state == DCS_REJECTED))
 		return 1;
 		
 	return 0;
@@ -660,7 +717,7 @@ static void dcs_link_to (char module)
 	}
 	else
 	{
-		if ((d[8] < 'A') || (d[8] > 'Z'))
+		if ((d[8] < 'A') || (d[8] > 'E'))
 		{
 			d[8] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 		}
@@ -718,7 +775,7 @@ static void dcs_keepalive_response(int request_size)
 	else
 	{
 		d[7] = settings.s.my_callsign[7];
-		if ((d[7] < 'A') || (d[7] > 'Z'))
+		if ((d[7] < 'A') || (d[7] > 'E'))
 		{
 			d[7] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 		}
@@ -858,7 +915,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	memcpy (d + 7, buf, 8);
 	//memcpy (d + 15, buf, 8);
 	memcpy (d + 15, settings.s.my_callsign, 8);
-	if ((d[22] < 'A') || (d[22] > 'Z'))
+	if ((d[22] < 'A') || (d[22] > 'E'))
 	{
 		d[22] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 	}
@@ -1052,7 +1109,7 @@ static void send_dcs_hotspot_dcs (int session_id, int last_frame, uint8_t frame_
 	memcpy (d + 7, buf, 8);
 	//memcpy (d + 15, buf, 8);
 	memcpy (d + 15, settings.s.my_callsign, 8);
-	if ((d[22] < 'A') || (d[22] > 'Z'))
+	if ((d[22] < 'A') || (d[22] > 'E'))
 	{
 		d[22] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 	}
