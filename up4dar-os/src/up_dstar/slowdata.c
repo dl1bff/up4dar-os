@@ -206,9 +206,11 @@ void slowdata_analyze_stream(void)
 					{
 						slowDataGPSA_state = 0;
 					}
-					
-					slowDataGPSA[slowDataGPSA_ptr] = d;
-					slowDataGPSA_ptr ++;
+					else
+					{
+						slowDataGPSA[slowDataGPSA_ptr] = d;
+						slowDataGPSA_ptr ++;
+					}
 				}
 				else  //  everything else including CR
 				{
