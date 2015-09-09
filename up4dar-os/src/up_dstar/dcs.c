@@ -217,7 +217,7 @@ static void dcs_set_dns_name(void)
 			memcpy(dcs_server_dns_name, "xrf", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			
-			if ((current_server >= 230) && (current_server < 270)
+			if ((current_server >= 245) && (current_server < 270)
 				&& (current_server != 255)		// DMR: MCC of Ukraine
 				&& (current_server != 262)		// DMR: MCC of Germany
 				)
