@@ -59,8 +59,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_dstar/urcall.h"
 #include "ambe_fec.h"
 #include "up_dstar/slowdata.h"
-
-
+#include "ccs.h"
 
 static ambe_q_t * microphone;
 static uint8_t rx_data[3];
@@ -87,6 +86,7 @@ static int suppress_user_feedback = 0;
 void set_phy_parameters(void)
 {
 	uint8_t value;
+	char buf[9];
 	
 	value = SETTING_SHORT(S_PHY_TXDELAY) & 0xFF;
 	snmp_set_phy_sysparam(1, &value, 1);
@@ -105,6 +105,36 @@ void set_phy_parameters(void)
 	value = SETTING_SHORT(S_PHY_LENGTHOFVW) & 0xFF;
 	snmp_set_phy_sysparam(6, &value, 1);
 	*/
+	
+	buf[0] = SET_RMU;
+	buf[1] = SETTING_CHAR(C_RMU_ENABLED) == 1 ? 0x01 : 0x02;
+	
+	phyCommSendCmd(buf, 2);
+	
+	int qrgRX = 0;
+	int qrgTX = 0;
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgRX = (qrgRX * 10) + (settings.s.qrg_rx[i] & 0x0F);
+	}
+	
+	for (int i=0; i < QRG_LENGTH; i++)
+	{
+		qrgTX = (qrgTX * 10) + (settings.s.qrg_tx[i] & 0x0F);
+	}
+
+	buf[0] = SET_QRG;
+	buf[1] = ((unsigned int)qrgRX >> 24) & 0xFF;
+	buf[2] = ((unsigned int)qrgRX >> 16) & 0xFF;
+	buf[3] = ((unsigned int)qrgRX >> 8) & 0xFF;
+	buf[4] = ((unsigned int)qrgRX >> 0) & 0xFF;
+	buf[5] = ((unsigned int)qrgTX >> 24) & 0xFF;
+	buf[6] = ((unsigned int)qrgTX >> 16) & 0xFF;
+	buf[7] = ((unsigned int)qrgTX >> 8) & 0xFF;
+	buf[8] = ((unsigned int)qrgTX >> 0) & 0xFF;
+	
+	phyCommSendCmd(buf, 9);
 }
 
 #define DLE 0x10
@@ -307,7 +337,7 @@ static void phy_send_response(int send_as_broadcast, int header_reason, uint8_t 
 	header[2] = 0x00;				// "2nd control byte"
 	header[3] = 0x00;				// "3rd control byte"
 	
-	memcpy(header+4, settings.s.my_callsign, CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
+	memcpy(header+4, repeater_callsign, CALLSIGN_LENGTH);			// RPT2 (Ausstieg)
 	
 	memcpy(header+12, settings.s.my_callsign, CALLSIGN_LENGTH-1);		// RPT1 (Einstieg)
 	
@@ -760,6 +790,9 @@ static void vTXTask( void *pvParameters )
 			if (PTT_CONDITION  // PTT pressed
 			 && (memcmp(settings.s.my_callsign, "NOCALL  ", CALLSIGN_LENGTH) != 0))
 			{
+				
+				ccs_send_info((uint8_t *) settings.s.my_callsign, (uint8_t *) settings.s.my_ext, 1);
+				
 				ambe_set_automute(0); // switch off automute
 				tx_state = 1;
 				ambe_start_encode();
@@ -810,6 +843,11 @@ static void vTXTask( void *pvParameters )
 					vTaskDelay(40);
 					
 					dstar_get_header(rx_source, &header_crc_result, rx_header);
+					
+					if ((rx_source == SOURCE_PHY) && (header_crc_result == DSTAR_HEADER_OK))
+					{
+						ccs_send_info(rx_header + 27, rx_header + 35, 0); // mycall  and mycall_ext
+					}
 					
 					rtclock_disp_xy(84, 0, 2, 1);
 					
@@ -1253,9 +1291,9 @@ void txtask_init( ambe_q_t * mic )
 	microphone = mic;
 	
 	memcpy (repeater_callsign, settings.s.my_callsign, CALLSIGN_LENGTH);
-	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'Z'))
+	if ((repeater_callsign[7] < 'A') || (repeater_callsign[7] > 'E'))
 	{
-		repeater_callsign[7] = 'B'; // my repeater module
+		repeater_callsign[7] = DEFAULT_REPEATER_MODULE_CHAR; // my repeater module
 	}
 	xTaskCreate( vTXTask, (signed char *) "TX", 300, ( void * ) 0, tskIDLE_PRIORITY + 1, ( xTaskHandle * ) NULL );
 	

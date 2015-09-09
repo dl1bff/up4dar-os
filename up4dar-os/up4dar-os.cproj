@@ -410,6 +410,12 @@
     <Compile Include="src\up_dstar\audio_q.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\up_dstar\ccs.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="src\up_dstar\ccs.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\up_dstar\dcs.c">
       <SubType>compile</SubType>
     </Compile>

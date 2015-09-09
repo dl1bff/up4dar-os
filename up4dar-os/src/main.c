@@ -60,6 +60,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "up_net/lldp.h"
 #include "up_dstar/dcs.h"
+#include "up_dstar/ccs.h"
 
 #include "up_net/dhcp.h"
 #include "up_dstar/gps.h"
@@ -148,7 +149,7 @@ static U32 counter_ROVR = 0;
 */
 
 
-static char tmp_buf[7];
+static char tmp_buf[8];
 
 
 
@@ -409,6 +410,19 @@ static void show_dcs_state(void)
 	{
 		send_dcs_state();
 	}
+
+}
+
+static void show_ccs_state(void)
+{
+	char buf[8];
+	
+	memcpy(buf, ccs_current_servername(), 6);
+	buf[6] = 32;
+	buf[7] = 0;
+	vdisp_prints_xy( 103, 33, VDISP_FONT_4x6,
+	 ccs_is_connected(), buf );
+	
 }		
 
 
@@ -553,6 +567,7 @@ static void set_phy_parameters(void)
 
 static int initialHeapSize;
 static char eth_autoneg_state = 0;
+static uint16_t ccs_inactivity_timeout = 0;
 		
 static void vServiceTask( void *pvParameters )
 {
@@ -562,7 +577,7 @@ static void vServiceTask( void *pvParameters )
 	char last_repeater_mode = 0;
 	char last_parrot_mode = 0;
 	char dcs_boot_timer = 8;
-	bool update = true;
+	// bool update = true;
 	bool last_rmu_enabled = false;
 
 	for (;;)
@@ -781,12 +796,14 @@ static void vServiceTask( void *pvParameters )
 		
 		ntp_service();
 		
+		/*
 		if (update)
 		{
 			dstarRMUEnable();
 			dstarRMUSetQRG();
 			update = false;
 		}
+		*/
 			 
 			
 		if (dcs_boot_timer > 0)
@@ -795,6 +812,7 @@ static void vServiceTask( void *pvParameters )
 		}
 		else
 		{
+			ccs_service();
 			dcs_service();
 		
 			if ((parrot_mode != last_parrot_mode) || (repeater_mode != last_repeater_mode) || (dstarRefreshMode()))
@@ -826,7 +844,31 @@ static void vServiceTask( void *pvParameters )
 			if (dcs_mode != 0)
 			{
 				show_dcs_state();
+				show_ccs_state();
 			}
+			
+			if (dcs_is_connected())
+			{
+				dcs_get_current_reflector_name(tmp_buf);
+				if (memcmp(tmp_buf, "DCS", 3) == 0)
+				{
+					ccs_start();
+					ccs_inactivity_timeout = 360; // 3 minutes
+				}
+			}
+			
+			if (ccs_inactivity_timeout > 0)
+			{
+				ccs_inactivity_timeout--;
+				
+				if (ccs_is_connected() && (ccs_inactivity_timeout == 0))
+				{
+					ccs_stop();
+				}
+			}
+			
+			
+			
 		}
 		
 		if (wm8510_get_spkr_volume() != SETTING_CHAR(C_SPKR_VOLUME))
@@ -1197,6 +1239,8 @@ int main (void)
 	// txtest_init();
 	
 	dcs_init();
+	ccs_init();
+	
 	
 	audio_q_initialize(& audio_tx_q);
 	audio_q_initialize(& audio_rx_q);
