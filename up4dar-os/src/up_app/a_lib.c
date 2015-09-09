@@ -647,22 +647,22 @@ static void ref_print_status (void)
 	vd_prints_xy(VDISP_REF_LAYER, 36, 12, VDISP_FONT_6x8, (ref_selected_item == 0),
 		ref_modes[(int) ref_items[0]]);
 	
-	#define XPOS 10
-	vd_prints_xy(VDISP_REF_LAYER, XPOS, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
+	#define XPOS_NODEINFO_LAYER 10
+	vd_prints_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER, 24, VDISP_FONT_6x8, (ref_selected_item == 1),
 		ref_types[(int) ref_items[1]]);
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER + 3*6, 24, VDISP_FONT_6x8, (ref_selected_item == 2),
 		ref_items[2] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER + 4*6, 24, VDISP_FONT_6x8, (ref_selected_item == 3),
 		ref_items[3] + 0x30);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER + 5*6, 24, VDISP_FONT_6x8, (ref_selected_item == 4),
 		ref_items[4] + 0x30);
 	
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER + 6*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
 		0x20);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER + 7*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
 		ref_items[5] + 0x41);
-	vd_printc_xy(VDISP_REF_LAYER, XPOS + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
+	vd_printc_xy(VDISP_REF_LAYER, XPOS_NODEINFO_LAYER + 8*6, 24, VDISP_FONT_6x8, (ref_selected_item == 5),
 		0x20);
 		
 	vd_clear_rect(VDISP_REF_LAYER, 0, 36, 120, 12);
@@ -1126,7 +1126,7 @@ void a_app_manager_init(void)
 	a_set_key_event_handler(a, debug_app_key_event_handler);
 	
 	a = a_new_app( "NODE INFO", VDISP_NODEINFO_LAYER);
-	a_set_button_text(a, "", "", "", "MENU");
+	a_set_button_text(a, "GPS", "", "", "MENU");
 	// a_set_key_event_handler(a, debug_app_key_event_handler);
 	
 	help_layer = vd_new_screen();

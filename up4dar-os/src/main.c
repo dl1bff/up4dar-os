@@ -64,6 +64,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "up_net/dhcp.h"
 #include "up_dstar/gps.h"
 #include "up_dstar/dvset.h"
+#include "up_dstar/nodeinfo.h"
 #include "up_dstar/r2cs.h"
 #include "up_dstar/rmuset.h"
 
@@ -633,6 +634,7 @@ static void vServiceTask( void *pvParameters )
 		}
 		
 		dvset();
+		nodeinfo_print();
 				
 		if (last_rmu_enabled != rmu_enabled)
 		{

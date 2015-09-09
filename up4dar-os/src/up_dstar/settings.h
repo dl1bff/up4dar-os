@@ -41,6 +41,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DPRS_MSG_LENGTH		13
 #define TXMSG_LENGTH		20
 #define QRG_LENGTH			9
+#define POS_LENGTH			7
 
 #define NUM_RPT_SETTINGS	5
 #define NUM_URCALL_SETTINGS		10
@@ -66,6 +67,10 @@ typedef union settings_union
 		char snmp_cmnty[SNMP_CMNTY_LENGTH];
 		char qrg_tx[QRG_LENGTH];
 		char qrg_rx[QRG_LENGTH];
+		char node_pos_lat[POS_LENGTH];
+		char node_pos_lon[POS_LENGTH];
+		char node_qrg[QRG_LENGTH];
+		char node_dup[QRG_LENGTH];
 	} s;
 	
 } settings_t;
