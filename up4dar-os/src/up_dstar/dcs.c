@@ -224,7 +224,7 @@ static void dcs_set_dns_name(void)
 			memcpy(dcs_server_dns_name, "xrf", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			
-			if ((current_server >= 230) && (current_server < 270)
+			if ((current_server >= 245) && (current_server < 270)
 				&& (current_server != 255)		// DMR: MCC of Ukraine
 				&& (current_server != 262)		// DMR: MCC of Germany
 				)
@@ -922,7 +922,7 @@ static void send_dcs_private (int session_id, int last_frame, char dcs_frame_cou
 	memcpy(d + 23, "CQCQCQ  ", 8);
 	memcpy(d + 31, settings.s.my_callsign, 7);
 	
-	d[38] = 0x20; // Das persönliche Rufzeichen vom Hotspot
+	d[38] = 0x20; // Das persÃ¶nliche Rufzeichen vom Hotspot
 	
 	memcpy(d + 39, settings.s.my_ext, 4);
 	
@@ -1055,7 +1055,7 @@ static void send_dextra_frame(int session_id, int last_frame, char dcs_frame_cou
   dcs_tx_counter ++;
 }
 
-// Sendevorgang wenn direkt an Up4Dar PTT gedrückt wird (Sysop- Durchgang)
+// Sendevorgang wenn direkt an Up4Dar PTT gedrÃ¼ckt wird (Sysop- Durchgang)
 void send_dcs(int session_id, int last_frame, char dcs_frame_counter)
 {
 	if (dcs_state == DCS_CONNECTED)
