@@ -33,6 +33,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "eth_txmem.h"
 
+#include "gcc_builtin.h"
 
 
 #define TX_BUFFER_Q_LEN		15
@@ -142,6 +143,7 @@ eth_txmem_t * eth_txmem_get (int size)
 				txmem_pool[i][j].state = TXMEM_ALLOC;
 				txmem_pool[i][j].tx_size = size;
 				
+				memset(txmem_pool[i][j].data, 0, size); // initialize with 0
 			//	maxTXQ ++;
 				return & txmem_pool[i][j];
 			}
