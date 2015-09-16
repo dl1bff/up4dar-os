@@ -44,7 +44,7 @@ extern const uint8_t ipv4_zero_addr[4];
 
 #define UDP_PACKET_SIZE(a) (14 + 20 + 8 + (a))
 
-#define NUM_UDP_SOCKETS   5
+#define NUM_UDP_SOCKETS   6
 
 extern unsigned short udp_socket_ports[NUM_UDP_SOCKETS];
 
@@ -53,6 +53,7 @@ extern unsigned short udp_socket_ports[NUM_UDP_SOCKETS];
 #define UDP_SOCKET_DNS		2
 #define UDP_SOCKET_DCS		3
 #define UDP_SOCKET_NTP		4
+#define UDP_SOCKET_CCS		5
 
 
 void ipv4_input (const uint8_t * p, int len, const uint8_t * eth_header);
