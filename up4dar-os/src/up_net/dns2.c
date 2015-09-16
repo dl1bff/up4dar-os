@@ -1,6 +1,6 @@
 /*
 
-Copyright (C) 2014   Michael Dirska, DL1BFF (dl1bff@mdx.de)
+Copyright (C) 2015   Michael Dirska, DL1BFF (dl1bff@mdx.de)
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -175,6 +175,60 @@ static const uint8_t tst002addr[4] = { 192, 168, 1, 210 };
 	
 
 
+static int dns2_name_cmp(const uint8_t * name1, const uint8_t * packet, int packet_len, const uint8_t * name2)
+{
+	int ptr1 = 0;
+	int ptr2 = 0;
+	
+	int max_pointer_count = 5; // max pointers in name
+	
+	while(1)
+	{
+		if ((name1[ptr1] & 0xC0) == 0xC0) // pointer to a different location in the packet
+		{
+			if (packet == NULL)  // no pointers possible without the packet pointer
+				break;
+			
+			max_pointer_count --;
+			
+			if (max_pointer_count <= 0)
+				break;  // too many pointers in name (possible loop)
+				
+			ptr1 = ((name1[ptr1] & 0x3F) << 8) | name1[ptr1 + 1];
+			
+			if (ptr1 >= packet_len) // new pointer outside of packet
+				break;
+			
+			name1 = packet;
+			
+			continue;
+		}
+		
+		if (name1[ptr1] != name2[ptr2]) // the length of the label is not the same -> name not equal
+			break;
+			
+		if (name1[ptr1] == 0) // end of labels -> every label was equal -> match!
+			return 0;
+			
+#define TOLOWER(c)  ((((c)>='A') && ((c)<='Z')) ? ((c) | 0x20) : (c))
+
+		for (int i=0; i < name1[ptr1]; i++)
+		{
+			if (TOLOWER(name1[ptr1 + i]) != TOLOWER(name2[ptr2 + i]))
+				return -1; // character in label is not equal
+		}
+		
+		ptr1 += name1[ptr1] + 1;
+		ptr2 += name2[ptr2] + 1;
+		
+		if (ptr2 > 256) // much too big, something is wrong, stop here
+			break;
+	}
+	
+	return -1;
+}
+
+
 int dns2_req_A (const char * name)
 {
 	
@@ -225,10 +279,9 @@ int dns2_req_A (const char * name)
 		
 		struct dns2_cache * cached = dc + i;
 		
-		if (cur->reqname_len == cached->reqname_len)
+		if (cached->reqname_len > 0) // entry is not empty
 		{
-			if ((memcmp(cur->reqname, cached->reqname, cached->reqname_len) == 0)
-				&& (cached->ttl > 0))
+			if ((cached->ttl > 0) && (dns2_name_cmp(cur->reqname, 0, 0, cached->reqname) == 0))
 			{  // same name requested and some TTL left
 				cached->link ++;
 				cur->reqname_len = 0; // free the newly created handle
@@ -400,6 +453,29 @@ void dns2_free(int handle)
 }
 
 
+static int dns2_name_len(const uint8_t * name)
+{
+	int ptr = 0;
+	
+	while (name[ptr] != 0) // name ends with 0 length byte..
+	{
+		if ((name[ptr] & 0xC0) == 0xC0) // ... or pointer
+		{
+			ptr ++; // pointer has two bytes
+			break;
+		}
+		
+		int len = (name[ptr] & 0x3F);
+		
+		ptr += 1 + len; // go to next label
+		
+		if (ptr > 256)  // name is too long, stop here
+			break;
+	}
+	
+	return ptr + 1;  // +1 for the last byte (0)
+}
+
 #define DNS_TTL_COUNTER_TIMER	3000
 #define DNS_WAIT_TIME_PER_SLOT  3
 
@@ -437,10 +513,10 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	if (rx_question_num != 1) // unexpected size of question section
 		return;
 	
-	if (memcmp(data + 12, cur->reqname, cur->reqname_len) != 0)
+	if (dns2_name_cmp(data + 12, data, data_len, cur->reqname) != 0)
 		return;  // not the requested name
 	
-	const uint8_t * d = data + (12 + cur->reqname_len);
+	const uint8_t * d = data + (12 + dns2_name_len(data + 12));
 	
 	if ((d[0] != 0) || (d[1] != cur->req_type) || (d[2] != 0) || (d[3] != 1))
 		return;  // wrong type or class
@@ -470,24 +546,14 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	
 	// for now: expect first answer to be the requested RR
 	// doesn't work with CNAME   -- FIXIT!!
-		
-	if ((d[0] == 0xC0) && (d[1] == 0x0C)) // domain compression (this name is same as request)
+	
+	if (dns2_name_cmp(d, data, data_len, cur->reqname) != 0)
 	{
-		d += 2;
-	}
-	else
-	{
-		if (memcmp(d, cur->reqname, cur->reqname_len) != 0)
-		{
-			cur->state = DNS_STATE_RESULT_ERR;
-			return;  // not the requested name 
-		}
-		
-		// TODO: handle domain compression correctly  -- FIXIT!!
-		
-		d += cur->reqname_len;
+		cur->state = DNS_STATE_RESULT_ERR;
+		return;  // not the requested name
 	}
 	
+	d += dns2_name_len(d);
 	
 	// vdisp_prints_xy( 24, 48, VDISP_FONT_6x8, 1, "DNS" );
 	
