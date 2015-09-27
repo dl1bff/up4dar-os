@@ -53,6 +53,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DNS_STATE_RESULT_OK		4
 #define DNS_STATE_RESULT_ERR	5
 #define DNS_STATE_RESULT_TIMEOUT  6
+#define DNS_STATE_RESULT_CNAME	7
+
 
 
 #define DNS_REQ_RETRY		4
@@ -80,7 +82,9 @@ static uint8_t dns_result_ipv4_addr[4];
 
 */
 
-#define DNS_REQNAME_SIZE  60
+#define MAX_CNAME_STEPS 4
+
+#define DNS_REQNAME_SIZE  100
 
 struct dns2_cache
 {
@@ -95,6 +99,9 @@ struct dns2_cache
 	
 	uint8_t link;
 	
+	uint8_t cname_counter;
+	uint8_t cname_pointer;
+	
 	uint8_t reqname_len;
 	uint8_t reqname[DNS_REQNAME_SIZE];
 	
@@ -103,7 +110,7 @@ struct dns2_cache
 };
 
 
-#define DNS_NUMBER_OF_ENTRIES  10
+#define DNS_NUMBER_OF_ENTRIES  7
 static struct dns2_cache * dc;
 
 
@@ -281,7 +288,8 @@ int dns2_req_A (const char * name)
 		
 		if (cached->reqname_len > 0) // entry is not empty
 		{
-			if ((cached->ttl > 0) && (dns2_name_cmp(cur->reqname, 0, 0, cached->reqname) == 0))
+			if ((cached->ttl > 0) && (dns2_name_cmp(cur->reqname, 0, 0, cached->reqname) == 0)
+				&& ((cached->state == DNS_STATE_RESULT_OK) || (cached->state == DNS_STATE_RESULT_CNAME)))
 			{  // same name requested and some TTL left
 				cached->link ++;
 				cur->reqname_len = 0; // free the newly created handle
@@ -311,6 +319,10 @@ int dns2_req_A (const char * name)
 	cur->link = 1; // one client links to this
 	cur->state = DNS_STATE_REQ_A;
 	cur->udp_local_port = 0; // select new port
+	cur->result_data_len = 0;
+	cur->ttl = 30;
+	cur->cname_counter = MAX_CNAME_STEPS;
+	
 	
 	vd_prints_xy(VDISP_DEBUG_LAYER, 0, 48, VDISP_FONT_4x6, 0, "AREQ");
 	vd_prints_xy(VDISP_DEBUG_LAYER, 20, 48, VDISP_FONT_4x6, 0, name);
@@ -319,10 +331,105 @@ int dns2_req_A (const char * name)
 }
 
 
+static int dns2_req_A_intern (const uint8_t * dname, uint8_t dname_len, uint8_t cname_counter)
+{
+	
+	int i;
+	int handle = -1;
+	int link_zero_slot = -1;
+	int ttl_min = 65535;
+	
+	if (cname_counter <= 0) // prevent CNAME loops
+		return -1;
+	
+	for (i=0; i < DNS_NUMBER_OF_ENTRIES; i++)
+	{
+		struct dns2_cache * cur = dc + i;
+		
+		if (cur->reqname_len == 0)
+		{
+			handle = i; // free slot
+			break;
+		}
+		
+		if (cur->link == 0) // slot currently not in use
+		{
+			if (cur->ttl < ttl_min)
+			{
+				ttl_min = cur->ttl;
+				link_zero_slot = i; // unused slot with the lowest TTL
+			}
+		}
+	}
+	
+	if (handle < 0)
+	{
+		if (link_zero_slot < 0) // could not find slot that is not in use
+		return -1; // no free slots
+		
+		handle = link_zero_slot; // use entry with smallest ttl left
+	}
+	
+	
+	
+	struct dns2_cache * cur = dc + handle;
+	
+	memcpy(cur->reqname, dname, dname_len);
+	cur->reqname_len = dname_len;
+	
+	
+	for (i=0; i < DNS_NUMBER_OF_ENTRIES; i++)
+	{
+		if (i == handle) // skip the newly created entry
+		continue;
+		
+		struct dns2_cache * cached = dc + i;
+		
+		if (cached->reqname_len > 0) // entry is not empty
+		{
+			if ((cached->ttl > 0) && (dns2_name_cmp(cur->reqname, 0, 0, cached->reqname) == 0)
+				&& ((cached->state == DNS_STATE_RESULT_OK) || (cached->state == DNS_STATE_RESULT_CNAME)))
+			{  // same name requested and some TTL left
+				cached->link ++;
+				cur->reqname_len = 0; // free the newly created handle
+				return i; // return the cached handle
+			}
+		}
+	}
+	
+	if (memcmp(ipv4_dns_pri, ipv4_zero_addr, sizeof ipv4_addr) == 0)
+	{  // no primary DNS server
+		return -1;
+	}
+	
+	cur->retry = DNS_REQ_RETRY;
+	cur->timeout = 0;
+	cur->primary_server = 1; // begin with primary server
+	cur->link = 1; // one client links to this
+	cur->state = DNS_STATE_REQ_A;
+	cur->udp_local_port = 0; // select new port
+	cur->result_data_len = 0;
+	cur->ttl = 30;
+	cur->cname_counter = cname_counter - 1;  // count down to prevent CNAME loops
+	
+	vd_prints_xy(VDISP_DEBUG_LAYER, 0, 48, VDISP_FONT_4x6, 0, "CNAME");
+	return handle; // OK
+}
+
+
+
 
 int dns2_result_available(int handle)
 {
 	struct dns2_cache * cur = dc + handle;
+	
+	while (cur->state == DNS_STATE_RESULT_CNAME)
+	{
+		cur = dc + cur->cname_pointer;
+		
+		if (cur->reqname_len == 0) // entry already deleted
+			return 1;
+	}
 	
 	if (
 		(cur->state == DNS_STATE_RESULT_ERR) ||
@@ -341,6 +448,14 @@ int dns2_result_available(int handle)
 int dns2_get_A_addr ( int handle, uint8_t ** v4addr)
 {
 	struct dns2_cache * cur = dc + handle;
+	
+	while (cur->state == DNS_STATE_RESULT_CNAME)
+	{
+		cur = dc + cur->cname_pointer;
+		
+		if (cur->reqname_len == 0) // entry already deleted
+			return -1;
+	}
 	
 	if (cur->state != DNS_STATE_RESULT_OK)
 	{
@@ -446,6 +561,20 @@ int dns2_find_dns_port( uint16_t port )
 void dns2_free(int handle)
 {
 	struct dns2_cache * cur = dc + handle;
+	
+	while (cur->state == DNS_STATE_RESULT_CNAME)
+	{
+		if (cur->link > 0)
+		{
+			cur->link --;
+		}
+		
+		cur = dc + cur->cname_pointer;
+		
+		if (cur->reqname_len == 0) // entry is already cleared
+			return;
+	}
+	
 	if (cur->link > 0)
 	{
 		cur->link --;
@@ -476,6 +605,76 @@ static int dns2_name_len(const uint8_t * name)
 	return ptr + 1;  // +1 for the last byte (0)
 }
 
+
+static int dns2_expanded_name_len(const uint8_t * name, const uint8_t * packet, int packet_len)
+{
+	uint16_t ptr = 0;
+	uint16_t len = 0;
+	
+	while (name[ptr] != 0) // name ends with 0 length byte
+	{
+		if ((name[ptr] & 0xC0) == 0xC0) // pointer to other part of the packet
+		{
+			ptr = ((name[ptr] & 0x3F) << 8) | name[ptr + 1];
+			
+			if (ptr >= packet_len) // points outside of packet
+				return -1;
+				
+			name = packet;
+		}
+		
+		uint8_t k = (name[ptr] & 0x3F);
+		
+		ptr += 1 + k; // go to next label
+		len += 1 + k;
+		
+		if (len > 256)  // name is too long, stop here
+			return -1;
+	}
+	
+	return len + 1;  // +1 for the last byte (0)
+}
+
+
+static void dns2_expanded_name_copy(uint8_t * dest, const uint8_t * name, const uint8_t * packet, int packet_len)
+{
+	uint16_t ptr = 0;
+	uint16_t len = 0;
+	
+	while (name[ptr] != 0) // name ends with 0 length byte
+	{
+		if ((name[ptr] & 0xC0) == 0xC0) // pointer to other part of the packet
+		{
+			ptr = ((name[ptr] & 0x3F) << 8) | name[ptr + 1];
+			
+			if (ptr >= packet_len) // points outside of packet
+				return;
+			
+			name = packet;
+		}
+		
+		uint8_t k = (name[ptr] & 0x3F);
+		
+		uint8_t i;
+		
+		dest[len] = k;
+		
+		for(i=1; i <= k; i++)
+		{
+			dest[len+i] = name[ptr+i];
+		}
+		
+		ptr += 1 + k; // go to next label
+		len += 1 + k;
+		
+		if (len > 256)  // name is too long, stop here
+			return;
+	}
+	
+	dest[len] = 0;
+}
+
+
 #define DNS_TTL_COUNTER_TIMER	3000
 #define DNS_WAIT_TIME_PER_SLOT  3
 
@@ -497,10 +696,10 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 		return;
 	}
 	
-	int rx_dns_req_id = (data[0] << 8) | data[1];
-	int rx_flags = (data[2] << 8) | data[3];
-	int rx_question_num = (data[4] << 8) | data[5];
-	int rx_answer_num = (data[6] << 8) | data[7];
+	uint16_t rx_dns_req_id = (data[0] << 8) | data[1];
+	uint16_t rx_flags = (data[2] << 8) | data[3];
+	uint16_t rx_question_num = (data[4] << 8) | data[5];
+	uint16_t rx_answer_num = (data[6] << 8) | data[7];
 //	int rx_authority_num = (data[8] << 8) | data[9];
 //	int rx_additional_num = (data[10] << 8) | data[11];
 	
@@ -543,49 +742,79 @@ void dns2_input_packet ( int handle, const uint8_t * data, int data_len, const u
 	// const uint8_t * d_end = data + data_len;
 	
 	
+	uint8_t i;
 	
-	// for now: expect first answer to be the requested RR
-	// doesn't work with CNAME   -- FIXIT!!
-	
-	if (dns2_name_cmp(d, data, data_len, cur->reqname) != 0)
+	for (i=0; i < rx_answer_num; i++)  // parse answer section
 	{
-		cur->state = DNS_STATE_RESULT_ERR;
-		return;  // not the requested name
+		uint8_t found = (dns2_name_cmp(d, data, data_len, cur->reqname) == 0);
+		
+		d += dns2_name_len(d);  // skip name
+		
+		uint16_t entry_len = (d[8] << 8) | d[9];
+		
+		uint32_t ttl = (d[4] << 24) | (d[5] << 16) | (d[6] << 8) | d[7];
+		
+		if (ttl < 20)
+		{
+			ttl = 20; // at least 20 seconds
+		}
+		
+		if (ttl > 14400)  // max 4 hours
+		{
+			ttl = 14400;
+		}
+		
+		if (found && (d[0] == 0) && (d[2] == 0) && (d[3] == 1) /* CLASS IN */)
+		{
+			if ((d[1] == DNS_QTYPE_A) && (entry_len >= 4))  
+			{
+				cur->ttl = ttl / (DNS_TTL_COUNTER_TIMER / 1000); // current ttl counter has tick rate of 3 seconds
+				
+				memcpy (cur->result_data, d + 10, sizeof ipv4_addr);
+				cur->result_data_len = sizeof ipv4_addr;
+				
+				cur->state = DNS_STATE_RESULT_OK;
+				return;
+			}
+			
+			if (d[1] == DNS_QTYPE_CNAME)
+			{
+				int k = dns2_expanded_name_len(d+10, data, data_len);
+				
+				if ((k < 0) || (k > DNS_REQNAME_SIZE))
+				{
+					cur->state = DNS_STATE_RESULT_ERR;
+				}
+				else
+				{
+					cur->ttl = ttl / (DNS_TTL_COUNTER_TIMER / 1000); // current ttl counter has tick rate of 3 seconds
+					
+					dns2_expanded_name_copy(cur->result_data, d+10, data, data_len);
+					cur->result_data_len = k;
+					
+					int h = dns2_req_A_intern(cur->result_data, cur->result_data_len, cur->cname_counter);
+					
+					if (h < 0)
+					{
+						cur->state = DNS_STATE_RESULT_ERR;
+					}
+					else
+					{
+						cur->cname_pointer = h;
+						cur->state = DNS_STATE_RESULT_CNAME;
+					}										
+				}
+				
+				return;
+			}
+		}
+		
+		d += 10 + entry_len; 
+		
+		if ((d - data) >= data_len) // pointer d has invalid value
+			return;
 	}
 	
-	d += dns2_name_len(d);
-	
-	// vdisp_prints_xy( 24, 48, VDISP_FONT_6x8, 1, "DNS" );
-	
-	
-	
-	if ((d[0] != 0) || (d[1] != DNS_QTYPE_A) || (d[2] != 0) || (d[3] != 1) /* CLASS IN */
-	  || (d[8] != 0) || (d[9] != 4) /* size of IPv4 address */ )
-	{
-		cur->state = DNS_STATE_RESULT_ERR;
-		return;  // wrong type or class, wrong length of address
-	}
-	
-	uint32_t ttl = (d[4] << 24) | (d[5] << 16) | (d[6] << 8) | d[7];
-	 
-	if (ttl < 20)
-	{
-		ttl = 20; // at least 20 seconds
-	}
-	
-	if (ttl > 14400)  // 4 hours
-	{
-		ttl = 14400;
-	}
-	
-	cur->ttl = ttl / (DNS_TTL_COUNTER_TIMER / 1000); // current ttl counter has tick rate of 3 seconds
-	
-	memcpy (cur->result_data, d + 10, sizeof ipv4_addr);
-	cur->result_data_len = sizeof ipv4_addr;
-	
-	// vdisp_prints_xy( 0, 48, VDISP_FONT_6x8, 1, "DNS1" );
-	
-	cur->state = DNS_STATE_RESULT_OK;
 	
 }
 
@@ -676,6 +905,18 @@ static void vDNSTask( void *pvParameters )
 				if ((cur->ttl == 0) && (cur->link == 0)) // TTL expired and entry unused
 				{
 					cur->reqname_len = 0; // free entry
+					
+					int j;
+					for (j=0; j < DNS_NUMBER_OF_ENTRIES; j++)
+					{
+						if (i == j) continue;
+						
+						if ((dc[j].reqname_len > 0) && (dc[j].state == DNS_STATE_RESULT_CNAME) && (dc[j].cname_pointer == i))
+						{
+							dc[j].ttl = 0; // delete this entry in next round
+							dc[j].state = DNS_STATE_RESULT_ERR;
+						}
+					}
 				}
 			}
 			
@@ -687,7 +928,7 @@ static void vDNSTask( void *pvParameters )
 			ttl_check_counter = (DNS_TTL_COUNTER_TIMER / DNS_WAIT_TIME_PER_SLOT) / DNS_NUMBER_OF_ENTRIES; // decrease TTL every 3 seconds
 		}
 		
-		// vd_prints_xy(VDISP_NODEINFO_LAYER, 0, 54, VDISP_FONT_4x6, 0, entry_counter);
+		vd_prints_xy(VDISP_DEBUG_LAYER, 0, 54, VDISP_FONT_6x8, 0, entry_counter);
 		
 	} // while(1)
 }	

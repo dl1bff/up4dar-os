@@ -203,7 +203,7 @@ static void dcs_set_dns_name(void)
 			}
 			else
 			{
-				memcpy(dcs_server_dns_name+6, ".reflector.up4dar.de", 21);
+				memcpy(dcs_server_dns_name+6, ".reflector.mdx.de", 21);
 			}
 			break;
 			
