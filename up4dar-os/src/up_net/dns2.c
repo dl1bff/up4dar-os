@@ -212,7 +212,7 @@ static int dns2_name_cmp(const uint8_t * name1, const uint8_t * packet, int pack
 			
 #define TOLOWER(c)  ((((c)>='A') && ((c)<='Z')) ? ((c) | 0x20) : (c))
 
-		for (int i=0; i < name1[ptr1]; i++)
+		for (int i=1; i <= name1[ptr1]; i++)
 		{
 			if (TOLOWER(name1[ptr1 + i]) != TOLOWER(name2[ptr2 + i]))
 				return -1; // character in label is not equal
