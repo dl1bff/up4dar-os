@@ -199,11 +199,11 @@ static void dcs_set_dns_name(void)
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
-				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
+				strcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de");
 			}
 			else
 			{
-				memcpy(dcs_server_dns_name+6, ".reflector.mdx.de", 21);
+				strcpy(dcs_server_dns_name+6, ".reflector.mdx.de");
 			}
 			break;
 			
@@ -213,11 +213,11 @@ static void dcs_set_dns_name(void)
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
-				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
+				strcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de");
 			}
 			else
 			{
-				memcpy(dcs_server_dns_name+6, ".xreflector.net", 16);
+				strcpy(dcs_server_dns_name+6, ".xreflector.net");
 			}
 			break;
 		case SERVER_TYPE_DEXTRA:
@@ -229,15 +229,15 @@ static void dcs_set_dns_name(void)
 				&& (current_server != 262)		// DMR: MCC of Germany
 				)
 			{
-				memcpy(dcs_server_dns_name+6, ".dstar.su", 10);
+				strcpy(dcs_server_dns_name+6, ".dstar.su");
 			}
 			else if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
-				memcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de", 28);
+				strcpy(dcs_server_dns_name+6, ".reflector.hamnet.up4dar.de");
 			}
 			else
 			{
-				memcpy(dcs_server_dns_name+6, ".reflector.up4dar.de", 21);
+				strcpy(dcs_server_dns_name+6, ".reflector.up4dar.de");
 			}
 			break;
 	}			
