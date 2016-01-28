@@ -629,7 +629,7 @@ static const char * const ref_modes[5] = { "D-STAR Modem",
 										   "Repeater    ",
 										   "Parrot (DVR)" };
 static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
-static const char * const ref_timer[7] = { "off", "5 min.", "10 min.", "15 min.", "20 min.", "30 min.", "40 min." };
+static const char * const ref_timer_desc[7] = { "off", "5 min.", "10 min.", "15 min.", "20 min.", "30 min.", "40 min." };
 	
 
 static void set_mode_vars(void)
@@ -672,7 +672,7 @@ static void ref_print_status (void)
 		vd_prints_xy(VDISP_REF_LAYER, 0, 36, VDISP_FONT_6x8, 0, "Hometimer");
 	
 		vd_prints_xy(VDISP_REF_LAYER, 60, 36, VDISP_FONT_6x8, (ref_selected_item == 6),
-			ref_timer[(int) ref_items[6]]);
+			ref_timer_desc[(int) ref_items[6]]);
 	}
 	
 	#undef XPOS

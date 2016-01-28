@@ -59,4 +59,5 @@ void dcs_home(void);
 
 void send_dcs_hotspot (int session_id, int last_frame, uint8_t frame_counter, const uint8_t * rx_data, const uint8_t * rx_voice, uint8_t crc_result, const uint8_t * rx_header);
 void dcs_get_current_statustext (char * s);
+int dcs_is_already_home(void);
 #endif /* DCS_H_ */

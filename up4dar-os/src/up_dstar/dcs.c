@@ -237,7 +237,7 @@ static void dcs_set_dns_name(void)
 			}
 			else
 			{
-				strcpy(dcs_server_dns_name+6, ".reflector.up4dar.de");
+				strcpy(dcs_server_dns_name+6, ".reflector.ircddb.net");
 			}
 			break;
 	}			
@@ -452,6 +452,22 @@ void dcs_off(void)
 			udp_socket_ports[UDP_SOCKET_DCS] = 0; // stop receiving frames
 			break;
 	}
+}
+
+int dcs_is_already_home(void)
+{
+	
+	if (dcs_state == DCS_CONNECTED)
+	{
+		settings_get_home_ref();
+		
+		if ((current_module == SETTING_CHAR(C_REF_MODULE_CHAR)) &&
+			(current_server == SETTING_SHORT(S_REF_SERVER_NUM)) &&
+			(current_server_type == SETTING_CHAR(C_REF_TYPE)))
+			return 1;
+	}
+	
+	return 0;
 }
 
 void dcs_home(void)

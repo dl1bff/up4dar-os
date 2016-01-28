@@ -724,9 +724,11 @@ static void vServiceTask( void *pvParameters )
 		// Selbstsändiges umschalten (Homerückkehr oder init)
 		if (ambe_get_ref_timer() == 0 && (repeater_mode || hotspot_mode))
 		{
-			dcs_home();
-			send_dcs_state();
-				
+			if (!dcs_is_already_home())
+			{
+				dcs_home();
+				send_dcs_state();
+			}
 			ambe_set_ref_timer(0);
 		}
 		
