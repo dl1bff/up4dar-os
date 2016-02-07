@@ -224,10 +224,7 @@ static void dcs_set_dns_name(void)
 			memcpy(dcs_server_dns_name, "xrf", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			
-			if ((current_server >= 245) && (current_server < 270)
-				&& (current_server != 255)		// DMR: MCC of Ukraine
-				&& (current_server != 262)		// DMR: MCC of Germany
-				)
+			if ((current_server >= 249) && (current_server <= 251))
 			{
 				strcpy(dcs_server_dns_name+6, ".dstar.su");
 			}
@@ -237,7 +234,7 @@ static void dcs_set_dns_name(void)
 			}
 			else
 			{
-				strcpy(dcs_server_dns_name+6, ".reflector.ircddb.net");
+				strcpy(dcs_server_dns_name+6, ".refl.up4dar.de");
 			}
 			break;
 	}			
