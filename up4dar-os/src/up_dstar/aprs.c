@@ -463,8 +463,8 @@ void aprs_send_beacon(void)
 	calculate_aprs_password((char *) p);
 	p += 5;
 		
-	memcpy(p, " vers UP4DAR " SWVER_STRING " \r\n", 26);
-	p += 26;
+	memcpy(p, " vers UP4DAR " SWVER_STRING " \r\n", 16 + strlen(SWVER_STRING));
+	p += 16 + strlen(SWVER_STRING);
 		
 	memcpy(p, aprs_call, aprs_call_size);	//build_aprs_call(data);
 	p += aprs_call_size;
@@ -532,8 +532,8 @@ void aprs_send_user_report(uint8_t * gps_a_data, uint16_t gps_a_len)
 	calculate_aprs_password((char *) p);
 	p += 5;
 		
-	memcpy(p, " vers UP4DAR " SWVER_STRING " \r\n", 26);
-	p += 26;
+	memcpy(p, " vers UP4DAR " SWVER_STRING " \r\n", 16 + strlen(SWVER_STRING));
+	p += 16 + strlen(SWVER_STRING);
 		
 	memcpy(p, gps_a_data, gps_a_len);
 		
