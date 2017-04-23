@@ -692,11 +692,12 @@ static void infocpy ( uint8_t * mem )
 
 // #define DCS_CONNECT_FRAME_SIZE	19
 #define DCS_CONNECT_FRAME_SIZE		519
-
+#define DCS_DISCONNECT_FRAME_SIZE		19
 
 static void dcs_link_to (char module)
 {
-	int size = (current_server_type == SERVER_TYPE_DEXTRA) ? DEXTRA_CONNECT_SIZE : DCS_CONNECT_FRAME_SIZE;
+	int size = (current_server_type == SERVER_TYPE_DEXTRA) ? DEXTRA_CONNECT_SIZE :
+	   ((module == ' ') ? DCS_DISCONNECT_FRAME_SIZE : DCS_CONNECT_FRAME_SIZE);
 	eth_txmem_t * packet = dcs_get_packet_mem(size);
 	
 	if (packet == NULL)
@@ -739,8 +740,10 @@ static void dcs_link_to (char module)
 		memcpy(d + 11, buf, 7);
 		d[18] = ' ';
 		d[18] = '@';
-		memcpy(d + 19, dcs_html_info, sizeof dcs_html_info);
-		infocpy(d + 19);
+		if (size > 19)
+		{
+			infocpy(d + 19);
+		}
 	}
 	
 	dcs_calc_chksum_and_send(packet, size);
