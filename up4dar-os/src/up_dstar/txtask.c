@@ -946,6 +946,13 @@ static void vTXTask( void *pvParameters )
 											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_DEXTRA);
 											dcs_on();
 										}
+										else if (memcmp("XLX", rx_header+19, 3) == 0)
+										{
+											dcs_over();
+											ambe_set_ref_timer(1);
+											dcs_select_reflector(n, rx_header[25], SERVER_TYPE_XLX);
+											dcs_on();
+										}
 									}									
 								}
 							}

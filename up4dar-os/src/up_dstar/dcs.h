@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #define DCS_H_
 
 #define SERVER_TYPE_DCS		0
-#define SERVER_TYPE_TST		1
+#define SERVER_TYPE_XLX		1
 #define SERVER_TYPE_DEXTRA	2
 
 extern uint8_t dcs_ambe_data[9];

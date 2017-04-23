@@ -628,7 +628,7 @@ static const char * const ref_modes[5] = { "D-STAR Modem",
 										   "Hotspot     ",
 										   "Repeater    ",
 										   "Parrot (DVR)" };
-static const char * const ref_types[3] = { "DCS", "TST", "XRF" };
+static const char * const ref_types[3] = { "DCS", "XLX", "XRF" };
 static const char * const ref_timer_desc[7] = { "off", "5 min.", "10 min.", "15 min.", "20 min.", "30 min.", "40 min." };
 	
 

@@ -159,8 +159,8 @@ void dcs_get_current_reflector_name (char * s)
 {
 	switch(current_server_type)
 	{
-		case SERVER_TYPE_TST:
-			memcpy(s, "TST", 3);
+		case SERVER_TYPE_XLX:
+			memcpy(s, "XLX", 3);
 			break;
 		case SERVER_TYPE_DEXTRA:
 			memcpy(s, "XRF", 3);
@@ -194,8 +194,8 @@ static void dcs_set_dns_name(void)
 {
 	switch(current_server_type)
 	{
-		case SERVER_TYPE_TST:
-			memcpy(dcs_server_dns_name, "tst", 3);
+		case SERVER_TYPE_XLX:
+			memcpy(dcs_server_dns_name, "xlx", 3);
 			vdisp_i2s(dcs_server_dns_name + 3, 3, 10, 1, current_server);
 			if (SETTING_BOOL(B_ENABLE_ALT_DNS))
 			{
@@ -203,7 +203,7 @@ static void dcs_set_dns_name(void)
 			}
 			else
 			{
-				strcpy(dcs_server_dns_name+6, ".reflector.mdx.de");
+				strcpy(dcs_server_dns_name+6, ".tms-it.net");
 			}
 			break;
 			
